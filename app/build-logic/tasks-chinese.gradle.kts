@@ -19,7 +19,8 @@ fun chineseSha(file: File): String {
     return md.digest().joinToString("") { "%02x".format(it) }
 }
 /** cyime_english.dict.yaml: english.txt frequency order, rime-ice spellings for the rest (see the call site). */
-fun cyimeEnglishWords(englishTxt: List<String>, rimeIceLines: List<String>, contractionLines: List<String>): String {
+fun cyimeEnglishWords(englishTxt: List<String>, rimeIceLines: List<String>, contractionLines: List<String>,
+                      extraWords: List<String> = emptyList()): String {
     val wordPattern = Regex("[A-Za-z][A-Za-z']*")
     val literal = mutableListOf<String>()
     var body = false
@@ -74,6 +75,8 @@ fun cyimeEnglishWords(englishTxt: List<String>, rimeIceLines: List<String>, cont
         add(text, weight)
     }
     literal.forEach { add(it, 1) }
+    // Letters-only words of data/cyime_mixed_words.tsv (PPT, CyIME), as spelled there.
+    extraWords.forEach { add(it, 1) }
     return "# Generated from bundled english.txt (order) and rime-ice en_dicts (spellings); licenses retained alongside sources.\n" +
         "---\nname: cyime_english\nversion: \"1\"\nsort: by_weight\n...\n" +
         rows.entries.joinToString("\n", postfix = "\n") { (key, weight) -> key + "\t" + weight }
@@ -115,7 +118,7 @@ val prepareChineseDictionaries by tasks.registering {
     inputs.property("unicodeCodes", 2)
     inputs.property("doublePinyinSentences", 1)
     inputs.property("shortcutOrder", 1)
-    inputs.property("englishWordsDictionary", 1)
+    inputs.property("englishWordsDictionary", 2)
     inputs.file(file("src/main/assets/english_contractions.txt"))
     val extWeights = file("data/rime_ice_ext_weights.tsv.gz")
     inputs.file(extWeights)
@@ -553,7 +556,8 @@ val prepareChineseDictionaries by tasks.registering {
         File(root, "cyime_english.dict.yaml").writeText(cyimeEnglishWords(
             file("src/main/assets/english.txt").readLines(),
             listOf("en_ext", "en").flatMap { File(root, "en_dicts/$it.dict.yaml").readLines() },
-            file("src/main/assets/english_contractions.txt").readLines()))
+            file("src/main/assets/english_contractions.txt").readLines(),
+            extraMixed.map { it[0] }.filter { w -> w.all { it in 'A'..'Z' || it in 'a'..'z' } }))
 
         // Same engine, dictionary and options as Chinese26; only the keyboard arrangement differs.
         // A sentence-final particle (吧, 呗, 呢…, app/data/sentence_final_particles.txt) is penalised as the first
