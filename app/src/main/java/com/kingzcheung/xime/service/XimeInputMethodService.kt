@@ -3765,6 +3765,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     // ── 原有方法 ──
 
     
+    /** 上一次开始输入时这个框要不要数字面板；只用来认出同一界面里数字框和文字框之间的切换（#333）。 */
+    private var lastStartWantedNumberPanel: Boolean? = null
+
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         endGlidePreview()
         super.onStartInput(attribute, restarting)
@@ -3898,10 +3901,15 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
         // Show the existing layout immediately. Native preparation is queued below,
         // before the first key, rather than loading translators on this callback.
-        if (!restarting) keyboardViewModel.resetKeyboard(uiState.value.isAsciiMode,
+        // 同一个界面里换输入框时宿主只给 restarting：数字框和文字框之间换了才照新框复位键盘（#333）；
+        // 同一类框照旧不动，QQ 这类每打一个字都重启输入的宿主不会把手动切的键盘打回去。
+        val wantsNumberPanel = editorInputPolicy.field.numberPanel ||
+            (EditorInfoClassifier.isNumberEditor(attribute) && SettingsPreferences.isAutoNumberKeyboardEnabled(this))
+        val keyboardRestart = restarting && (lastStartWantedNumberPanel ?: wantsNumberPanel) == wantsNumberPanel
+        lastStartWantedNumberPanel = wantsNumberPanel
+        if (!keyboardRestart) keyboardViewModel.resetKeyboard(uiState.value.isAsciiMode,
             uiState.value.currentSchemaId.ifBlank { SettingsPreferences.getCurrentSchema(this) },
-            editorInputPolicy.field.numberPanel ||
-                (EditorInfoClassifier.isNumberEditor(attribute) && SettingsPreferences.isAutoNumberKeyboardEnabled(this)))
+            wantsNumberPanel)
         synchronizeKeyboardInputSession()
 
         // 先重置候选状态到初始值，避免前一 session 的残留状态影响新输入
@@ -3964,7 +3972,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             }
         }
 
-        EditorInputPreparation(this).schedule(restarting, EditorInfoClassifier.isNumberEditor(attribute))
+        EditorInputPreparation(this).schedule(keyboardRestart, EditorInfoClassifier.isNumberEditor(attribute))
         attribute?.let { updateEnterKeyText(it) }
     }
     
