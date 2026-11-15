@@ -373,8 +373,8 @@ data class KeyboardInputPreferences(
             val hold = SpaceHoldAction.entries.firstOrNull { it.name == prefs.getString("space_hold_action", "CURSOR") }
                 ?: SpaceHoldAction.CURSOR
             val numberRow = SettingsPreferences.isNumberRowEnabled(context)
-            // 开关一变，26 键第一排的角标跟着换（见 QwertySwipeSymbols.numberRowUp）；键盘随后按新设置重画。
-            com.kingzcheung.xime.settings.KeysConfigHelper.numberRowCorners = numberRow
+            // 数字行或上下角标提示的开关一变，26 键的角标换成那一套（见 CornerVariant）；键盘随后按新设置重画。
+            com.kingzcheung.xime.settings.KeysConfigHelper.refreshCornerVariant(context)
             return KeyboardInputPreferences(
                 keyGlowEnabled = KeyEffectPreferences.glowEnabled(prefs),
                 keyAnimationEnabled = KeyEffectPreferences.animationEnabled(prefs),

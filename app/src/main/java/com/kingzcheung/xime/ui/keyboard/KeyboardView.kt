@@ -411,6 +411,10 @@ fun KeyboardView(
     // 设置里「在菜单里直接编辑」关着时，菜单右上角不出编辑按钮，和以前一样；编辑中被关掉就放弃这次编辑。
     val inlineEditingEnabled = rememberInlineQuickActionEditing()
     LaunchedEffect(inlineEditingEnabled) { if (!inlineEditingEnabled && inlineEditor.active) inlineEditor.cancel() }
+    val punctuationFull = !state.isAsciiMode && !state.inputProfile.language.typesLettersDirectly && (state.schemaSwitches.firstOrNull { it.name == "full_shape" }?.currentIndex?.let { it == 1 }
+        ?: SettingsPreferences.punctuationFullWidth(androidx.compose.ui.platform.LocalContext.current, true))
+    // 打开了「跟随全角半角」的字母键角标按它换写法（KeysConfigHelper.getKeyGesture）；在画键之前更新。
+    com.kingzcheung.xime.settings.KeysConfigHelper.cornerFullWidth = punctuationFull
     CompositionLocalProvider(
         LocalInlineQuickActionEditor provides inlineEditor,
         LocalKeyGapLightVoice provides gapLightVoice,
@@ -446,8 +450,7 @@ fun KeyboardView(
         LocalKeyboardPunctuation provides if (state.isCalculatorMode &&
             state.inputProfile.language != com.kingzcheung.xime.settings.InputLanguage.JAPANESE) null else KeyboardPunctuation(
             // 全角/半角只作用于中文与日文：英文键盘（含不开 ascii 的英文单词方案）的键面提示与上滑标点保持半角
-            full = !state.isAsciiMode && !state.inputProfile.language.typesLettersDirectly && (state.schemaSwitches.firstOrNull { it.name == "full_shape" }?.currentIndex?.let { it == 1 }
-                ?: SettingsPreferences.punctuationFullWidth(androidx.compose.ui.platform.LocalContext.current, true)),
+            full = punctuationFull,
             japanese = state.inputProfile.language == com.kingzcheung.xime.settings.InputLanguage.JAPANESE,
             chinese = !state.isAsciiMode && state.inputProfile.language == com.kingzcheung.xime.settings.InputLanguage.CHINESE),
         LocalKeyboardInputPreferences provides inputPreferences,
