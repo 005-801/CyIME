@@ -89,6 +89,22 @@ fun DoublePinyinSettingsContent(onBack: () -> Unit) {
             .onSuccess { schemes = it }.onFailure { message = "无法读取双拼方案：${it.message}" }
         enabled = withContext(Dispatchers.IO) { SchemaManager.getEnabledSchemas(context).toSet() }
     }
+    // 「在方案栏显示」「九键版本」的开关自动应用（SchemaChangeApplier）；应用完在这里说结果，没生效的写出原因。
+    LaunchedEffect(Unit) {
+        com.kingzcheung.xime.rime.SchemaChangeApplier.finished.collect { usable ->
+            val (shown, problems) = withContext(Dispatchers.IO) {
+                val ids = SchemaManager.getEnabledSchemas(context).filter { DoublePinyinSchemes.find(it) != null }
+                ids to com.kingzcheung.xime.rime.RimeConfigHelper.schemaProblems(context).filterKeys { it in ids }
+                    .mapKeys { (id, _) -> SchemaManager.getSchemaDisplayName(context, id) ?: id }
+            }
+            message = when {
+                !usable -> "没有应用成功，原因见「已安装的方案」"
+                problems.isNotEmpty() -> problems.entries.joinToString("；") { (name, reason) -> "${name}没生效：$reason" }
+                shown.isNotEmpty() -> "已应用，可在「语言与方案」的方案一栏选择"
+                else -> "已应用"
+            }
+        }
+    }
     DisposableEffect(context) {
         val prefs = SettingsPreferences.getPrefsPublic(context)
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->

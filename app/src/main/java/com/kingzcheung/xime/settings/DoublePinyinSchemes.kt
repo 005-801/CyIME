@@ -186,7 +186,8 @@ object DoublePinyinSchemes {
                 isOnLayout(it) && baseId(it) == id })
             SettingsPreferences.setCurrentSchema(context, updated.firstOrNull { InputProfiles.describe(it).language == InputLanguage.CHINESE } ?: updated.first())
         SchemaManager.setEnabledSchemas(context, updated)
-        notifyChanged(context)
+        // 和「已安装的方案」的开关同一条路自动应用（11-15）：以前只通知输入法，键盘没开着就一直等着用户去点部署。
+        com.kingzcheung.xime.rime.SchemaChangeApplier.request(context)
     }
 
     fun save(context: Context, scheme: DoublePinyinScheme) {
