@@ -375,6 +375,8 @@ private fun CustomImageThemeSection(currentThemeId: String, imageTheme: Boolean,
     var hasImage by remember { mutableStateOf(com.kingzcheung.xime.ui.theme.CustomImageTheme.hasImage(context)) }
     // 调整页正在调的图片（刚选的新图或已在用的那张）与要沿用的主题。
     var editing by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // 正在调位置的轮播图片（11-15）：确认只记它的摆放，取消什么都不删（图早就在用）。
+    var editingSlide by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     val motion = com.kingzcheung.xime.ui.theme.rememberBackgroundMotionSettings()
     val slides = remember(motion.slides) { com.kingzcheung.xime.ui.theme.CustomImageTheme.slides(context, motion.slides) }
@@ -443,6 +445,17 @@ private fun CustomImageThemeSection(currentThemeId: String, imageTheme: Boolean,
                 },
                 onAdd = { slidePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                 onRemoveSlide = { src -> scope.launch(Dispatchers.IO) { com.kingzcheung.xime.ui.theme.CustomImageTheme.removeSlide(context, src) } },
+                onAdjustSlide = { src -> editingSlide = src },
+                onApplySlideToOthers = { src ->
+                    scope.launch(Dispatchers.IO) {
+                        val placement = com.kingzcheung.xime.ui.theme.CustomImageTheme.slidePlacement(context, src)
+                        runCatching {
+                            slides.filter { it != src }.forEach {
+                                com.kingzcheung.xime.settings.BackgroundMotionPreferences.setSlidePlacement(context, it, placement)
+                            }
+                        }.onFailure { com.kingzcheung.xime.util.FileLogger.e("Appearance", "Slide placement save failed", it) }
+                    }
+                },
             )
             // 遮罩只管「我的图片」：图片关着时调它看不到任何变化，不放出来。
             if (imageOn) {
@@ -486,6 +499,25 @@ private fun CustomImageThemeSection(currentThemeId: String, imageTheme: Boolean,
                 editing = null
                 scope.launch(Dispatchers.IO) { com.kingzcheung.xime.ui.theme.CustomImageTheme.discard(context, src) }
             },
+        )
+    }
+    editingSlide?.let { src ->
+        CustomImageEditorSheet(
+            src = src,
+            baseThemeId = com.kingzcheung.xime.ui.theme.CustomImageTheme.baseFor(context, com.kingzcheung.xime.ui.theme.CustomImageTheme.ID),
+            initial = remember(src) { com.kingzcheung.xime.ui.theme.CustomImageTheme.slidePlacement(context, src) },
+            onConfirm = { placement ->
+                scope.launch {
+                    val saved = withContext(Dispatchers.IO) {
+                        runCatching { com.kingzcheung.xime.settings.BackgroundMotionPreferences.setSlidePlacement(context, src, placement) }
+                    }
+                    saved.onSuccess { editingSlide = null }.onFailure {
+                        com.kingzcheung.xime.util.FileLogger.e("Appearance", "Slide placement save failed", it)
+                        android.widget.Toast.makeText(context, "没有保存成功，请重试", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
+            onDismiss = { editingSlide = null },
         )
     }
     if (confirmDelete) {
