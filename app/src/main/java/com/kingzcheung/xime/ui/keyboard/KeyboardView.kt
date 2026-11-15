@@ -131,6 +131,14 @@ internal val LocalDeleteDrag = staticCompositionLocalOf<(() -> DeleteDragSession
 /** How long startup may take before the loading panel shows "正在加载词库" and its progress bar. */
 internal const val DEPLOY_NOTICE_DELAY_MS = 600L
 
+/**
+ * 首选上拖选改局部（PR #363）目前只接了 26 键双拼；九键、14 键和全拼等其它方案
+ * 照旧用长按首选里的拆词重选，两种入口不同时出现。
+ */
+internal fun usesSentenceDragEdit(profile: com.kingzcheung.xime.settings.InputProfile): Boolean =
+    profile.scheme == com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN &&
+        profile.layout.kind == com.kingzcheung.xime.settings.LayoutKind.ALPHABETIC
+
 /** Keep choices for the unconfirmed suffix when an earlier candidate is selected. */
 internal fun remainingSentenceSyllables(
     selected: List<com.kingzcheung.xime.rime.PinyinSyllableOption>, consumed: Int,
@@ -1585,7 +1593,8 @@ fun KeyboardView(
                                 com.kingzcheung.xime.handwriting.HandwritingTemplates.forget(handwritingContext, handwritingWord)
                             }
                         } else if (!word.isNullOrEmpty()) {
-                            deletePending = DeletePendingWord(word, pin = pinChoice(callbacks, cs, word)) {
+                            val parts = sentenceParts(callbacks, cs, word, first = (railEntry?.first ?: index) == 0, state.inputProfile)
+                            deletePending = DeletePendingWord(word, pin = pinChoice(callbacks, cs, word), parts = parts) {
                                 if (!callbacks.isCandidateSnapshotCurrent(cs)) return@DeletePendingWord
                                 if (railEntry != null) {
                                     callbacks.onGlobalCandidateDelete?.invoke(railEntry.first)
@@ -1598,7 +1607,7 @@ fun KeyboardView(
                     onSentenceSelectionChange = { start, end -> updateSentenceDrag(start, end, cs.engineRevision) },
                     onSentenceSelectionEnd = ::endSentenceDrag,
                     onSentenceSelection = if (sentenceEdit == null && !showHandwritingCandidates && !glossSwap &&
-                        !state.isAsciiMode && state.inputProfile.scheme == com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN &&
+                        !state.isAsciiMode && usesSentenceDragEdit(state.inputProfile) &&
                         !expandedDataMode && (cs.candidates.firstOrNull()?.length ?: 0) >= 2) { start, end ->
                         callbacks.onOpenSentenceEdit?.invoke(start, end, cs.engineRevision) { owner ->
                             if (owner != null && callbacks.isCandidateSnapshotCurrent(cs)) {
@@ -1823,7 +1832,8 @@ fun KeyboardView(
                                 .getOrNull(entry.globalIndex)?.text
                             if (!word.isNullOrEmpty()) {
                                 onHapticFeedback?.invoke()
-                                deletePending = DeletePendingWord(word, pin = pinChoice(callbacks, cs, word)) {
+                                val parts = sentenceParts(callbacks, cs, word, first = entry.globalIndex == 0, state.inputProfile)
+                                deletePending = DeletePendingWord(word, pin = pinChoice(callbacks, cs, word), parts = parts) {
                                     if (!callbacks.isCandidateSnapshotCurrent(cs)) return@DeletePendingWord
                                     callbacks.onGlobalCandidateDelete?.invoke(entry.globalIndex)
                                 }
@@ -2402,7 +2412,14 @@ fun KeyboardView(
                 onPin = { onHapticFeedback?.invoke(); deletePending = null; pending.pin?.apply?.invoke() },
                 pinnedPlace = pending.pin?.pinnedPlace ?: 0,
                 placeHere = pending.pin?.placeHere ?: 0,
-                onPinHere = { onHapticFeedback?.invoke(); deletePending = null; pending.pin?.applyHere?.invoke() })
+                onPinHere = { onHapticFeedback?.invoke(); deletePending = null; pending.pin?.applyHere?.invoke() },
+                parts = pending.parts?.words,
+                onPart = { part ->
+                    onHapticFeedback?.invoke(); deletePending = null
+                    pending.parts?.reselect?.invoke(part)
+                    // 重选这个词：收起展开页，候选栏就是这个词的其它写法。
+                    viewModel.setCandidatePageExpanded(false)
+                })
         }
 
         // A route change replaces only the panel content, never restarts the reveal host.
@@ -2757,6 +2774,7 @@ private fun KeyboardResizeControlsHost(
 @Composable
 internal fun ForgetLearningConfirm(word: String, message: String?, modifier: Modifier,
     onCancel: () -> Unit, onConfirm: () -> Unit, pinned: Boolean? = null, onPin: () -> Unit = {},
+    parts: List<String>? = null, onPart: (Int) -> Unit = {},
     pinnedPlace: Int = 0, placeHere: Int = 0, onPinHere: () -> Unit = {}) {
     val forget = "忘掉「$word」的学习记录？词库里本来有的词会回到原来的位置，自己打出来的新词会消失。"
     val forgetLine = "忘掉：删掉学习记录，词库里本来有的词回到原来的位置，自己打出来的新词会消失。"
@@ -2777,7 +2795,8 @@ internal fun ForgetLearningConfirm(word: String, message: String?, modifier: Mod
         modifier = modifier, onCancel = onCancel, onConfirm = onConfirm,
         extraLabel = when (pinned) { null -> null; false -> if (here) "固定第一" else "固定"; true -> "取消固定" },
         onExtra = onPin,
-        extra2Label = if (here) "固定在第 $placeHere 位" else null, onExtra2 = onPinHere)
+        extra2Label = if (here) "固定在第 $placeHere 位" else null, onExtra2 = onPinHere,
+        parts = parts, onPart = onPart)
 }
 
 /**
@@ -2789,7 +2808,9 @@ internal fun KeyboardConfirmCard(title: String, message: String, confirmLabel: S
     tag: String, modifier: Modifier, onCancel: () -> Unit, onConfirm: () -> Unit,
     extraLabel: String? = null, onExtra: () -> Unit = {},
     /** 第二个附加按钮（长按候选的「固定在第 N 位」）；按钮多了一行放不下就换行。 */
-    extra2Label: String? = null, onExtra2: () -> Unit = {}) {
+    extra2Label: String? = null, onExtra2: () -> Unit = {},
+    /** 长按首选整句时拆出的词；点一个只重选它。 */
+    parts: List<String>? = null, onPart: (Int) -> Unit = {}) {
     val cardColors = keyboardCardColors()
     Box(
         modifier = modifier
@@ -2813,6 +2834,16 @@ internal fun KeyboardConfirmCard(title: String, message: String, confirmLabel: S
                     style = MaterialTheme.typography.titleMedium,
                     color = cardColors.text
                 )
+                if (!parts.isNullOrEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "点一个词重选",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = cardColors.text.copy(alpha = .7f)
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    SentencePartChips(parts, cardColors.text, tag, onPart)
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = message,
@@ -2853,9 +2884,54 @@ private data class DeletePendingWord(
     val message: String? = null,
     /** 引擎候选的固定按钮；null＝不显示（手写候选、没在组词）。 */
     val pin: PinChoice? = null,
+    /** 长按首选整句时拆出的词；null＝不是整句（不显示）。 */
+    val parts: SentenceParts? = null,
     val onConfirm: () -> Unit,
 )
 
+/** 长按首选整句：拆出的词，以及点了第几个词后去重选。 */
+private class SentenceParts(val words: List<String>, val reselect: (Int) -> Unit)
+
+/**
+ * 首选是引擎组出来的整句（两个词以上）时拆成词；其它候选、拿不到（引擎正忙）都不拆。
+ * 26 键双拼用首选上的拖选改局部（PR #363），不再出拆词；其它方案还没有拖选，照旧出拆词。
+ */
+private fun sentenceParts(callbacks: KeyboardCallbacks, cs: com.kingzcheung.xime.service.CandidateState,
+    word: String, first: Boolean, profile: com.kingzcheung.xime.settings.InputProfile): SentenceParts? {
+    val reselect = callbacks.onReselectSentenceWord ?: return null
+    if (usesSentenceDragEdit(profile)) return null
+    if (!first || !cs.isComposing || cs.candidates.firstOrNull() != word) return null
+    val words = callbacks.sentenceWords(word)?.takeIf { it.size >= 2 } ?: return null
+    return SentenceParts(words) { target ->
+        if (callbacks.isCandidateSnapshotCurrent(cs)) reselect(words, target)
+    }
+}
+
+/** 整句拆出的词，一行排不下就换行；每个词一个按钮。 */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun SentencePartChips(parts: List<String>, textColor: Color, tag: String, onPart: (Int) -> Unit) {
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        parts.forEachIndexed { index, part ->
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(textColor.copy(alpha = .1f))
+                    .clickable { onPart(index) }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .testTag("$tag-part-$index"),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(part, style = MaterialTheme.typography.titleMedium, color = textColor)
+            }
+        }
+    }
+}
+
+/** 卡片底部的按钮，一行放不下（多了「固定在第 N 位」）就换行。 */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ConfirmCardButtons(content: @Composable () -> Unit) {

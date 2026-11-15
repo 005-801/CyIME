@@ -1,7 +1,6 @@
 package com.kingzcheung.xime.service
 
 import com.kingzcheung.xime.rime.RimeEngine
-import com.kingzcheung.xime.settings.InputScheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -171,7 +170,7 @@ internal class ImeSentenceEditor(private val service: XimeInputMethodService) {
 
     fun open(start: Int, end: Int, revision: Long, reply: (SentenceEditSession?) -> Unit) {
         val state = service.uiState.value
-        if (state.isAsciiMode || state.inputProfile.scheme != InputScheme.DOUBLE_PINYIN) { reply(null); return }
+        if (state.isAsciiMode || !com.kingzcheung.xime.ui.keyboard.usesSentenceDragEdit(state.inputProfile)) { reply(null); return }
         service.keyRouter.postRimeJob("sentence_edit_open") {
             val snapshot = service.rimeEngine.sentenceEditSnapshot(revision)
             val owner = snapshot?.takeIf { start >= 0 && start < end && end < it.boundaries.size &&
