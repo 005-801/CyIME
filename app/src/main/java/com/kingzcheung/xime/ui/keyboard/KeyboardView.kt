@@ -1052,7 +1052,10 @@ fun KeyboardView(
                 }
                 is ToolbarButtonItem.Plugin -> ({
                     if (item.action == "open_panel") {
-                        callbacks.onOpenToolPanel?.invoke(item.pluginId)
+                        // 这个插件的面板开着时再点一次是关上（翻译栏原来点了又重新打开一遍，只能点叉关）。
+                        if (toolPanelOpenFor(state.toolPanelVisible, state.toolPanelPluginId, item.pluginId))
+                            callbacks.onToolPanelClose?.invoke()
+                        else callbacks.onOpenToolPanel?.invoke(item.pluginId)
                     }
                 })
             }
@@ -1070,7 +1073,9 @@ fun KeyboardView(
                 com.kingzcheung.xime.keyboard.ToolbarPressMenu(load = { load(plugin.pluginId) },
                     onChoose = { key, option -> toolbarFeedback(); choose(plugin.pluginId, key, option) })
             }
-            return ToolbarAction(item, onLongClick = openSettings, pressMenu = pressMenu, active = item is ToolbarButtonItem.Builtin && when (item.button) {
+            return ToolbarAction(item, onLongClick = openSettings, pressMenu = pressMenu, active = if (item is ToolbarButtonItem.Plugin)
+                item.action == "open_panel" && toolPanelOpenFor(state.toolPanelVisible, state.toolPanelPluginId, item.pluginId)
+                else item is ToolbarButtonItem.Builtin && when (item.button) {
                 ToolbarButton.EDIT -> (page as? KeyboardPage.Overlay)?.route == OverlayRoute.Edit
                 ToolbarButton.EMOJI -> (page as? KeyboardPage.Overlay)?.route == OverlayRoute.Emoji
                 ToolbarButton.CLIPBOARD -> (page as? KeyboardPage.Overlay)?.route is OverlayRoute.Clipboard
@@ -3173,3 +3178,7 @@ private fun keyboardSwipeCursor(onCursorMove: ((Int) -> Unit)?, inputPreferences
         }
     }
 }
+
+/** 工具栏上这个插件的按钮对应的面板正开着：再点是关，按钮亮着。 */
+internal fun toolPanelOpenFor(visible: Boolean, openPluginId: String, pluginId: String): Boolean =
+    visible && openPluginId == pluginId
