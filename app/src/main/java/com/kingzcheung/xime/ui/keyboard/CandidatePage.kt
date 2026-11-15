@@ -589,7 +589,7 @@ private fun CandidatePageItem(
         BasicText(
             text = annotated,
             style = TextStyle(fontWeight = FontWeight.Normal, lineHeight = 25.sp,
-                platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)),
+                platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)).withInputTextLocale(),
         )
     }
 }

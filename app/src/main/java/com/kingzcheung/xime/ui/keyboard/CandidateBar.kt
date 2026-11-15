@@ -1210,7 +1210,7 @@ fun CandidateItem(
         val twoLineWidth = fit?.takeIf { it.twoLines }?.textWidth
         val primaryStyle = candidatePrimaryTextStyle(textSize, candidateFontFamily, isSelected).let {
             if (twoLineWidth != null) candidateTwoLineTextStyle(it, textSize) else it
-        }.copy(shadow = textShadow)
+        }.copy(shadow = textShadow).withInputTextLocale()
         Text(
             text = sentenceCandidateText(text, index, dragSelection, LocalSentenceCandidateHighlight.current, accentColor),
             modifier = (if (twoLineWidth != null) Modifier.width(with(LocalDensity.current) { twoLineWidth.toDp() })

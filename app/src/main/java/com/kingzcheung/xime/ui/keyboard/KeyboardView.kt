@@ -436,11 +436,11 @@ fun KeyboardView(
             !(inputPreferences.splitKeyboardEnabled && supportsSplitKeyboard(state.currentSchemaId, state.isAsciiMode))
         ) 0.5f else 0.8f,
         LocalKeyCornerRadius provides kbKey.cornerRadius.dp,
-        // 注音：字按台湾字形画（#371：中国大陆字体把 ㄧ 画成竖线，台湾横写时是横的；候选的繁体字也是台湾写法）。
-        // 只换没自己指定 style 的文字；系统字体没有台湾字形时不变。
+        // 汉字按当前输入语言的写法画（见 inputTextLocaleTag）：注音按台湾字形（#371：大陆字形把 ㄧ 画成竖线），
+        // 简体按大陆字形，日语、韩语各按自己的；日文系统上打中文不再是日本写法。系统字体没有那种字形时不变。
         androidx.compose.material3.LocalTextStyle provides androidx.compose.material3.LocalTextStyle.current.let { base ->
-            if (!state.isAsciiMode && state.inputProfile.scheme == com.kingzcheung.xime.settings.InputScheme.ZHUYIN)
-                base.copy(localeList = androidx.compose.ui.text.intl.LocaleList("zh-TW")) else base
+            inputTextLocaleTag(state.inputProfile.language, state.inputProfile.scheme, inputPreferences.traditionalOutput)
+                ?.let { base.copy(localeList = remember(it) { androidx.compose.ui.text.intl.LocaleList(it) }) } ?: base
         },
         LocalTextModeLabel provides when {
             page.textMainType() == MainType.HANDWRITING -> state.inputProfile.language.displayName
