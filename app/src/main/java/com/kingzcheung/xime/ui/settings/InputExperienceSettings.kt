@@ -128,7 +128,7 @@ internal fun InputExperienceSettings(
                     // 搜索「长按时间」等落到上面「按键角标的符号和数字」（SettingsSearch 的关键词），不单设锚点：没选长按时这里不显示。
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("长按多久输入角标：${symbolLongPressLabel(settings.symbolLongPressSeconds)} 秒")
-                        Text("默认 0.3 秒。26、14 键，九键和笔画都用这个时长。", style = MaterialTheme.typography.bodySmall)
+                        Text("默认 0.5 秒。26、14 键，九键和笔画都用这个时长。", style = MaterialTheme.typography.bodySmall)
                         Slider(value = settings.symbolLongPressSeconds, modifier = Modifier.testTag("symbol-long-press-slider"),
                             onValueChange = { settings = settings.copy(symbolLongPressSeconds = normalizeSymbolLongPressSeconds(it)) },
                             onValueChangeFinished = { settings.save(context) }, valueRange = 0.1f..1f, steps = 17)

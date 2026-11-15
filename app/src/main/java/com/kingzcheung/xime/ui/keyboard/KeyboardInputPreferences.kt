@@ -33,11 +33,11 @@ internal fun normalizeSymbolKeyHoldSeconds(value: Float): Float =
     ((value.takeIf { it.isFinite() } ?: 1f).coerceIn(0.3f, 2f) * 10).roundToInt() / 10f
 
 /**
- * 「长按输入」角标时按住多久输入：0.1–1 秒，每档 0.05 秒，默认 0.3 秒（原来写死的时长，用户 11-08 要求可调）。
+ * 「长按输入」角标时按住多久输入：0.1–1 秒，每档 0.05 秒，默认 0.5 秒（用户 11-15 定；原来 0.3 秒，11-08 起可调）。
  * 26/14/17/18 键、九键（含拂动时的数字）、笔画和自定义布局共用这一个时长。
  */
 internal fun normalizeSymbolLongPressSeconds(value: Float): Float =
-    ((value.takeIf { it.isFinite() } ?: 0.3f).coerceIn(0.1f, 1f) * 20).roundToInt() / 20f
+    ((value.takeIf { it.isFinite() } ?: 0.5f).coerceIn(0.1f, 1f) * 20).roundToInt() / 20f
 
 /** 九键「下一项」拖到候选算拖动选词的距离：键盘区宽或高的 20%–80%，每档 10%，默认 50%（用户 10-25 定的一半）。 */
 /** 角标不透明度：10%~100%，按 5% 一档；读坏了当 100%（原样）。 */
@@ -180,7 +180,7 @@ data class KeyboardInputPreferences(
     val frostedGlass: FrostedGlassConfig = FrostedGlassConfig(),
     val symbolInputMode: SymbolInputMode = SymbolInputMode.SWIPE_UP,
     /** 「长按输入」角标的触发时长，见 [normalizeSymbolLongPressSeconds]；只在角标为长按输入（含被 26 键滑行锁成长按）时起作用。 */
-    val symbolLongPressSeconds: Float = 0.3f,
+    val symbolLongPressSeconds: Float = 0.5f,
     val reverseSymbolSwipe: Boolean = false,
     /** 打字中（有拼音、候选或联想）清空时连同整个输入框一起清，默认关只清拼音（10-31 别人提的需求）。 */
     val clearAllWhileComposing: Boolean = false,
@@ -350,7 +350,7 @@ data class KeyboardInputPreferences(
                 SettingsPreferences.KEY_PREEDIT_BUBBLE_OPACITY,
                 com.kingzcheung.xime.settings.LetterSwipeBindings.CHINESE, com.kingzcheung.xime.settings.LetterSwipeBindings.ENGLISH,
                 SettingsPreferences.KEY_SPLIT_KEYBOARD, SettingsPreferences.KEY_SPLIT_RIGHT_G, SettingsPreferences.KEY_FILL_KEYBOARD_BLANK, SettingsPreferences.KEY_WIDE_KEYS, SettingsPreferences.KEY_EVEN_MERGED_KEYS, SettingsPreferences.KEY_NUMBER_ROW, SettingsPreferences.KEY_SPLIT_GAP_PORTRAIT, SettingsPreferences.KEY_SPLIT_GAP_LANDSCAPE, CHINESE_GLIDE_KEY, DELETE_CHINESE_GLIDE_CHARACTER_KEY, GLIDE_PREVIEW_KEY, ENGLISH_AUTO_SPACE_KEY, ENGLISH_PUNCTUATION_SPACE_KEY, EMAIL_SUFFIXES_KEY, ADDRESS_FIELDS_ENGLISH_KEY, SYMBOL_NAMES_KEY, GREEK_LETTERS_KEY, CYLM_LONG_ALTERNATIVE_KEY,
-                "space_hold_action", "cursor_gesture_mode", "cursor_hold_seconds", "neighbor_correction", com.kingzcheung.xime.settings.SpellingPatches.DOUBLE_PINYIN_CORRECTION_KEY, MIXED_INPUT_KEY, RARE_CHARACTERS_KEY, TRADITIONAL_OUTPUT_KEY, CANDIDATE_EMOJI_KEY, DATETIME_CANDIDATES_KEY, "symbol_input_mode", "symbol_long_press_seconds", "cursor_step_dp", "cursor_swipe_lines", "cursor_step_haptic", "cursor_step_sound", "key_text_scale", CORNER_HINT_OPACITY_KEY, HIDE_FUNCTION_KEY_HINTS_KEY, UPPERCASE_KEY_LABELS_KEY, CHINESE_UPPERCASE_KEY_LABELS_KEY, "fixed_symbols",
+                "space_hold_action", "cursor_gesture_mode", "cursor_hold_seconds", "neighbor_correction", com.kingzcheung.xime.settings.SpellingPatches.DOUBLE_PINYIN_CORRECTION_KEY, MIXED_INPUT_KEY, RARE_CHARACTERS_KEY, TRADITIONAL_OUTPUT_KEY, CANDIDATE_EMOJI_KEY, DATETIME_CANDIDATES_KEY, "symbol_input_mode", "symbol_long_press_seconds", "symbol_long_press_seconds_v2", "cursor_step_dp", "cursor_swipe_lines", "cursor_step_haptic", "cursor_step_sound", "key_text_scale", CORNER_HINT_OPACITY_KEY, HIDE_FUNCTION_KEY_HINTS_KEY, UPPERCASE_KEY_LABELS_KEY, CHINESE_UPPERCASE_KEY_LABELS_KEY, "fixed_symbols",
                 "fourteen_letter_swipe", "fourteen_letter_swipe_dp", "reverse_symbol_swipe", CLEAR_ALL_WHILE_COMPOSING_KEY, CLEAR_BEFORE_CURSOR_ONLY_KEY, SWIPE_DISTANCE_DELETE_KEY, com.kingzcheung.xime.keyboard.DeleteRepeatSpeed.KEY, REVERSE_DELETE_SWIPE_KEY, CLEAR_SWIPE_PERCENT_KEY, JAPANESE_LONG_VOWEL_KEY, "syllable_split_key", "shift_syllable_split", "kana_direction_hints", "flick_direction_disc", "flick_direction_disc_v2",
                 "glide_typing", "glide_typing_v2", "letter_long_press_menu", "t9_flick_letters", "t9_glide_typing", "language_key_hold_seconds", "language_key_hold_seconds_v2", LANGUAGE_KEY_IME_PICKER_KEY, "symbol_key_hold_seconds", "t9_candidate_drag_percent", T9_MERGE_ZERO_ENTER_KEY,
                 SettingsPreferences.KEY_HANDWRITING_WUBI_HINTS, "qwerty_stagger_mode", "qwerty_stagger_custom", "qwerty_comma_key", "qwerty_period_key", "qwerty_period_key_v2", "bottom_punctuation_swipe_up_v3", com.kingzcheung.xime.service.ENGLISH_SENTENCE_CAPS,
@@ -452,7 +452,9 @@ data class KeyboardInputPreferences(
                 symbolInputMode = SymbolInputMode.entries.firstOrNull {
                     it.name == prefs.getString("symbol_input_mode", null)
                 } ?: SymbolInputMode.SWIPE_UP,
-                symbolLongPressSeconds = normalizeSymbolLongPressSeconds(prefs.getFloat("symbol_long_press_seconds", 0.3f)),
+                symbolLongPressSeconds = // 旧默认 0.3 秒迁移为 0.5 秒（用户 11-15）；自己调过的时长保留。
+                    normalizeSymbolLongPressSeconds(prefs.getFloat("symbol_long_press_seconds_v2",
+                        prefs.getFloat("symbol_long_press_seconds", 0.3f).let { if (it == 0.3f) 0.5f else it })),
                 reverseSymbolSwipe = prefs.getBoolean("reverse_symbol_swipe", false),
                 clearAllWhileComposing = prefs.getBoolean(CLEAR_ALL_WHILE_COMPOSING_KEY, false),
                 clearBeforeCursorOnly = prefs.getBoolean(CLEAR_BEFORE_CURSOR_ONLY_KEY, false),
@@ -521,7 +523,7 @@ data class KeyboardInputPreferences(
             .putBoolean("fourteen_letter_swipe", fourteenLetterSwipe)
             .putFloat("fourteen_letter_swipe_dp", normalizeLetterSwipeDistance(fourteenLetterSwipeDp))
             .putString("symbol_input_mode", symbolInputMode.name)
-            .putFloat("symbol_long_press_seconds", normalizeSymbolLongPressSeconds(symbolLongPressSeconds))
+            .putFloat("symbol_long_press_seconds_v2", normalizeSymbolLongPressSeconds(symbolLongPressSeconds))
             .putBoolean("reverse_symbol_swipe", reverseSymbolSwipe)
             .putBoolean(CLEAR_ALL_WHILE_COMPOSING_KEY, clearAllWhileComposing)
             .putBoolean(CLEAR_BEFORE_CURSOR_ONLY_KEY, clearBeforeCursorOnly)
