@@ -470,10 +470,11 @@ private fun AnswerSection(facts: SetupFacts, answers: SetupAnswers, onAnswers: (
             }
         }
     }
-    // 选了九键就不再问一遍：全拼九键要用九键整句组词模型（自动留下），双拼九键只用双拼词库、用不到它。
+    // 选了九键就不再问一遍。全拼、双拼不管用不用九键都要词组模型（26 键整句也用它，11-15），这题只定新下哪一档。
     if (keyboard != KeyboardWay.T9) GuideQuestion("也用九键打字吗？", listOf(
-        Triple(true, "用九键", "九键按整句常用说法组词，长句更容易一次打对；需要九键整句组词模型"),
-        Triple(false, "不用九键", "只用 26 键、14 键或手写，不留九键模型"),
+        Triple(true, "用九键", "九键按整句常用说法组词，长句更容易一次打对；需要整句组词模型"),
+        Triple(false, "不用九键", if (SetupGuidePlanner.usesPinyin(facts, answers)) "只用 26 键、14 键或手写；拼音整句照样用整句组词模型，新下的用精简档"
+            else "只用 26 键、14 键或手写，不留整句组词模型"),
     ), answers.t9, "setup-t9") { onAnswers(answers.copy(t9 = it)) }
     GuideQuestion("语音输入打算怎么用？", listOf(
         Triple(VoiceUse.OFTEN, "经常用，想边说边看到字", "说话时字就跟着出来，停下后再自动改错、加标点"),
