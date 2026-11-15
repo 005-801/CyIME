@@ -710,9 +710,7 @@ private fun FixedBottomCalibrationSettings() {
         val prefs = SettingsPreferences.getPrefsPublic(context)
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == SettingsPreferences.KEY_EDGE_TO_EDGE_KEYBOARD || key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_POSITION ||
-                key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_PADDING_DP || key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_LOWERING_DP ||
-                key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_LOWERING_LIMIT_DP ||
-                key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP) {
+                key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_LOWERING_LIMIT_DP || SettingsPreferences.isBottomCalibrationKey(key)) {
                 edge = SettingsPreferences.edgeToEdgeKeyboard(context)
                 bottomPosition = SettingsPreferences.keyboardBottomPosition(context)
                 adjustment = SettingsPreferences.getKeyboardBottomAdjustmentDp(context)

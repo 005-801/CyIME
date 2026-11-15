@@ -1251,9 +1251,31 @@ object SettingsPreferences {
 
     private const val DEFAULT_KEYBOARD_BOTTOM_PADDING_DP = 0
 
-    fun getKeyboardBottomPaddingDp(context: Context): Int {
-        return getPrefs(context).getInt(KEY_KEYBOARD_BOTTOM_PADDING_DP, DEFAULT_KEYBOARD_BOTTOM_PADDING_DP).coerceAtLeast(0)
+    /**
+     * 底部留白、调低按横竖屏分开记（#329：1.15.69 撤回 1.15.68 的贴底算法时连分开记也一起撤了，调竖屏横屏也跟着变）。
+     * 只分开存值，贴底算法不变。后缀和 1.15.68 用过的 _portrait/_landscape 不同，那一版留下的旧值不会冒出来；
+     * 没调过的方向沿用不带后缀的旧值，升级后两个方向都和升级前一样。
+     */
+    private fun bottomOrientationSuffix(context: Context): String =
+        if (context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+            BOTTOM_LANDSCAPE_SUFFIX else BOTTOM_PORTRAIT_SUFFIX
+    private const val BOTTOM_PORTRAIT_SUFFIX = "@portrait"
+    private const val BOTTOM_LANDSCAPE_SUFFIX = "@landscape"
+
+    /** 改的是底部留白或调低（哪个方向都算）：键盘和设置页要重新量。 */
+    internal fun isBottomCalibrationKey(key: String?): Boolean =
+        when (key?.removeSuffix(BOTTOM_PORTRAIT_SUFFIX)?.removeSuffix(BOTTOM_LANDSCAPE_SUFFIX)) {
+            KEY_KEYBOARD_BOTTOM_PADDING_DP, KEY_KEYBOARD_BOTTOM_LOWERING_DP, KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP -> true
+            else -> false
+        }
+
+    private fun bottomCalibrationDp(context: Context, key: String, default: Int = 0): Int {
+        val prefs = getPrefs(context)
+        return prefs.getInt(key + bottomOrientationSuffix(context), prefs.getInt(key, default)).coerceAtLeast(0)
     }
+
+    fun getKeyboardBottomPaddingDp(context: Context): Int =
+        bottomCalibrationDp(context, KEY_KEYBOARD_BOTTOM_PADDING_DP, DEFAULT_KEYBOARD_BOTTOM_PADDING_DP)
 
     /**
      * 旧字段始终保存非负留白，低于系统建议值的校准单独保存。
@@ -1262,7 +1284,7 @@ object SettingsPreferences {
      */
     internal fun getKeyboardBottomAdjustmentDp(context: Context): Int =
         getKeyboardBottomPaddingDp(context).takeIf { it > 0 }
-            ?: -getPrefs(context).getInt(loweringKey(context), 0).coerceAtLeast(0)
+            ?: -bottomCalibrationDp(context, loweringKey(context))
 
     internal const val KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP = "keyboard_bottom_edge_lowering_dp"
 
@@ -1274,11 +1296,10 @@ object SettingsPreferences {
     }
 
     internal fun setKeyboardBottomAdjustmentDp(context: Context, adjustmentDp: Int) {
-        val edit = getPrefs(context).edit().putInt(KEY_KEYBOARD_BOTTOM_PADDING_DP, adjustmentDp.coerceAtLeast(0))
-        val lowering = loweringKey(context)
-        if (adjustmentDp < 0) edit.putInt(lowering, -adjustmentDp)
-        else edit.remove(lowering)
-        edit.apply()
+        // 只写当前方向；调低清零时写 0 而不是删掉，不然会退回不带后缀的旧值。
+        val suffix = bottomOrientationSuffix(context)
+        getPrefs(context).edit().putInt(KEY_KEYBOARD_BOTTOM_PADDING_DP + suffix, adjustmentDp.coerceAtLeast(0))
+            .putInt(loweringKey(context) + suffix, (-adjustmentDp).coerceAtLeast(0)).apply()
     }
 
     /** 键盘上次量到的「最多还能调低多少 dp」（系统建议值减安全下限，按当前方向）；没量过为 null。 */
@@ -1298,8 +1319,10 @@ object SettingsPreferences {
         // 「恢复系统建议」就是用系统给的底边：明确记下贴底关，不回到默认的开。
         // 「底部位置」回到自动（66 的效果），留白清零。
         getPrefs(context).edit().putBoolean(KEY_EDGE_TO_EDGE_KEYBOARD, true)
-            .putString(KEY_KEYBOARD_BOTTOM_POSITION, KeyboardBottomPosition.AUTO.name).remove(KEY_KEYBOARD_BOTTOM_PADDING_DP)
-            .remove(KEY_KEYBOARD_BOTTOM_LOWERING_DP).remove(KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP).apply()
+            .putString(KEY_KEYBOARD_BOTTOM_POSITION, KeyboardBottomPosition.AUTO.name).apply {
+                for (key in listOf(KEY_KEYBOARD_BOTTOM_PADDING_DP, KEY_KEYBOARD_BOTTOM_LOWERING_DP, KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP))
+                    for (suffix in listOf("", BOTTOM_PORTRAIT_SUFFIX, BOTTOM_LANDSCAPE_SUFFIX)) remove(key + suffix)
+            }.apply()
     }
 
     fun isSchemaImportWarningDismissed(context: Context): Boolean {

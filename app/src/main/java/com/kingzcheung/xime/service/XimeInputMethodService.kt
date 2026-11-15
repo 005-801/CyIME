@@ -1006,16 +1006,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             if (key?.startsWith(com.kingzcheung.xime.settings.HardwareKeyboardPreferences.PREFIX) == true) {
                 uiState.value = uiState.value.copy(hardwareOptions = com.kingzcheung.xime.settings.HardwareKeyboardPreferences.read(this))
             }
+            // 底部留白、调低按横竖屏分开存（键名带方向后缀），哪个方向的改了都重新量。
+            if (key == SettingsPreferences.KEY_EDGE_TO_EDGE_KEYBOARD || SettingsPreferences.isBottomCalibrationKey(key)) {
+                val decor = window.window?.decorView
+                refreshKeyboardBottomPadding()
+                updateKeyboardBottomInsets(decor?.rootWindowInsets)
+                decor?.requestApplyInsets()
+            }
             when (key) {
-                SettingsPreferences.KEY_EDGE_TO_EDGE_KEYBOARD, SettingsPreferences.KEY_KEYBOARD_BOTTOM_PADDING_DP,
-                SettingsPreferences.KEY_KEYBOARD_BOTTOM_LOWERING_DP, SettingsPreferences.KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP -> {
-                    val decor = window.window?.decorView
-                    val padding = SettingsPreferences.getKeyboardBottomPaddingDp(this@XimeInputMethodService)
-                    if (uiState.value.keyboardBottomPaddingDp != padding)
-                        uiState.value = uiState.value.copy(keyboardBottomPaddingDp = padding)
-                    updateKeyboardBottomInsets(decor?.rootWindowInsets)
-                    decor?.requestApplyInsets()
-                }
                 SettingsPreferences.KEY_INPUT_TEXT_LOCATION -> syncInlinePinyinLocation()
                 RimeConfigHelper.DEPLOYMENT_REVISION, com.kingzcheung.xime.settings.LanguagePreferences.KEY -> {
                     val languagesOnly = key == com.kingzcheung.xime.settings.LanguagePreferences.KEY
@@ -4237,6 +4235,13 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         return true
     }
 
+    /** 底部留白按当前方向重新读（#329：横竖屏分开记），转屏和改设置时调用。 */
+    private fun refreshKeyboardBottomPadding() {
+        val padding = SettingsPreferences.getKeyboardBottomPaddingDp(this)
+        if (uiState.value.keyboardBottomPaddingDp != padding)
+            uiState.value = uiState.value.copy(keyboardBottomPaddingDp = padding)
+    }
+
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         currentResolvedKeyboardSize = null
         clearHardwareSurfaceBounds()
@@ -4247,6 +4252,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // 期间经原连接做的编辑不会记进光标前文字，结束后整份作废，下次照旧去读。
         TrackedInputConnection.withRawConnection { super.onConfigurationChanged(newConfig) }
         trackedConnection?.memory?.edited()
+        refreshKeyboardBottomPadding()
         if (newConfig.screenWidthDp > newConfig.screenHeightDp) {
             closeToolPanel()
         }
