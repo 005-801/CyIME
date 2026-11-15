@@ -484,25 +484,7 @@ private fun StrokeKeyboardContent(
                     )
                 }
                 StrokeDigitKey(
-                    digit = "*", swipeDigit = "6",
-                    onClick = { onKeyPress("*") },
-                    onPress = { onKeyPressDown?.invoke("*") },
-                    backgroundColor = keyBackgroundColor,
-                    textColor = keyTextColor,
-                    modifier = Modifier.weight(1f),
-                    shadowEnabled = shadowEnabled,
-                    shadowElevation = shadowElevation,
-                    shadowShapeRadius = shadowShapeRadius,
-                    fontSize = strokeFontSize,
-                    onSwipeStateChange = onSwipeStateChange,
-                    swipes = swipesFor("*", "6"),
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-            ) {
-                StrokeDigitKey(
-                    digit = "分词", swipeDigit = "7",
+                    digit = "分词", swipeDigit = "6",
                     onClick = { onKeyPress("word_separator") },
                     onPress = { onKeyPressDown?.invoke("word_separator") },
                     backgroundColor = keyBackgroundColor,
@@ -513,7 +495,25 @@ private fun StrokeKeyboardContent(
                     shadowShapeRadius = shadowShapeRadius,
                     fontSize = strokeFontSize,
                     onSwipeStateChange = onSwipeStateChange,
-                    swipes = swipesFor("分词", "7"),
+                    swipes = swipesFor("分词", "6"),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+            ) {
+                StrokeDigitKey(
+                    digit = "*", swipeDigit = "7",
+                    onClick = { onKeyPress("*") },
+                    onPress = { onKeyPressDown?.invoke("*") },
+                    backgroundColor = keyBackgroundColor,
+                    textColor = keyTextColor,
+                    modifier = Modifier.weight(1f),
+                    shadowEnabled = shadowEnabled,
+                    shadowElevation = shadowElevation,
+                    shadowShapeRadius = shadowShapeRadius,
+                    fontSize = strokeFontSize,
+                    onSwipeStateChange = onSwipeStateChange,
+                    swipes = swipesFor("*", "7"),
                 )
                 StrokeDigitKey(
                     digit = "，", swipeDigit = "8",
