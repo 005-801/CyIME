@@ -595,7 +595,7 @@ private fun LayoutDisplayPage(
                             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                         )
                         Text(
-                            text = "选择输入编码的显示位置。终端输入框在候选栏显示。",
+                            text = "选择输入编码的显示位置。「显示在候选栏」时编码在候选栏上方的拼音气泡里，打开下面的「拼音放在键盘内」就放进候选栏左侧。终端输入框在候选栏显示。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)
@@ -634,7 +634,7 @@ private fun LayoutDisplayPage(
                     DoublePinyinRawPreeditToggle()
                     if (inputTextLocation == SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR) {
                         var showPreview by remember { mutableStateOf(SettingsPreferences.showPreeditPreview(context)) }
-                        SettingsToggleItem(Icons.TwoTone.DataObject, "显示拼音编辑栏", "打字时在候选区显示编码，支持编辑的方案可点按修改。",
+                        SettingsToggleItem(Icons.TwoTone.DataObject, "显示拼音编辑栏", "打字时在候选栏上方的气泡里显示编码（放在键盘内时在候选栏左侧），支持编辑的方案可点按修改。",
                             showPreview, { showPreview = it; SettingsPreferences.setShowPreeditPreview(context, it) })
                         if (showPreview) {
                             var insideKeyboard by remember { mutableStateOf(SettingsPreferences.inlinePreeditPreview(context)) }

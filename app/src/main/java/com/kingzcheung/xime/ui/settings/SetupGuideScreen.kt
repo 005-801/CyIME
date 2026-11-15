@@ -779,7 +779,7 @@ private fun MoreQuestions(facts: SetupMoreFacts, answers: SetupMoreChoices, onAn
     } else GuideQuestion("按键角标的符号和数字怎么输入？", com.kingzcheung.xime.ui.keyboard.CornerInputChoice.entries.map { choice ->
         Triple(choice, choice.label, when (choice) {
             com.kingzcheung.xime.ui.keyboard.CornerInputChoice.SWIPE -> "${upper}出上角标，${lower}出下角标；长按没有反应"
-            com.kingzcheung.xime.ui.keyboard.CornerInputChoice.SWIPE_BUBBLE -> "${upper}出上角标，${lower}出下角标；长按弹出这个字母的大写和带声调的写法"
+            com.kingzcheung.xime.ui.keyboard.CornerInputChoice.SWIPE_BUBBLE -> "${upper}出上角标，${lower}出下角标；长按弹出这个字母的大小写，元音还有带声调的写法"
             com.kingzcheung.xime.ui.keyboard.CornerInputChoice.LONG_PRESS -> "按住一下出上角标，${lower}出下角标；九键长按出数字"
         })
     }, answers.corner, "setup-more-corner") { onAnswers(answers.copy(corner = it)) }
