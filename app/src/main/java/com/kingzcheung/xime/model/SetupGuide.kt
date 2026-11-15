@@ -126,8 +126,8 @@ object SetupGuide {
             keyboard = keyboard,
             keyboardName = chineseLayout?.displayName.orEmpty(),
             shownDoublePinyin = DoublePinyinScheme.BUILTINS.map { it.id }.filterTo(linkedSetOf()) { it in enabledSchemas },
-            doublePinyinChoices = doublePinyins.map { DoublePinyinChoice(it.id, it.name, it.preview(), !DoublePinyinSchemes.isCustom(it.id),
-                lettersOnly = it.usesSemicolon) },
+            // 每种双拼都有 14 键、九键版本（ing 在分号上的方案把分号并到 L 键），不再标 lettersOnly。
+            doublePinyinChoices = doublePinyins.map { DoublePinyinChoice(it.id, it.name, it.preview(), !DoublePinyinSchemes.isCustom(it.id)) },
             wubiInstalled = File(SchemaManager.getRimeDir(context), "${SetupGuidePlanner.WUBI}.schema.yaml").isFile,
             wubi98Installed = File(SchemaManager.getRimeDir(context), "${SetupGuidePlanner.WUBI98}.schema.yaml").isFile,
             doublePinyinKeyHints = keys.doublePinyinKeyHints,

@@ -66,6 +66,9 @@ class NineKeyFuzzySettingsTest {
         val exact = NineKeyFuzzyReadings(DoublePinyinScheme.FLYPY, emptySet()).options("8746")
         assertTrue(exact.any { it.pinyin == "zhong" && it.spelling == "vs" && it.digits == 2 && !it.near })
         assertTrue(exact.none { it.near })
+        // 微软双拼 ing 的分号和 L 同在 5 键：95 列出 xing（送 x;）。
+        assertTrue(NineKeyFuzzyReadings(DoublePinyinScheme.MICROSOFT, emptySet()).options("95")
+            .any { it.pinyin == "xing" && it.spelling == "x;" && it.digits == 2 })
         System.getenv("CYIME_FUZZY_FIXTURE")?.let { path ->
             val output = File(path).apply { mkdirs() }
             listOf(nine, File(dir, "$doubleNine.schema.yaml"), full, double).forEach { it.copyTo(File(output, it.name), overwrite = true) }

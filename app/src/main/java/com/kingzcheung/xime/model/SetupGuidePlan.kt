@@ -30,7 +30,7 @@ enum class FuzzyHabit(val title: String, val example: String, val fuzzyIds: List
 
 /** 一种可选的双拼：[example] 是“双拼”两个字的打法，如 ul'pb。 */
 data class DoublePinyinChoice(val id: String, val name: String, val example: String, val builtin: Boolean = true,
-    /** 只有 26 键（ing 在分号键上的微软双拼）：14 键、九键没有分号键，不生成这两个版本。 */
+    /** 只有 26 键的双拼。现在没有这样的方案（微软双拼的分号在 14 键、九键上并到 L 键，11-15），留着给以后的方案。 */
     val lettersOnly: Boolean = false)
 
 /**
@@ -282,7 +282,7 @@ object SetupGuidePlanner {
     private const val K14_SUFFIX = "_14jian"
     private const val T9_SUFFIX = "_t9"
 
-    /** 这种打法能用的键盘：全拼、双拼有 26 键、14 键、九键（微软双拼只有 26 键）；五笔只问打法，不问键盘。 */
+    /** 这种打法能用的键盘：全拼、双拼有 26 键、14 键、九键（只有 26 键的双拼除外）；五笔只问打法，不问键盘。 */
     fun keyboards(facts: SetupFacts, answers: SetupAnswers): List<KeyboardWay> {
         val choices = when (answers.typing) {
             TypingWay.FULL_PINYIN -> listOf(KeyboardWay.QWERTY, KeyboardWay.K14, KeyboardWay.T9)

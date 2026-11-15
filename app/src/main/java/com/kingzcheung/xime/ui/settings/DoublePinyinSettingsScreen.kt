@@ -161,10 +161,9 @@ fun DoublePinyinSettingsContent(onBack: () -> Unit) {
                                 scheme.collisions().size.let { if (it > 0) " · $it 组同码" else "" },
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             DoublePinyinKeyMap(scheme)
-                            // 九键没有分号键，ing 在分号上的方案（微软双拼）没有九键版本。
-                            listOfNotNull(Triple(scheme.id, "在方案栏显示", "打开后可在「语言与方案」里选它"),
+                            // 九键没有分号键：ing 在分号上的方案（微软双拼）分号和 L 同在 5 键。
+                            listOf(Triple(scheme.id, "在方案栏显示", "打开后可在「语言与方案」里选它"),
                                 Triple(DoublePinyinScheme.t9Id(scheme.id), "九键版本", "用九键打${scheme.name}：每个字按两个双拼键所在的数字键")
-                                    .takeUnless { scheme.usesSemicolon }
                             ).forEach { (id, title, subtitle) ->
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
