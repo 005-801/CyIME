@@ -16,6 +16,8 @@ import com.kingzcheung.xime.service.QuickSendFormEditTextHolder
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -2834,6 +2836,9 @@ internal fun KeyboardConfirmCard(title: String, message: String, confirmLabel: S
                     style = MaterialTheme.typography.titleMedium,
                     color = cardColors.text
                 )
+                // 说明和整句拆词放进能上下滑的一段，按钮固定在卡片底下：键盘矮、按钮多（加了「固定」「固定在第 N 位」）
+                // 时说明再长也只是这段变短可滑，「忘掉」不会被挤出卡片（#391）。
+                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 if (!parts.isNullOrEmpty()) {
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -2850,6 +2855,7 @@ internal fun KeyboardConfirmCard(title: String, message: String, confirmLabel: S
                     style = MaterialTheme.typography.bodyMedium,
                     color = cardColors.text.copy(alpha = .7f)
                 )
+                }
                 Spacer(Modifier.height(12.dp))
                 ConfirmCardButtons {
                     TextButton(onClick = onCancel) {
