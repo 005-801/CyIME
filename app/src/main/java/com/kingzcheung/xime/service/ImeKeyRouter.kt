@@ -900,6 +900,23 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
     }
 
     /**
+     * 点了九键滑行的备选（#214）：整个组合就是这一笔，直接上屏这个词，清掉九键的组合（与通讯录候选同一条上屏路）。
+     * 组合已经变了（不再是这一笔）时什么也不做。上屏的词不是 Rime 选出来的，不记进九键词频。
+     */
+    private suspend fun commitT9GlideAlternative(digits: String, text: String) {
+        val holder = service.candidateTransform.t9GlideAlternatives
+        val state = service.uiState.value
+        // 候选的引擎版本上面已经核对过（这一份候选还是当前组合的）；这里再核对这一笔还登记着、没有分段上屏过。
+        if (text.isEmpty() || service.t9PartialSegments.isNotEmpty() ||
+            !holder.matches(digits, state.currentSchemaId, state.inputSessionId)) {
+            FileLogger.w("InputLatency", "t9 glide alternative dropped: composition changed")
+            return
+        }
+        holder.clear()
+        commitPreparedText(text, t9 = true)
+    }
+
+    /**
      * 分号是编码键的方案没在打字时点分号键：按全角／半角设置出标点（全角是「；」）。
      * 键面也跟着写（semicolonKeyLabel）；实体键盘的分号空闲时本来就由 Rime 出「；」。
      */
@@ -2597,7 +2614,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
             null
         }
         pendingAction?.glideInput?.let { input ->
-            applyGlideAlternative(input, snapshot)
+            if (isT9Schema(service.uiState.value.currentSchemaId)) commitT9GlideAlternative(input, pendingAction.commitText)
+            else applyGlideAlternative(input, snapshot)
             return
         }
         if (pendingAction != null && pendingAction.isPluginCandidate) {

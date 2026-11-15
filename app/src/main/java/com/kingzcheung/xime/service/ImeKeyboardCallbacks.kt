@@ -78,6 +78,10 @@ internal fun rememberImeKeyboardCallbacks(
             onLetterNeighbors = { schema, encoded -> service.keyRouter.letterNeighbors = schema to encoded },
             onGlideWord = service.keyRouter::commitGlideWord,
             onGlideCode = service.keyRouter::typeGlideCode,
+            onT9GlideAlternatives = { digits, words ->
+                val state = service.uiState.value
+                service.candidateTransform.t9GlideAlternatives.offer(digits, words, state.currentSchemaId, state.inputSessionId)
+            },
             glidePreviewer = service.keyRouter::glidePreviewer,
             onGlideEnglishPreview = service::showGlideEnglishPreview,
             onGlidePreviewCode = service::showGlidePreviewCode,

@@ -283,13 +283,17 @@ private fun T9KeyboardSwipeOverlay(
                 val doublePinyin = glideDoublePinyin
                 glideScope.launch {
                     // 很短又认不出：快打时手指一抖被当成了滑行，按点了起点那个键算，不吞这一下（用户 11-11）。
-                    val digits = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    val glide = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                         runCatching {
-                            com.kingzcheung.xime.glide.GlideLexicon.t9Digits(glideContext, keys, xs, ys, dictionary, doublePinyin)
-                        }.getOrDefault("")
-                    }.ifEmpty { com.kingzcheung.xime.glide.shortGlideTapKey(keys, xs, ys)?.toString().orEmpty() }
+                            com.kingzcheung.xime.glide.GlideLexicon.t9Glide(glideContext, keys, xs, ys, dictionary, doublePinyin)
+                        }.getOrNull()
+                    }
+                    val digits = glide?.digits.orEmpty()
+                        .ifEmpty { com.kingzcheung.xime.glide.shortGlideTapKey(keys, xs, ys)?.toString().orEmpty() }
                     if (digits.isEmpty()) return@launch
                     kotlinx.coroutines.withContext(inputContext) {
+                        // 同一笔的其他词（#214）：先登记，打入的数字串整笔出现时候选栏在首选之后给出。
+                        callbacks.onT9GlideAlternatives?.invoke(digits, glide?.alternatives.orEmpty().takeIf { glide?.digits == digits }.orEmpty())
                         for (digit in digits) {
                             val key = digit.toString()
                             if (callbacks.onPreeditKeyInput?.invoke(key) != true) controller.onDigitPressed(key)
