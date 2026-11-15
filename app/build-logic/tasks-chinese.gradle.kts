@@ -139,6 +139,8 @@ val prepareChineseDictionaries by tasks.registering {
     inputs.file(removedWords)
     val removedNames = file("data/cyime_removed_names.txt")
     inputs.file(removedNames)
+    val removedParticleHomophones = file("data/cyime_removed_particle_homophones.txt")
+    inputs.file(removedParticleHomophones)
     val acronymFilter = file("data/cyime_acronym_filter.lua")
     inputs.file(acronymFilter)
     val englishMemory = file("data/cyime_en_memory.lua")
@@ -251,6 +253,10 @@ val prepareChineseDictionaries by tasks.registering {
         // common surname, appear whole in a public list of Chinese personal names, and are not famous (base.dict, the
         // chat and subtitle word model, or weight 150 and up keep them).
         removedNames.readLines().filter { it.isNotBlank() && !it.startsWith("#") }.mapTo(removed) { it.trim() }
+        // A common word plus a homophone of a sentence-final particle that chat writes far less often than the word plus
+        // the particle (2026-11-15: shengxiaoma gave 生肖马, not 生效吗, on every keyboard). One whole word beat 生效 + 吗 in
+        // the sentence; the list is built by tools/ime_lab/particle_homophone_words.py, which never lists a base.dict word.
+        removedParticleHomophones.readLines().filter { it.isNotBlank() && !it.startsWith("#") }.mapTo(removed) { it.trim() }
         // 那 before 哪 (his rule: 那个 ahead of 哪个; ime5 2026-11-11 那几家 came after 哪几家). Where 那X and 哪X are both
         // words and X starts with a measure word or 几/些/一 (那几家, 那一种, 那些人), 那X gets at least 哪X's weight + 1.
         // A 那 form under 5% of its 哪 form is a misspelling, not a word of its own (那怕, 那一), and is left alone.
