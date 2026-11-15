@@ -671,7 +671,7 @@ fun KeyboardLayout(
                                     onInput = { text -> (onCommitText ?: onKeyPress)(text) },
                                     onKeyPressDown = onKeyPressDown,
                                     onKeyRelease = onKeyRelease,
-                                    showHints = swipeUpHintsEnabled || swipeDownHintsEnabled,
+                                    onSwipeStateChange = { state, bounds -> processSwipeState(state, bounds) },
                                 )
                             }
                         }
