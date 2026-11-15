@@ -39,6 +39,13 @@ local CACHE_MAX = 200
 -- ===== 补字 =====
 local HEAD_QUALITY = 60
 
+-- lua 造的候选没有 preedit 时，Rime 拿原始字母当编码显示（#372：分词后编码显示成 h s p n z）。
+-- 和 stroke.schema.yaml 的 preedit_format 一样换成笔画（康熙部首）；分词号、通配符原样留着。
+local STROKE_GLYPHS = { h = "⼀", s = "⼁", p = "⼃", n = "⼂", z = "⼄" }
+local function stroke_preedit(code)
+  return (code:gsub("[hspnz]", STROKE_GLYPHS))
+end
+
 -- 把编码按分词键切段。只允许 h/s/p/n/z 和分词键 '（含 * 的通配查询交给内置
 -- wildcard 模块，这里整段不处理，避免重复给候选）。
 local function split(input)
@@ -233,6 +240,7 @@ local function emit_char_heads(env, parts, seg)
         seen[t] = true
         local cand = Candidate("stroke", seg.start, stop, t, "")
         cand.quality = HEAD_QUALITY
+        cand.preedit = stroke_preedit(head .. "'")
         yield(cand)
       end
     end
@@ -295,6 +303,7 @@ local function emit_learned(env, input, seg)
   for _, item in ipairs(list) do
     local cand = Candidate("stroke", seg.start, seg._end, item.text, "")
     cand.quality = BASE_QUALITY + math.min(item.commits, 4)
+    cand.preedit = stroke_preedit(input)
     yield(cand)
   end
 end
@@ -343,7 +352,9 @@ function M.func(input, seg, env)
 
   -- 只保留本次组词过程中最长的编码。逐字选词时剩余编码（如 pp'nn）比完整
   -- 编码短，不再覆盖，上屏时才能拿到完整编码、段数才和字数对得上。
-  if not env.pending_code or #input > #env.pending_code then
+  -- 不是上一次编码的后半截（打一半清空后重打），就从这次重新记。
+  local pending = env.pending_code
+  if not pending or #input > #pending or pending:sub(-#input) ~= input then
     env.pending_code = input
   end
 
@@ -361,6 +372,7 @@ function M.func(input, seg, env)
       seen[text] = true
       local cand = Candidate("stroke_phrase", seg.start, stop or seg._end, text, "")
       cand.quality = QUALITY
+      cand.preedit = stroke_preedit(input:sub(1, (stop or seg._end) - seg.start))
       yield(cand)
     end
 
