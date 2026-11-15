@@ -43,9 +43,12 @@ internal object QwertySwipeSymbols {
     private val digits = firstRow("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
     private val singleLower = lowerRows("@", "～", "…", "—", "（", "）", "【", "】", "“", "！", "？", "：", "；", "《", "》", "、")
     private val singleEnglishLower = lowerRows("@", "~", "…", "-", "(", ")", "[", "]", "\"", "!", "?", ":", ";", "<", ">", "/")
-    // 开数字行又只显示一边：! @ # … 在数字行上，第一排放第二、三排打不出的半角符号（固定半角，写 Markdown、代码用）。
-    private val singleNumberRowFirst = firstRow("`", "'", "-", "_", "=", "+", "\\", "|", "{", "}")
-    private val singleNumberRowEnglishFirst = firstRow("`", "'", "_", "=", "+", "\\", "|", "{", "}", "•")
+    // 开数字行又只显示一边（用户 11-15 定稿）：数字在数字行上，第一排放日常常用、第二三排没有的符号，固定不跟随全角半角；
+    // 写代码的符号在看不见的那一边，照样能滑出。中文引号成对放在 Q W、E R，L 原来的 “ 换成 -，免得重复。
+    private val singleNumberRowFirst = firstRow("“", "”", "‘", "’", "·", "￥", "#", "%", "&", "*")
+    private val singleNumberRowLower = mapOf("l" to "-")
+    // 英文：撇号最常用放 Q，接着 # $ % & * + = \ _。
+    private val singleNumberRowEnglishFirst = firstRow("'", "#", "$", "%", "&", "*", "+", "=", "\\", "_")
     // 11-01 到 11-15 的数字行预设：升级时把旧的共用修改分到各套布局里，存着的这些格子算预设，不带过去（见 adoptVariants）。
     private val oldNumberRowUp = listOf(firstRow("「", "」", "『", "』", "℃", "←", "→", "√", "★", "?"),
         firstRow("「", "」", "『", "』", "℃", "←", "→", "√", "★", "※"), firstRow("", "", "", "", "", "", "", "", "", "?"))
@@ -58,7 +61,8 @@ internal object QwertySwipeSymbols {
     /** 只显示一边时，显示的那一边放的一套（每键一个符号）。 */
     private fun single(english: Boolean, numberRow: Boolean) =
         (if (!numberRow) digits else if (english) singleNumberRowEnglishFirst else singleNumberRowFirst) +
-            (if (english) singleEnglishLower else singleLower)
+            (if (english) singleEnglishLower else singleLower) +
+            (if (numberRow && !english) singleNumberRowLower else emptyMap())
     /** [variant] 这一套的上方预设。只显示下方的两套里，上方不显示但照样能滑出，沿用上下都显示时的上方。 */
     fun up(english: Boolean, variant: CornerVariant): Map<String, String> =
         if (variant.showsUp && !variant.showsDown) single(english, variant.numberRow)
@@ -85,7 +89,8 @@ internal object QwertySwipeSymbols {
     fun followPreset(english: Boolean, variant: CornerVariant): Set<String> {
         if (english || variant.showsUp == variant.showsDown) return emptySet()
         val direction = if (variant.showsUp) "up" else "down"
-        return singleLower.filterValues(::hasWidthPair).keys.map { "$direction.$it" }.toSet()
+        return single(false, variant.numberRow).filterKeys { it !in firstRowKeys }.filterValues(::hasWidthPair)
+            .keys.map { "$direction.$it" }.toSet()
     }
     private fun followKey(english: Boolean, variant: CornerVariant) = "qwerty_symbol_follow_${if (english) "en" else "zh"}_${variant.id}"
     /** 用户改过的「跟随全角半角」：格子 → 开或关；没改过的格子照 [followPreset]。 */

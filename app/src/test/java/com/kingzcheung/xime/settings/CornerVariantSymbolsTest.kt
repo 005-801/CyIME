@@ -61,6 +61,17 @@ class CornerVariantSymbolsTest {
             for (variant in listOf(CornerVariant.UP, CornerVariant.NR_UP))
                 assertEquals(26, QwertySwipeSymbols.up(english, variant).values.toSet().size)
         }
+        // 用户 11-15 定稿：开数字行只显示一边时第一排放常用符号；中文 L 换成 -，免得和 Q 的 “ 重复。
+        assertEquals(listOf("“", "”", "‘", "’", "·", "￥", "#", "%", "&", "*"),
+            firstRow.map { QwertySwipeSymbols.up(false, CornerVariant.NR_UP).getValue(it) })
+        assertEquals("-", QwertySwipeSymbols.up(false, CornerVariant.NR_UP).getValue("l"))
+        assertEquals("“", QwertySwipeSymbols.up(false, CornerVariant.UP).getValue("l"))
+        assertEquals(listOf("'", "#", "$", "%", "&", "*", "+", "=", "\\", "_"),
+            firstRow.map { QwertySwipeSymbols.up(true, CornerVariant.NR_UP).getValue(it) })
+        // 第一排固定，不跟随全角半角；第二三排和不开数字行时一样跟随。
+        val nrFollow = QwertySwipeSymbols.followPreset(false, CornerVariant.NR_UP)
+        assertTrue(firstRow.none { "up.$it" in nrFollow })
+        assertTrue("up.g" in nrFollow)
     }
 
     @Test fun `follow width swaps a paired symbol and leaves the rest alone`() {
