@@ -227,8 +227,9 @@ data class DoublePinyinScheme(
             |  comment_format: []
             |
             |t9:
-            |  # 左侧拼音栏和整句解码按全拼的数字计算，双拼九键不用；候选上方按双拼两键一字显示拼音。
-            |  left_panel_mode: none
+            |  # 左侧拼音栏的读音由输入法按本方案的两个键算（NineKeyFuzzyReadings），引擎只负责点选后锁定；
+            |  # 以前写 none，没开模糊音时双拼九键没有拼音栏，选不了读音（11-15）。候选上方按双拼两键一字显示拼音。
+            |  left_panel_mode: pinyin
             |  double_pinyin: true
             |  isDisplayOriginalPreedit: false
             |

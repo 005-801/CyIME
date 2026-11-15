@@ -62,6 +62,10 @@ class NineKeyFuzzySettingsTest {
         val doubleReadings = NineKeyFuzzyReadings(DoublePinyinScheme.FLYPY, groups).options("7454")
         assertTrue(doubleReadings.any { it.pinyin == "si" && !it.near })
         assertTrue(doubleReadings.any { it.pinyin == "shi" && it.spelling == "ui" && it.digits == 2 && it.near })
+        // 没开模糊音时双拼九键也有拼音栏：只列本方案两个键的精确读音（zhong 是 vs，按 87）。
+        val exact = NineKeyFuzzyReadings(DoublePinyinScheme.FLYPY, emptySet()).options("8746")
+        assertTrue(exact.any { it.pinyin == "zhong" && it.spelling == "vs" && it.digits == 2 && !it.near })
+        assertTrue(exact.none { it.near })
         System.getenv("CYIME_FUZZY_FIXTURE")?.let { path ->
             val output = File(path).apply { mkdirs() }
             listOf(nine, File(dir, "$doubleNine.schema.yaml"), full, double).forEach { it.copyTo(File(output, it.name), overwrite = true) }

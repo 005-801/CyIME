@@ -294,7 +294,7 @@ class DoublePinyinSchemeTest {
             assertTrue(text.startsWith(DoublePinyinScheme.GENERATED_MARK + id + "\n"))
             assertTrue(text.contains("  schema_id: $id\n  language: zh\n  input_scheme: double_pinyin\n"))
             assertTrue(text.contains("  prism: $id\n"))
-            assertTrue(text.contains("  left_panel_mode: none\n  double_pinyin: true\n  isDisplayOriginalPreedit: false\n"))
+            assertTrue(text.contains("  left_panel_mode: pinyin\n  double_pinyin: true\n  isDisplayOriginalPreedit: false\n"))
             assertTrue(text.contains("    - t9_processor\n") && text.contains("    - t9_filter\n"))
             assertFalse(text.contains("joint_decoder") || text.contains("cylm"))
             val rules = text.substringAfter("  algebra:\n").lines().takeWhile { it.startsWith("    - ") }
