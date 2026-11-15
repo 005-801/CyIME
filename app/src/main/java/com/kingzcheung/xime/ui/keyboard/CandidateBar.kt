@@ -538,7 +538,7 @@ fun CandidateBar(
                     modifier = Modifier.testTag("association-cancel-cross"), restingFill = edgeButtonFill,
                     slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true) {
                     Icon(Icons.Outlined.HighlightOff, contentDescription = "关闭联想",
-                        tint = protectedVisuals.textColor, modifier = Modifier.size(22.dp))
+                        tint = protectedVisuals.textColor, modifier = Modifier.size(22.dp * LocalCandidateSizeFactor.current))
                 }
                 // 这 4dp 铺满栏高、自己接点按，免得点在第一个候选左边被这个键放大的触摸范围接走（#274）。
                 Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
@@ -574,7 +574,7 @@ fun CandidateBar(
                                 modifier = Modifier.testTag("toolbar-leading"), slotWidth = toolbarSlot) {
                                 // 图标照旧用 CyIME 标志，只把读屏说明改成它的作用「展开菜单」。
                                 Icon(painterResource(R.drawable.cyime_toolbar_mark), contentDescription = "展开菜单",
-                                    tint = iconButtonTint, modifier = Modifier.size(22.dp))
+                                    tint = iconButtonTint, modifier = Modifier.size(22.dp * LocalCandidateSizeFactor.current))
                             }
                         }
                         Spacer(modifier = Modifier.width(4.dp))
@@ -588,7 +588,7 @@ fun CandidateBar(
                                 imageVector = Icons.Default.ContentCopy,
                                 contentDescription = "剪切板",
                                 tint = protectedVisuals.accentColor,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(16.dp * LocalCandidateSizeFactor.current)
                             )
                         }
                     }
@@ -856,7 +856,7 @@ private fun HideKeyboardButton(
     KeyboardToolbarButton(onHide, background, modifier = Modifier.testTag("toolbar-hide"), slotWidth = slotWidth) {
         Icon(if (isVoiceSticky) Icons.Default.KeyboardDoubleArrowDown else Icons.Default.KeyboardArrowDown,
             contentDescription = if (isVoiceSticky) "收起成悬浮条" else "收起键盘",
-            tint = tint, modifier = Modifier.size(24.dp))
+            tint = tint, modifier = Modifier.size(24.dp * LocalCandidateSizeFactor.current))
     }
 }
 
@@ -942,7 +942,7 @@ internal fun ToolbarActionButton(
         if (voiceActive && voiceState == RecognitionState.PROCESSING) {
             androidx.compose.material3.CircularProgressIndicator(Modifier.size(36.dp), color = visuals.accentColor, strokeWidth = 2.dp)
         }
-        ToolbarButtonIcon(action.item, tint = iconTint, modifier = Modifier.size(22.dp), active = action.active)
+        ToolbarButtonIcon(action.item, tint = iconTint, modifier = Modifier.size(22.dp * LocalCandidateSizeFactor.current), active = action.active)
     }
     }
 }
@@ -1046,7 +1046,7 @@ private fun ClipboardPreviewBar(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Default.ContentPaste, contentDescription = null,
-                        tint = visuals.textColor, modifier = Modifier.size(18.dp))
+                        tint = visuals.textColor, modifier = Modifier.size(18.dp * LocalCandidateSizeFactor.current))
                     if (image != null) {
                         ClipboardImagePreview(image,
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -1070,7 +1070,7 @@ private fun ClipboardPreviewBar(
                         },
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "打开剪贴板",
-                            tint = visuals.accentColor, modifier = Modifier.size(22.dp))
+                            tint = visuals.accentColor, modifier = Modifier.size(22.dp * LocalCandidateSizeFactor.current))
                     }
                 }
             }
@@ -1079,7 +1079,7 @@ private fun ClipboardPreviewBar(
             KeyboardToolbarButton(callbacks.onHideKeyboard, iconButtonContainer,
                 modifier = Modifier.testTag("toolbar-hide")) {
                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = "收起键盘",
-                    tint = visuals.textColor, modifier = Modifier.size(24.dp))
+                    tint = visuals.textColor, modifier = Modifier.size(24.dp * LocalCandidateSizeFactor.current))
             }
         } else {
             Spacer(Modifier.size(40.dp))
@@ -1359,7 +1359,7 @@ private fun CandidateExpansionButton(
         modifier = Modifier.testTag("candidate-expansion").semantics { stateDescription = if (expanded) "已展开" else "已收起" }) {
         Icon(Icons.Default.KeyboardArrowDown,
             contentDescription = if (expanded) "返回键盘" else "展开候选词",
-            tint = foreground, modifier = Modifier.size(24.dp).rotate(rotation))
+            tint = foreground, modifier = Modifier.size(24.dp * LocalCandidateSizeFactor.current).rotate(rotation))
     }
 }
 

@@ -535,7 +535,7 @@ private fun T9KeyboardContent(
                 }
                 // One four-slot scale for letters and syllables, independent of option count.
                 val metrics = t9CandidateMetrics(maxWidth.value, maxHeight.value,
-                    LocalDensity.current.fontScale, LocalKeyboardInputPreferences.current.keyTextScale,
+                    LocalDensity.current.fontScale, rememberCandidateTextSize().toFloat(),
                     keyContentScale(maxWidth.value, maxHeight.value / 4f))
                 val sample = rememberTextMeasurer().measure("shuang",
                     TextStyle(fontSize = metrics.fontSizeSp.sp, fontFamily = AppFonts.candidateFontFamily),
@@ -574,7 +574,7 @@ private fun T9KeyboardContent(
                             textColor = keyTextColor,
                             backgroundColor = keyBackgroundColor,
                             accentColor = accentColor,
-                            // 读音用大一号的字，每个各自缩到放得下；符号列表照旧。
+                            // 读音和候选字一样大，每个各自缩到放得下；符号列表小一号。
                             fontSize = (if (option != null) metrics.pinyinFontSizeSp else candidateFontSize).sp,
                             isSelected = isSelected,
                             approximate = option?.near == true,
