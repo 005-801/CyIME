@@ -388,7 +388,6 @@ fun KeyboardView(
     // 全屏手写时表情、编辑(方向)等面板回到平时键盘的大小（11-05），不再铺满整个屏幕。
     val handwritingOverlaySlot = handwritingPanelSlot(state.handwritingExpanded, state.handwritingNormalHeightDp,
         state.handwritingControlsWidthDp, state.handwritingControlsOffsetX, state.keyboardWidthDp, state.keyboardHeightDp)
-    var cursorControlActive by remember { mutableStateOf(false) }
     val floatingBottomClearance = remember(state.isFloatingMode) { mutableFloatStateOf(0f) }
     // 上拉变悬浮后接着跟手：换模式时这一层不变，由它接着读手指。
     val undockFollow = remember { KeyboardUndockFollow() }
@@ -472,10 +471,8 @@ fun KeyboardView(
             },
             onCursorMove = callbacks.onCursorMove,
             onCursorMoveVertical = callbacks.onCursorMoveVertical,
-            onCursorModeChange = {
-                cursorControlActive = it
-                if (it) callbacks.onPreeditCursorMove?.invoke("preedit_cursor:0")
-            },
+            // 进入移光标时键盘不压淡、不盖字（用户 11-15：遮罩把键缝动效挡住了）；提示写在空格自己上面（SpaceKeyButton）。
+            onCursorModeChange = { if (it) callbacks.onPreeditCursorMove?.invoke("preedit_cursor:0") },
             onVoiceModeChange = callbacks.onVoiceModeChange,
             onVoiceToggle = callbacks.onVoiceStickyToggle,
             onVoiceHoldEnd = callbacks.onVoiceHoldEnd,
@@ -1110,15 +1107,10 @@ fun KeyboardView(
         } }
         // 面板高度包含工具栏/候选栏；按键区只分配剩余高度。
         // Service 以整张卡片顶部上报避让区域，不能只上报按键区。
-        // 拼音放在键盘内时，光标调整移动的就是候选栏里的拼音：候选栏不压淡，只压淡按键区（#162）。
-        // 只在光标调整中读候选状态，平时按键不连带整块键盘重组。
-        val cursorKeepsBar = cursorControlActive && inputPreferences.preeditInsideKeyboard &&
-            candidateState.value.shownPreedit(state.inputProfile).isNotEmpty()
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .then(if (onPreviewArrangePositioned != null) Modifier.clearAndSetSemantics {} else Modifier)
-                .hiddenDuringCursorControl(cursorControlActive && !cursorKeepsBar)
         ) {
             var handwritingCandidates by remember(state.inputSessionId, state.inputProfile.language) { mutableStateOf<List<String>>(emptyList()) }
             var handwritingClearSignal by remember(state.inputSessionId, state.inputProfile.language) { mutableIntStateOf(0) }
@@ -1948,7 +1940,7 @@ fun KeyboardView(
                     modifier = panelMaterial.fillMaxSize()
                 )
             }
-            Box(Modifier.weight(1f).fillMaxWidth().hiddenDuringCursorControl(cursorKeepsBar).testTag("keyboard-underlay")) {
+            Box(Modifier.weight(1f).fillMaxWidth().testTag("keyboard-underlay")) {
             val clipboardPanel = LocalClipboardPanelExpansion.current
             val stableUnderlayState = if (clipboardPanel != null) {
                 val normal = state.copy(keyboardHeightDp = clipboardPanel.collapsedHeight)
@@ -2323,8 +2315,6 @@ fun KeyboardView(
             val configuration = LocalConfiguration.current
             val isLandscapeBottom = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         }
-
-        if (cursorControlActive) CursorControlOverlay(keyboardBgColor, keyTextColor, Modifier.matchParentSize())
 
         state.voiceNotice?.let { notice ->
             Box(Modifier.matchParentSize().then(Modifier.zIndex(21f)), contentAlignment = Alignment.TopCenter) {
