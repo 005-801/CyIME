@@ -181,6 +181,16 @@ fun KeyboardLayout(
         candidateState != null) remember(candidateState) {
         androidx.compose.runtime.derivedStateOf { awaitsDoublePinyinFinal(candidateState.value.inputText) }
     } else null
+    // 双拼辅助码（双拼方案 › 辅助码，默认关）：打拼音时 Shift 键变成「辅」，点它再打形码筛候选。
+    // 只认补丁真写进当前方案的（RimeEngine.auxCodeActive，按键队列第一键就读到），14 键、合并键布局没有。
+    val auxOnShift = if (LocalKeyboardInputPreferences.current.doublePinyinAuxCode && doublePinyin && !isAsciiMode &&
+        !fourteenKey && candidateState != null) remember(candidateState, uiState.currentSchemaId) {
+        androidx.compose.runtime.derivedStateOf {
+            val input = candidateState.value.inputText
+            auxCodeKeyShown(input, ingOnShift?.value == true) && com.kingzcheung.xime.rime.RimeEngine.isInitialized() &&
+                com.kingzcheung.xime.rime.RimeEngine.getInstance().auxCodeActive(uiState.currentSchemaId)
+        }
+    } else null
     // 注音（大千）：11 列，下面三行 10 键缩进半键，没有 Shift，删除键在第四行末尾。
     val zhuyin = !isAsciiMode && uiState.inputProfile.layout.kind == com.kingzcheung.xime.settings.LayoutKind.ZHUYIN
     // 数字行（默认关）：字母上方一排，键和顺序在「按键符号 → 数字行」里改；注音不加（见 [numberRowShown]）。
@@ -844,6 +854,7 @@ fun KeyboardLayout(
                             val shiftSlot = Modifier.weight(letterSideKeyWeight)
                             SemicolonShiftKey(
                                 ingActive = ingOnShift,
+                                auxActive = auxOnShift,
                                 onKeyPress = onKeyPress,
                                 onKeyPressDown = onKeyPressDown,
                                 backgroundColor = specialKeyBackgroundColor,

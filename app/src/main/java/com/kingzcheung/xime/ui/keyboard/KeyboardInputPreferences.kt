@@ -151,6 +151,11 @@ data class KeyboardInputPreferences(
      * 打了声母等韵母时左下角的 Shift 键变成 ing；见 KeysConfigHelper.setSemicolonOnShift、[SemicolonShiftKey]。
      */
     val doublePinyinSemicolonOnShift: Boolean = false,
+    /**
+     * 双拼辅助码开着（双拼方案 › 辅助码，默认关）。只读：由 SpellingPatches 自己保存（选的是哪张码表），[save] 不写；
+     * 放在这里是为了设置互锁（InputGestureLocks：打字时和「Shift 键分词」都要占 Shift 键）。
+     */
+    val doublePinyinAuxCode: Boolean = false,
     /** 中文全拼 26 键中英混输（nihaohello → 你好hello），默认关；见 app/data/cyime_mixed_input.lua。 */
     val mixedInput: Boolean = false,
     /** 中文全拼 26 键、双拼和九键补出生僻字（瀺 chan、槻 gui），默认关；见 app/data/cyime_rare_chars.lua。 */
@@ -355,6 +360,7 @@ data class KeyboardInputPreferences(
                 "glide_typing", "glide_typing_v2", "letter_long_press_menu", "t9_flick_letters", "t9_glide_typing", "language_key_hold_seconds", "language_key_hold_seconds_v2", LANGUAGE_KEY_IME_PICKER_KEY, "symbol_key_hold_seconds", "t9_candidate_drag_percent", T9_MERGE_ZERO_ENTER_KEY,
                 SettingsPreferences.KEY_HANDWRITING_WUBI_HINTS, "qwerty_stagger_mode", "qwerty_stagger_custom", "qwerty_comma_key", "qwerty_period_key", "qwerty_period_key_v2", "bottom_punctuation_swipe_up_v3", com.kingzcheung.xime.service.ENGLISH_SENTENCE_CAPS,
                 DOUBLE_PINYIN_KEY_HINTS_KEY, DOUBLE_PINYIN_KEY_HINTS_WITH_CORNERS_KEY, DOUBLE_PINYIN_SEMICOLON_ON_SHIFT_KEY,
+                com.kingzcheung.xime.settings.SpellingPatches.AUX_CODE_KEY,
                 SettingsPreferences.KEY_SWIPE_UP_HINTS_ENABLED, SettingsPreferences.KEY_SWIPE_DOWN_HINTS_ENABLED,
                 *SideSymbolTarget.entries.map { it.prefKey }.toTypedArray(),
                 BOTTOM_LIFT_CURSOR_KEY, VOICE_SWIPE_CANCEL_KEY, HANDWRITING_RECOGNIZE_EARLY_KEY,
@@ -435,6 +441,8 @@ data class KeyboardInputPreferences(
                 swipeUpHints = SettingsPreferences.isSwipeUpHintsEnabled(context),
                 swipeDownHints = SettingsPreferences.isSwipeDownHintsEnabled(context),
                 doublePinyinSemicolonOnShift = prefs.getBoolean(DOUBLE_PINYIN_SEMICOLON_ON_SHIFT_KEY, false),
+                doublePinyinAuxCode = com.kingzcheung.xime.settings.SpellingPatches.AuxCode.of(
+                    prefs.getString(com.kingzcheung.xime.settings.SpellingPatches.AUX_CODE_KEY, null)) != null,
                 mixedInput = prefs.getBoolean(MIXED_INPUT_KEY, false),
                 rareCharacters = prefs.getBoolean(RARE_CHARACTERS_KEY, false),
                 traditionalOutput = prefs.getBoolean(TRADITIONAL_OUTPUT_KEY, false),

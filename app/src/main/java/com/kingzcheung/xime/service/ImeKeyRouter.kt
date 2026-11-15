@@ -937,6 +937,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
      */
     internal fun schemeCodeKey(text: String): String? {
         val state = service.uiState.value
+        if (auxCodeTrigger(text)) return text
         if (text.length != 1 || state.isAsciiMode ||
             state.inputProfile.scheme != com.kingzcheung.xime.settings.InputScheme.EXTERNAL) return null
         val c = when (text[0]) { '，' -> ','; '。' -> '.'; else -> text[0] }
@@ -944,6 +945,17 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         if (c.isDigit() && (!service.candidateState.value.isComposing || state.inputProfile.layout.kind !in
                 setOf(com.kingzcheung.xime.settings.LayoutKind.ALPHABETIC, com.kingzcheung.xime.settings.LayoutKind.MERGED))) return null
         return c.toString().takeIf { service.rimeEngine.spellerAlphabetHas(state.currentSchemaId, c) || schemeLeadKey(c) }
+    }
+
+    /**
+     * 双拼辅助码（SpellingPatches.AuxCode）开着、正在打拼音：屏幕上的「辅」和实体键盘的 ` 都送进 Rime，
+     * 方案的辅码筛选（search.lua）从这里往后读形码。没在打字时 ` 照旧按标点上屏；辅助码关着时一点不变。
+     */
+    internal fun auxCodeTrigger(text: String): Boolean {
+        if (text != com.kingzcheung.xime.settings.SpellingPatches.AUX_CODE_TRIGGER) return false
+        val state = service.uiState.value
+        return !state.isAsciiMode && state.inputProfile.scheme == com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN &&
+            service.candidateState.value.isComposing && service.rimeEngine.auxCodeActive(state.currentSchemaId)
     }
 
     /**
@@ -1162,7 +1174,9 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 service.rimeEngine.discardClearUndo()
             }
             if (usesDirectFieldInput && routeDirectFieldKey(key, isShifted, hardwareEvent)) return@command
-            if (service.uiState.value.inputProfile.scheme == com.kingzcheung.xime.settings.InputScheme.EXTERNAL &&
+            // 双拼也读一次：辅助码开没开（` 送不送进 Rime）跟着方案走，见 [schemeCodeKey]。
+            if (service.uiState.value.inputProfile.scheme in setOf(com.kingzcheung.xime.settings.InputScheme.EXTERNAL,
+                    com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN) &&
                 !service.uiState.value.isAsciiMode &&
                 !service.rimeEngine.spellerAlphabetKnown(service.uiState.value.currentSchemaId)) service.rimeEngine.warmSpellerAlphabet()
             val panelKeyboard = service.keyboardViewModel.keyboardState.value.let {

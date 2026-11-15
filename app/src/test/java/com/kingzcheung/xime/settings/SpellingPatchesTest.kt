@@ -216,4 +216,66 @@ class SpellingPatchesTest {
         assertEquals("", value("cyime_omission_schema"))
         assertEquals("", value("cyime_edit_schema"))
     }
+
+    private val doublePinyinSchema = """
+        |schema:
+        |  schema_id: double_pinyin_flypy
+        |  dependencies:
+        |    - melt_eng
+        |    - radical_pinyin
+        |engine:
+        |  filters:
+        |    - simplifier@traditionalize_user
+        |    - lua_filter@*search@radical_pinyin
+        |    - uniquifier
+        |key_binder:
+        |  search: "`"
+        |""".trimMargin()
+
+    private fun patchedList(custom: String, key: String): List<String>? {
+        val root = SchemaManager.yaml.parseToYamlNode(custom) as YamlMap
+        val patch = root.entries.entries.single { it.key.content == "patch" }.value as YamlMap
+        val list = patch.entries.entries.singleOrNull { it.key.content == key }?.value as? YamlList ?: return null
+        return list.items.map { (it as YamlScalar).content }
+    }
+
+    /** 11-15 双拼辅助码：只把部件拼音那道筛选换成形码表，别的滤镜顺序不动，码表方案加进依赖一起编，再留个标记给输入法读。 */
+    @Test fun auxCodeSwapsOnlyTheRadicalSearchAndAddsItsTable() {
+        val parts = SpellingPatches.auxCodeParts(doublePinyinSchema, SpellingPatches.AuxCode.FLYPY)
+        val custom = SpellingPatches.patch("", parts.flatMap { it.lines })!!
+        assertEquals(listOf("simplifier@traditionalize_user", "lua_filter@*search@cyime_aux_flypy", "uniquifier"),
+            patchedList(custom, "engine/filters"))
+        assertEquals(listOf("melt_eng", "radical_pinyin", "cyime_aux_flypy"), patchedList(custom, "schema/dependencies"))
+        assertTrue(custom.contains("\"${SpellingPatches.AUX_CODE_MARK}\": flypy"))
+    }
+
+    @Test fun switchingAuxTablesDoesNotPileUpDependencies() {
+        val withZrm = doublePinyinSchema.replace("    - radical_pinyin\n", "    - radical_pinyin\n    - cyime_aux_zrm\n")
+        val parts = SpellingPatches.auxCodeParts(withZrm, SpellingPatches.AuxCode.FLYPY)
+        val custom = SpellingPatches.patch("", parts.flatMap { it.lines })!!
+        assertEquals(listOf("melt_eng", "radical_pinyin", "cyime_aux_flypy"), patchedList(custom, "schema/dependencies"))
+    }
+
+    /** 关着、或者方案自己改过没有部件拼音筛选时，一行都不写，方案原样。 */
+    @Test fun auxCodeOffOrUnknownSchemaWritesNothing() {
+        val off = SpellingPatches.auxCodeParts(null, null)
+        assertTrue(off.all { it.lines.isEmpty() })
+        assertTrue(SpellingPatches.auxCodeParts(doublePinyinSchema, null).all { it.lines.isEmpty() })
+        val noSearch = doublePinyinSchema.replace("    - lua_filter@*search@radical_pinyin\n", "")
+        assertTrue(SpellingPatches.auxCodeParts(noSearch, SpellingPatches.AuxCode.ZRM).all { it.lines.isEmpty() })
+        assertTrue(SpellingPatches.auxCodeParts("not: [yaml", SpellingPatches.AuxCode.ZRM).all { it.lines.isEmpty() })
+        // 开过再关：补丁段整段拿掉，回到原文件。
+        val original = "patch:\n  \"translator/enable_correction\": true\n"
+        val on = SpellingPatches.patch(original, SpellingPatches.auxCodeParts(doublePinyinSchema, SpellingPatches.AuxCode.ZRM).flatMap { it.lines })!!
+        assertEquals(original, SpellingPatches.patch(on, off.flatMap { it.lines }))
+    }
+
+    @Test fun auxCodeIdsAndTablesStayStable() {
+        // 存的值是 id，改了旧设置就读不出来。
+        assertEquals(listOf("zrm", "flypy"), SpellingPatches.AuxCode.entries.map { it.id })
+        assertEquals(setOf("cyime_aux_zrm", "cyime_aux_flypy"), SpellingPatches.AuxCode.schemaIds)
+        assertNull(SpellingPatches.AuxCode.of(null))
+        assertNull(SpellingPatches.AuxCode.of("off"))
+        assertEquals("`", SpellingPatches.AUX_CODE_TRIGGER)
+    }
 }

@@ -147,6 +147,10 @@ fun DoublePinyinSettingsContent(onBack: () -> Unit) {
                         DoublePinyinRawPreeditToggle()
                     }
                 }
+                // 辅助码（用户 11-15）：所有双拼 26 键方案共用，默认关。
+                Column(Modifier.settingsSearchAnchor("辅助码")) {
+                    SettingsSection(title = "辅助码") { DoublePinyinAuxCodeSetting(keyboardPrefs) }
+                }
                 Button(onClick = { edit(copyOf(DoublePinyinScheme.FLYPY)) }, enabled = !busy,
                     modifier = Modifier.testTag("double-pinyin-new")) { Text("新建双拼方案") }
                 schemes.forEach { scheme ->

@@ -183,10 +183,28 @@ class RimeEngine {
 
     private fun mergedSpellerAlphabet(): String {
         val schema = nativeGetCurrentSchema().orEmpty()
+        readAuxCode(schema)
         return mergedAlphabet?.takeIf { it.first == schema }?.second ?: run {
             nativeGetSchemaString(schema, "speller/alphabet").orEmpty().also { mergedAlphabet = schema to it }
         }
     }
+
+    /**
+     * 双拼辅助码：（方案，会话代号，开着没有）。补丁写了 cyime_aux_code/table 才算开着（SpellingPatches.auxCodeParts），
+     * 部署、换方案后会话代号变了就重读，设置刚改、还没部署完时照旧是关的。
+     */
+    @Volatile private var auxCode: Triple<String, Long, Boolean>? = null
+
+    private fun readAuxCode(schema: String) {
+        val generation = sessionGeneration.get()
+        if (auxCode?.let { it.first == schema && it.second == generation } == true) return
+        auxCode = Triple(schema, generation,
+            !nativeGetSchemaString(schema, com.kingzcheung.xime.settings.SpellingPatches.AUX_CODE_MARK).isNullOrEmpty())
+    }
+
+    /** 不加锁：[schemaId] 的辅助码开着（` 打字中送进 Rime，Shift 键换成「辅」）。还没读过时返回 false，按键队列下一键就读到。 */
+    internal fun auxCodeActive(schemaId: String): Boolean =
+        auxCode?.takeIf { it.first == schemaId && it.second == sessionGeneration.get() }?.third == true
 
     /** 按键队列里先读一次当前方案的字母表，屏幕键盘线程随后可以不加锁地查 [spellerAlphabetHas]。 */
     internal fun warmSpellerAlphabet() { locked { mergedSpellerAlphabet() } }
@@ -198,8 +216,9 @@ class RimeEngine {
     internal fun spellerAlphabetHas(schemaId: String, c: Char): Boolean =
         mergedAlphabet?.takeIf { it.first == schemaId }?.second?.contains(c) == true
 
-    /** 不加锁：[schemaId] 的字母表已经读过（读到空串也算）。 */
-    internal fun spellerAlphabetKnown(schemaId: String): Boolean = mergedAlphabet?.first == schemaId
+    /** 不加锁：[schemaId] 的字母表已经读过（读到空串也算），辅助码也读过（换过会话要重读）。 */
+    internal fun spellerAlphabetKnown(schemaId: String): Boolean = mergedAlphabet?.first == schemaId &&
+        auxCode?.let { it.first == schemaId && it.second == sessionGeneration.get() } == true
 
     internal fun mergedLetterKeyCode(letter: Char): Int = locked {
         // An intentionally customized old schema must remain usable and must not be overwritten.
