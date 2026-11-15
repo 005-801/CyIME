@@ -124,27 +124,26 @@ fun SetupGuideScreen(firstRun: Boolean, onDone: () -> Unit, onOpenPerformance: (
     }
     if (showMore) {
         BackHandler { showMore = false }
-        // 改了的先存下，再去别的页面，回来不丢。
-        fun applyThen(next: () -> Unit) {
-            val from = moreFacts?.current; val to = moreAnswers
-            if (from == null || to == null || from == to) { next(); return }
-            scope.launch {
-                withContext(Dispatchers.IO) { SetupGuide.applyMore(context, from, to) }
-                next()
-            }
-        }
         SetupMoreContent(
             facts = moreFacts, answers = moreAnswers, result = moreResult,
-            onAnswers = { moreAnswers = it },
+            // 点哪项就马上写进设置（和设置页那个开关同一处、同一个写法），再读回实际生效的值（11-14 反馈：这里选了
+            // 「退格直接删字」，没点「好了」就返回，设置页的开关不跟着开）。不再等「好了」：返回、去别的页面都不丢，两边随时一致。
+            onAnswers = { picked ->
+                val now = moreAnswers
+                moreAnswers = picked
+                if (now != null && now != picked) {
+                    SetupGuide.applyMore(context, now, picked)
+                    moreAnswers = SetupGuide.readMoreChoices(context)
+                }
+            },
             onBack = { showMore = false },
             onSkip = onDone,
-            onOpenRoute = onOpenRoute?.let { open -> { route: String -> applyThen { open(route) } } },
+            onOpenRoute = onOpenRoute,
+            // 已经都写进去了，「好了」只列出这次打开后改了哪些。
             onApply = {
                 val from = moreFacts?.current; val to = moreAnswers
                 if (from == null || to == null || from == to) onDone()
-                else scope.launch {
-                    moreResult = withContext(Dispatchers.IO) { SetupGuide.applyMore(context, from, to) }
-                }
+                else moreResult = SetupMore.changes(from, to)
             },
             onDone = onDone,
         )
@@ -663,8 +662,8 @@ private fun MoreEntry(onClick: () -> Unit) {
 }
 
 /**
- * 「更多配置」：大家最常问的几项，一题一组大选项卡。每题先选着现在的设置，不点就不改；点「好了」只改点过的项，
- * 「跳过」什么都不改。说不清的几样（剪贴板同步、键盘尺寸、性能与省电）只放跳转行。
+ * 「更多配置」：大家最常问的几项，一题一组大选项卡。每题先选着现在的设置，点哪项就马上改成哪项（11-14 起，和设置页随时一致）；
+ * 「好了」列出这次改了哪些；一项都没改时右上角是「跳过」，直接离开。说不清的几样（剪贴板同步、键盘尺寸、性能与省电）只放跳转行。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -687,7 +686,8 @@ internal fun SetupMoreContent(
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回") }
                 },
-                actions = { if (result == null) TextButton(onClick = onSkip, modifier = Modifier.testTag("setup-more-skip")) {
+                // 改过的已经生效，再写「跳过」像是能撤销；改过就只留下面的「好了」。
+                actions = { if (result == null && facts?.current == answers) TextButton(onClick = onSkip, modifier = Modifier.testTag("setup-more-skip")) {
                     Text("跳过", style = GuideText.body())
                 } },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -716,7 +716,8 @@ internal fun SetupMoreContent(
                 }
                 Spacer(Modifier.height(24.dp))
             } else {
-                Text("选中的是现在的设置，不点就不改。", style = GuideText.body(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("选中的是现在的设置。点哪项就马上改成哪项，和设置页里那个开关是同一个设置。",
+                    style = GuideText.body(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 MoreQuestions(facts, answers, onAnswers)
                 if (onOpenRoute != null) {
                     GuideHeading("要到单独页面设的")
