@@ -1086,6 +1086,8 @@ fun SwipeableIconKeyButton(
     distanceDelete: Boolean = false,
     /** 删除键：按住连删按「长按删除速度」。会左右滑动删除的键都是删除键；手写的删除键不接滑动，单独标。 */
     deleteKey: Boolean = distanceDelete,
+    /** 键缝动效：删除键往里收，其余功能键按下亮；九键合并的大回车传 SWEEP，和普通回车一样。 */
+    gapLight: GapLightKind = if (deleteKey) GapLightKind.PULL else GapLightKind.PRESS,
 ) {
     // Gesture coroutines survive recomposition; route to the current editor/input callbacks.
     val currentOnClick by rememberUpdatedState(onClick)
@@ -1198,7 +1200,7 @@ fun SwipeableIconKeyButton(
             .background(feedbackColors.background)
             .keyHeldHighlight(isPressed && feedback == KeyFlickFeedback.NORMAL), materialLevel = com.kingzcheung.xime.ui.theme.MaterialLevel.RAISED,
                 glowVisibility = if (feedback == KeyFlickFeedback.NORMAL) 1f else 1f - (flickPreview?.progress ?: 0f),
-                gapLight = if (deleteKey) GapLightKind.PULL else GapLightKind.PRESS)
+                gapLight = gapLight)
             .then(if (honeycombEdge != null) Modifier.honeycombLabelArea(half = true) else Modifier),
         contentAlignment = Alignment.Center
     ) {

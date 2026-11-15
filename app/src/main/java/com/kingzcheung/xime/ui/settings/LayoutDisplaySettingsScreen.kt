@@ -537,7 +537,9 @@ private fun LayoutDisplayPage(
                         Column(Modifier.settingsSearchAnchor("候选注释内容")) {
                             Text("候选注释内容", style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp))
-                            Text("释义：中文候选显示英文，混出的英文候选显示中文，九键长按「下一项」或按住 Shift 再选候选就上屏英文单词；选释义会自动下载释义词典，并把上面的「自动」改成「显示」，查不到的候选仍显示拼音。",
+                            // 九键「去掉 0 键，回车加高」开着时没有「下一项」，不写九键那半句（用户 11-15）。
+                            val nineNext = !com.kingzcheung.xime.ui.keyboard.rememberKeyboardInputPreferences().t9MergeZeroIntoEnter
+                            Text("释义：中文候选显示英文，混出的英文候选显示中文，${if (nineNext) "九键长按「下一项」或" else ""}按住 Shift 再选候选就上屏英文单词；选释义会自动下载释义词典，并把上面的「自动」改成「显示」，查不到的候选仍显示拼音。",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 16.dp))
                             var glossDownloadRequest by remember { mutableStateOf(0) }
