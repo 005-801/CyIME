@@ -920,6 +920,9 @@ object KeysConfigHelper {
     private var symbolOverridesEn: Map<CornerVariant, Map<String, String>> = emptyMap()
     /** 中文各套里跟随全角半角的格子（英文不分全角半角）。 */
     private var symbolFollowsZh: Map<CornerVariant, Set<String>> = emptyMap()
+    /** 数字行键各套的角标修改（中文 false、英文 true → 套 → 格子），和中文各套里跟随全角半角的格子，见 [NumberRowSymbols]。 */
+    private var numberRowOverrides: Map<Boolean, Map<CornerVariant, Map<String, String>>> = emptyMap()
+    private var numberRowFollowsZh: Map<CornerVariant, Set<String>> = emptyMap()
     private var symbolCustomZh: Map<String, KeyGestureConfig> = emptyMap()
     private var symbolCustomEn: Map<String, KeyGestureConfig> = emptyMap()
     private var symbolOverridesK14: Map<String, String> = emptyMap()
@@ -947,6 +950,11 @@ object KeysConfigHelper {
             symbolOverridesEn = CornerVariant.entries.associateWith { QwertySwipeSymbols.load(context, true, it) }
             symbolFollowsZh = CornerVariant.entries.associateWith {
                 QwertySwipeSymbols.follows(false, it, QwertySwipeSymbols.loadFollows(context, false, it)) }
+            val numberRowVariants = CornerVariant.entries.filter { it.numberRow }
+            numberRowOverrides = listOf(false, true).associateWith { english ->
+                numberRowVariants.associateWith { NumberRowSymbols.load(context, english, it) } }
+            numberRowFollowsZh = numberRowVariants.associateWith {
+                NumberRowSymbols.follows(false, NumberRowSymbols.loadFollows(context, false, it)) }
             symbolOverridesK14 = FourteenKeySymbols.load(context)
             symbolOverridesCustom = customLayouts.filter(CustomLayoutSymbols::editable)
                 .associate { it.id to CustomLayoutSymbols.load(context, it) }
@@ -1864,6 +1872,19 @@ object KeysConfigHelper {
     /** 获取笔画键手势配置（xime.yaml keyboard.stroke.keys，custom 键级覆盖）。
      *  键 id 为键面标签：一、丨、丿、丶、乛、*、分词、，、。 */
     fun getStrokeKeyGesture(key: String): KeyGestureConfig? = _strokeGestureConfigs[key]
+
+    /**
+     * 数字行键 [key] 现在的上方、下方角标（键盘现在这一套；中文打开了跟随全角半角的格子按现在的全角半角换写法）。
+     * 没有的方向是空字符串。读的是 Compose 状态，开关、全角半角一变就重画。
+     */
+    internal fun numberRowCorners(key: String, english: Boolean): Pair<String, String> {
+        val variant = cornerVariant
+        val (up, down) = NumberRowSymbols.cells(key, numberRowOverrides[english]?.get(variant).orEmpty())
+        val follows = if (english) emptySet() else numberRowFollowsZh[variant].orEmpty()
+        fun shown(direction: String, stored: String) =
+            if ("$direction.$key" in follows) QwertySwipeSymbols.width(stored, cornerFullWidth) else stored
+        return shown("up", up) to shown("down", down)
+    }
 
     internal fun qwertySymbolEditorValues(context: Context, english: Boolean,
         variant: CornerVariant = cornerVariant): Map<String, String> {

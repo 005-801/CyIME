@@ -671,7 +671,10 @@ fun KeyboardLayout(
                                     onInput = { text -> (onCommitText ?: onKeyPress)(text) },
                                     onKeyPressDown = onKeyPressDown,
                                     onKeyRelease = onKeyRelease,
-                                    showHints = swipeUpHintsEnabled || swipeDownHintsEnabled,
+                                    showUpHints = swipeUpHintsEnabled,
+                                    showDownHints = swipeDownHintsEnabled,
+                                    english = isAsciiMode || uiState.inputProfile.language != com.kingzcheung.xime.settings.InputLanguage.CHINESE,
+                                    configVersion = cfgVer,
                                 )
                             }
                         }

@@ -42,7 +42,9 @@ internal fun numberRowShiftSymbol(key: String): String? = NUMBER_SHIFT_SYMBOLS[k
 
 /**
  * 数字行的一排键：点按把键上写的原样上屏（[onInput]，和字母键上角标的数字同一条路，不拿来选候选）；
- * 数字键上滑、下滑或长按出 [numberRowShiftSymbol]，[showHints] 关时只是不显示角标，照样能滑出。
+ * 上滑出上方角标、下滑出下方角标，长按出上方角标（上方空着时出下方）。角标在「按键符号」26 键页数字行上改，
+ * 预设上下都是 [numberRowShiftSymbol]（[com.kingzcheung.xime.settings.NumberRowSymbols]）。
+ * [showUpHints]、[showDownHints] 关时只是不显示那一边的角标，照样能滑出；上下一样时只画上方一个。
  */
 @Composable
 internal fun NumberKeyRow(
@@ -58,22 +60,31 @@ internal fun NumberKeyRow(
     onKeyPressDown: ((String) -> Unit)?,
     onKeyRelease: ((String) -> Unit)?,
     modifier: Modifier = Modifier,
-    showHints: Boolean = true,
+    showUpHints: Boolean = true,
+    showDownHints: Boolean = true,
+    /** 英文键盘用英文那几套；中文以外的语言也是。 */
+    english: Boolean = false,
+    /** 角标改了（[com.kingzcheung.xime.settings.KeysConfigHelper.configVersion]）时重画。 */
+    @Suppress("UNUSED_PARAMETER") configVersion: Int = 0,
 ) {
     val spans = numberRowSpans(keys.size, splitAt)
     Row(modifier.fillMaxWidth().testTag("number-row")) {
         keys.forEachIndexed { index, key ->
             if (index == splitAt) SplitGapSpacer(NUMBER_ROW_SPLIT_ROW, splitGap)
-            val shift = numberRowShiftSymbol(key)
-            val commitShift: ((String) -> Unit)? = shift?.let { symbol -> { _: String -> onInput(symbol) } }
+            val (upCell, downCell) = com.kingzcheung.xime.settings.KeysConfigHelper.numberRowCorners(key, english)
+            val up = upCell.takeIf { it.isNotEmpty() }
+            val down = downCell.takeIf { it.isNotEmpty() }
+            val commit: (String) -> ((String) -> Unit) = { symbol -> { _: String -> onInput(symbol) } }
             KeyButton(
                 text = key,
                 onClick = { onInput(key) },
-                swipeText = shift?.takeIf { showHints },
-                swipeDownText = shift?.takeIf { showHints },
-                onSwipe = commitShift,
-                onSwipeDown = commitShift,
-                onLongClick = shift?.let { symbol -> { onInput(symbol) } },
+                swipeText = up?.takeIf { showUpHints },
+                swipeDownText = down?.takeIf { showUpHints || showDownHints },
+                // 下方角标画在键上：只显示下方时画；上下都显示时和上方不一样才画，一样的只画上方一个（原来的样子）。
+                swipeDownKeyLabel = down?.takeIf { showDownHints && (!showUpHints || it != up) },
+                onSwipe = up?.let(commit),
+                onSwipeDown = down?.let(commit),
+                onLongClick = (up ?: down)?.let { symbol -> { onInput(symbol) } },
                 backgroundColor = keyBackgroundColor,
                 textColor = keyTextColor,
                 modifier = Modifier.weight(spans[index]).testTag("number-row-key:$index"),

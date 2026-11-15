@@ -157,6 +157,8 @@ fun KeyButton(
     shadowShapeRadius: Dp = 8.dp,
     /** 手势由外层接管时（符号键按住当 Ctrl），按下的样子由外层给。 */
     externalPressed: Boolean = false,
+    /** 画在键左下角的下方角标（数字行只开下方提示等，位置同字母键）；null 时不画，下滑照样走 [swipeDownText]。 */
+    swipeDownKeyLabel: String? = null,
 ) {
     var ownPressed by remember { mutableStateOf(false) }
     val isPressed = ownPressed || externalPressed
@@ -269,6 +271,21 @@ fun KeyButton(
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp),
+                    fontFamily = keyLabelFontFamily
+                )
+            }
+
+            if (flickPreview?.fromTop != false && !swipeDownKeyLabel.isNullOrEmpty()) {
+                val displayText = if (swipeDownKeyLabel.length <= 4) swipeDownKeyLabel else swipeDownKeyLabel.take(4)
+                Text(
+                    text = punctuationKeyLabel(displayText),
+                    color = keyHintColor(textColor, frostedGlass, 0.5f, LocalKeyboardInputPreferences.current.cornerHintOpacity),
+                    fontSize = hintSize.sp,
+                    lineHeight = (hintSize * 1.2f).sp,
+                    fontWeight = FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    modifier = Modifier.align(Alignment.BottomStart).padding(start = 5.dp, bottom = 2.dp),
                     fontFamily = keyLabelFontFamily
                 )
             }
