@@ -197,10 +197,17 @@ object SpellingPatches {
         .mapNotNull { file -> file.name.removeSuffix(".schema.yaml").takeIf { file.isFile && file.name.endsWith(".schema.yaml") } }
         .filter { DoublePinyinScheme.splitLayoutVariant(it) != null }.sorted()
 
+    /**
+     * 双拼的 14 键版本（小鹤随应用内置，其余由键位表生成）：和合并键布局一样只写模糊音和简拼，模糊音排在最前，
+     * 先派生出近音拼音再换成双拼键、合并键。以前只给 26 键双拼写，14 键双拼开了模糊音、简拼也不生效（11-15 实测）。
+     */
+    internal fun doublePinyinK14Schemas(context: Context): List<String> =
+        doublePinyinSchemas(context).map { DoublePinyinScheme.k14Id(it) }
+
     /** 模糊音设置据此提醒双拼用户打开「模糊音也用于双拼」。 */
     fun usingDoublePinyin(context: Context): Boolean {
         val id = SettingsPreferences.getCurrentSchema(context)
-        return id in doublePinyinSchemas(context) || DoublePinyinScheme.splitLayoutVariant(id) != null || DoublePinyinSchemes.isT9(id)
+        return id in doublePinyinSchemas(context) || DoublePinyinScheme.splitLayoutVariant(id) != null || DoublePinyinSchemes.isT9(id) || DoublePinyinSchemes.isK14(id)
     }
 
     /** 设置页改完开关后在后台线程调用：写补丁，有改动就通知输入法重新部署。 */
@@ -242,7 +249,7 @@ object SpellingPatches {
                     auxCodeParts(if (auxCode == null) null else schema(), auxCode)
             } || changed
         }
-        for (id in doublePinyinLayoutVariants(rimeDir)) {
+        for (id in doublePinyinK14Schemas(context) + doublePinyinLayoutVariants(rimeDir)) {
             changed = write(rimeDir, id) { schema ->
                 listOf(doublePinyinPart(schema, doublePinyinFuzzy, abbreviation, id) ?: return@write null)
             } || changed

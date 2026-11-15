@@ -191,6 +191,23 @@ class SpellingPatchesTest {
         assertEquals(expected.map { "  - \"" + it.replace("\\", "\\\\") + "\"" }, lines.drop(1))
     }
 
+    /**
+     * 14 键双拼（11-15）：模糊音、简拼和 26 键双拼一样写在最前，派生出的近音拼音、简拼都再换成合并键，
+     * 所以 zi 也能打出 zhi 的 14 键编码，zhong 能打 Z。
+     */
+    @Test fun fourteenKeyDoublePinyinGetsFuzzyAndAbbreviationBeforeItsMergedKeys() {
+        val base = java.io.File("src/main/assets/rime_chinese/double_pinyin_flypy_14jian.schema.yaml").readText()
+        for (scheme in listOf(DoublePinyinScheme.FLYPY, DoublePinyinScheme.BUILTINS.first { it.id == DoublePinyinScheme.ZIRANMA_ID })) {
+            val algebra = if (scheme == DoublePinyinScheme.FLYPY) SpellingPatches.algebraOf(base)!!
+                else SpellingPatches.algebraOf(scheme.k14Schema(base).lineSequence().drop(1).joinToString("\n"))!!
+            val abbreviation = SpellingPatches.abbreviationRules(scheme)
+            val rules = SpellingPatches.Fuzzy.Z.penalized + abbreviation.first + algebra + abbreviation.second
+            assertTrue(scheme.id, spellingsOf(rules, "zi").containsAll(spellingsOf(algebra, "zhi")))
+            assertTrue(scheme.id, "Z" in spellingsOf(rules, "zhong"))
+            assertTrue(scheme.id, spellingsOf(rules, "zhong").none { '#' in it })
+        }
+    }
+
     /** 11-03 统一纠错：顺序、多键、漏键默认开（不写补丁，同以前）；关了只写方案里本来有的键。 */
     @Test fun typoSwitchesWriteOnlyWhatIsTurnedOffAndPresent() {
         val iceSchema = schema + "  enable_correction: true\n  cyime_neighbor_correction: true\n" +
