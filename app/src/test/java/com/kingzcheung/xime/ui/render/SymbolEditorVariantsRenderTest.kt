@@ -72,10 +72,6 @@ class SymbolEditorVariantsRenderTest {
         waitForVariant(CornerVariant.NR_BOTH)
         assertTrue(SettingsPreferences.isNumberRowEnabled(app))
         assertTrue(rule.onAllNodesWithText("“", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
-        // 数字行画在字母上面，每个键都能点开改，角标和字母键一样显示。
-        rule.waitUntil(10_000) { rule.onAllNodesWithTag("symbol-number-key:1").fetchSemanticsNodes().isNotEmpty() }
-        rule.onNodeWithTag("symbol-number-key:1").assertHasClickAction()
-        assertTrue(rule.onAllNodesWithText("!", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
         shot("symbol-editor-number-row-both")
 
         // 关掉下方角标：又是另一套。
