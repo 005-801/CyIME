@@ -3875,6 +3875,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             SettingsPreferences.isVerboseLoggingEnabled(this)
         )
         
+        // 从地址栏这类单独记语言的框出来，方案回到进框前的，名字要等准备时重读（#353：空格显示意大利语，打的是中文）。
+        if (editorPresentation.currentSchemaId != uiState.value.currentSchemaId) schemaNameStale = true
         uiState.value = uiState.value.copy(
             inputSessionId = System.nanoTime(),
             // 语言键菜单里中文指向进框前的方案：网址、邮箱框和可见密码框（代码编辑器）都先给英文、能切回中文。
@@ -4648,6 +4650,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      * ([privacy]), completions ([editorRestricted], [editorSecret]) and literal field input
      * ([editorInputPolicy], whose language/schema presentation is returned).
      */
+    /** uiState 的方案已换、空格上的方案名还是旧的；输入框准备好后重读名字。只在主线程读写。 */
+    internal var schemaNameStale = false
+
     private fun beginEditorField(attribute: EditorInfo?, restarting: Boolean): EditorSessionPresentation {
         // 敏感输入框（密码等）判定；插件派发读同一结果，这里只重置 composing 去重
         pluginEvents.onStartInput()
