@@ -39,6 +39,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -2787,27 +2790,127 @@ internal fun ForgetLearningConfirm(word: String, message: String?, modifier: Mod
     onCancel: () -> Unit, onConfirm: () -> Unit, pinned: Boolean? = null, onPin: () -> Unit = {},
     parts: List<String>? = null, onPart: (Int) -> Unit = {},
     pinnedPlace: Int = 0, placeHere: Int = 0, onPinHere: () -> Unit = {}) {
-    val forget = "忘掉「$word」的学习记录？词库里本来有的词会回到原来的位置，自己打出来的新词会消失。"
-    val forgetLine = "忘掉：删掉学习记录，词库里本来有的词回到原来的位置，自己打出来的新词会消失。"
-    val here = pinned == false && placeHere >= 2
-    KeyboardConfirmCard(
-        title = if (pinned == null) "忘掉学习" else "「$word」",
-        message = message ?: when (pinned) {
-            null -> forget
-            false -> if (here) "固定第一：这个编码下排第一，固定多个按先后排。\n" +
-                "固定在第 $placeHere 位：锁在现在这个位置，别的词照常学习。\n$forgetLine"
-                else "固定：这个编码下排第一，固定多个按先后排。\n$forgetLine"
-            true -> (if (pinnedPlace >= 1) "已固定在第 $pinnedPlace 位。" else "") +
-                "取消固定：回到原来的位置。\n$forgetLine"
-        },
-        confirmLabel = "忘掉",
-        destructive = true,
-        tag = "forget-learning-confirm",
-        modifier = modifier, onCancel = onCancel, onConfirm = onConfirm,
-        extraLabel = when (pinned) { null -> null; false -> if (here) "固定第一" else "固定"; true -> "取消固定" },
-        onExtra = onPin,
-        extra2Label = if (here) "固定在第 $placeHere 位" else null, onExtra2 = onPinHere,
-        parts = parts, onPart = onPart)
+    if (pinned == null) {
+        KeyboardConfirmCard(
+            title = "忘掉学习",
+            message = message ?: "忘掉「$word」的学习记录？词库里本来有的词会回到原来的位置，自己打出来的新词会消失。",
+            confirmLabel = "忘掉",
+            destructive = true,
+            tag = "forget-learning-confirm",
+            modifier = modifier, onCancel = onCancel, onConfirm = onConfirm,
+            parts = parts, onPart = onPart)
+        return
+    }
+    // 用户 11-16：说明太长、按钮名不合适。改成图标加短名「固定首位」「固定当前位置(N)」「取消固定」「忘记」，
+    // 一行排开都看得见；说明只在已固定时留一行「已固定在第 N 位」。
+    val here = !pinned && placeHere >= 2
+    val actions = buildList {
+        if (pinned) add(PinCardAction("取消固定", "forget-learning-confirm-extra", PinCardIcon.Unpin, onClick = onPin))
+        else {
+            add(PinCardAction("固定首位", "forget-learning-confirm-extra", PinCardIcon.Pin, onClick = onPin))
+            if (here) add(PinCardAction("固定当前位置($placeHere)", "forget-learning-confirm-extra2",
+                PinCardIcon.PinAt(placeHere), onClick = onPinHere))
+        }
+        add(PinCardAction("忘记", "forget-learning-confirm-forget", PinCardIcon.Forget, destructive = true, onClick = onConfirm))
+    }
+    CandidatePinCard(word, message ?: if (pinned && pinnedPlace >= 1) "已固定在第 $pinnedPlace 位" else null,
+        actions, modifier, onCancel, parts, onPart)
+}
+
+private sealed interface PinCardIcon {
+    data object Pin : PinCardIcon
+    data class PinAt(val place: Int) : PinCardIcon
+    data object Unpin : PinCardIcon
+    data object Forget : PinCardIcon
+}
+
+private class PinCardAction(val label: String, val tag: String, val icon: PinCardIcon,
+    val destructive: Boolean = false, val onClick: () -> Unit)
+
+/** 长按引擎候选的卡片：标题、最多一行说明、一行等宽的图标按钮；右上角 × 和点卡片外面都是取消。 */
+@Composable
+private fun CandidatePinCard(word: String, note: String?, actions: List<PinCardAction>, modifier: Modifier,
+    onCancel: () -> Unit, parts: List<String>?, onPart: (Int) -> Unit) {
+    val cardColors = keyboardCardColors()
+    val tag = "forget-learning-confirm"
+    Box(
+        modifier = modifier
+            .background(cardColors.scrim)
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onCancel)
+            .testTag(tag),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.widthIn(max = 360.dp),
+            colors = CardDefaults.cardColors(containerColor = cardColors.card)
+        ) {
+            Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("「$word」", style = MaterialTheme.typography.titleMedium, color = cardColors.text,
+                        maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f))
+                    androidx.compose.material3.IconButton(onClick = onCancel) {
+                        Icon(Icons.Default.Close, contentDescription = "取消", tint = cardColors.text.copy(alpha = .7f))
+                    }
+                }
+                Column(Modifier.padding(end = 8.dp).weight(1f, fill = false).verticalScroll(rememberScrollState())) {
+                    if (!parts.isNullOrEmpty()) {
+                        Text("点一个词重选", style = MaterialTheme.typography.bodySmall, color = cardColors.text.copy(alpha = .7f))
+                        Spacer(Modifier.height(6.dp))
+                        SentencePartChips(parts, cardColors.text, tag, onPart)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    if (note != null) {
+                        Text(note, style = MaterialTheme.typography.bodyMedium, color = cardColors.text.copy(alpha = .7f),
+                            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+                Row(Modifier.padding(end = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    actions.forEach { action ->
+                        val tint = if (action.destructive) MaterialTheme.colorScheme.error else cardColors.text
+                        Column(
+                            Modifier.weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(cardColors.text.copy(alpha = .08f))
+                                .clickable(onClick = action.onClick)
+                                .padding(horizontal = 4.dp, vertical = 8.dp)
+                                .testTag(action.tag),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            PinCardIconView(action.icon, tint)
+                            Spacer(Modifier.height(4.dp))
+                            Text(action.label, style = MaterialTheme.typography.labelMedium, color = tint,
+                                textAlign = TextAlign.Center, maxLines = 2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PinCardIconView(icon: PinCardIcon, tint: Color) {
+    val size = Modifier.size(22.dp)
+    when (icon) {
+        PinCardIcon.Pin -> Icon(Icons.Default.PushPin, null, size, tint)
+        PinCardIcon.Forget -> Icon(Icons.Default.DeleteOutline, null, size, tint)
+        // 取消固定：图钉上画一道斜杠。
+        PinCardIcon.Unpin -> Icon(Icons.Outlined.PushPin, null, size.drawWithContent {
+            drawContent()
+            drawLine(tint, androidx.compose.ui.geometry.Offset(2.dp.toPx(), 2.dp.toPx()),
+                androidx.compose.ui.geometry.Offset(this.size.width - 2.dp.toPx(), this.size.height - 2.dp.toPx()),
+                strokeWidth = 2.dp.toPx())
+        }, tint)
+        // 固定到当前位置：图钉右下角带位置数字。
+        is PinCardIcon.PinAt -> Box(size) {
+            Icon(Icons.Default.PushPin, null, Modifier.size(18.dp).align(Alignment.TopStart), tint)
+            Text("${icon.place}", color = tint, fontSize = 10.sp, lineHeight = 10.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.align(Alignment.BottomEnd))
+        }
+    }
 }
 
 /**
