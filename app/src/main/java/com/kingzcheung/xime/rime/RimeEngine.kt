@@ -1106,8 +1106,11 @@ class RimeEngine {
         if (!isInitialized) return false
         mutateLocked {
             ensureT9SchemaPatchesForDeployedSchemas(userDataDir)
+            // 先关掉会话再维护：会话开着时 librime 按缓存里的旧方案列表编译，刚打开的方案这一遍编不进去（11-15 首道双拼）。
+            nativeReleaseSessionForMaintenance()
             if (!nativeStartMaintenance(false)) {
                 FileLogger.w(TAG, "deployIncremental: startMaintenance returned false, falling back to full deploy")
+                try { nativeReloadSessionAfterMaintenance() } finally { sessionReplaced() }
                 return false
             }
             // A slow native worker still owns build/. Wait before reloading or falling back.
@@ -1424,6 +1427,7 @@ class RimeEngine {
             }
         }
     }
+    private external fun nativeReleaseSessionForMaintenance()
     private external fun nativeStartMaintenance(full: Boolean): Boolean
     private external fun nativeJoinMaintenance()
     private external fun nativeDeploy(): Boolean

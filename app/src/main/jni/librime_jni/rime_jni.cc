@@ -1249,9 +1249,21 @@ public:
         return false;
     }
 
+    // librime's workspace update reads the schema list through the shared config cache, and a live
+    // session's switcher keeps the old "default" config there: an incremental pass started under a live
+    // session compiles the list from before the change, so a schema just turned on is not built.
+    // Close the session first; reloadSessionAfterMaintenance reopens it on the same schema.
+    void releaseSessionForMaintenance() {
+        if (!rime || !session_id_) return;
+        schema_before_maintenance_ = getCurrentSchema();
+        rime->destroy_session(session_id_);
+        session_id_ = 0;
+    }
+
     bool reloadSessionAfterMaintenance() {
         if (!rime || rime->is_maintenance_mode()) return false;
-        const auto schema = getCurrentSchema();
+        const auto schema = session_id_ ? getCurrentSchema() : schema_before_maintenance_;
+        schema_before_maintenance_.clear();
         if (session_id_) rime->destroy_session(session_id_);
         session_id_ = 0;
         if (!createSession()) return false;
@@ -1822,6 +1834,7 @@ public:
 private:
     RimeApi* rime;
     RimeSessionId session_id_ = 0;
+    std::string schema_before_maintenance_;
     bool incognito_ = false;
     std::string user_data_dir_;
     std::string shared_data_dir_;
@@ -3322,6 +3335,11 @@ Java_com_kingzcheung_xime_rime_RimeEngine_nativeDestroy(
 }
 
 // 部署
+JNIEXPORT void JNICALL
+Java_com_kingzcheung_xime_rime_RimeEngine_nativeReleaseSessionForMaintenance(JNIEnv*, jobject) {
+    Rime::Instance().releaseSessionForMaintenance();
+}
+
 JNIEXPORT jboolean JNICALL
 Java_com_kingzcheung_xime_rime_RimeEngine_nativeReloadSessionAfterMaintenance(JNIEnv*, jobject) {
     return Rime::Instance().reloadSessionAfterMaintenance() ? JNI_TRUE : JNI_FALSE;
