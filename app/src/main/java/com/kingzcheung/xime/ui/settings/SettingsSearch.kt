@@ -119,8 +119,8 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
     val speech = "$smart › 语音转文本"
     val captionPage = "$system › 扩展 › 插件 › 字幕"
     val handwriting = "$smart › 手写"
-    val clipboard = "$system › 剪贴板与同步"
-    val clipboardPanel = "$clipboard › 剪贴板面板"
+    val clipboard = "$system › 剪贴板"
+    val clipboardSync = "$clipboard › 剪贴板同步"
     val other = "$system › 其他设置"
     val backup = "$other › 备份与恢复"
     val performance = "$other › 性能与省电"
@@ -147,7 +147,7 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         page("智能联想", smart, SettingsRoutes.SmartPrediction, "联想 预测 个人学习 模型增强 下一个词"),
         page("语音转文本", smart, SettingsRoutes.SpeechToText, "语音 识别 麦克风 说话 听写 在线 本地 语音输入 开关 字幕 语音在哪 语音输入在哪 怎么说话"),
         page("手写", smart, SettingsRoutes.Handwriting, "手写 写字 笔迹 公式 手写模型"),
-        page("剪贴板与同步", system, SettingsRoutes.ClipboardSync, "剪贴板 同步 验证码 短信 复制 电脑 Windows 互联"),
+        page("剪贴板", system, SettingsRoutes.ClipboardPanel, "剪贴板 剪贴板面板 剪贴板与同步 菜单 更多 设置 面板 验证码 短信 复制"),
         page("扩展", system, SettingsRoutes.Market, "下载 输入方案 模型 插件 商店 扩展商店"),
         page("其他设置", system, SettingsRoutes.Other, "其他 更多 备份 性能 省电 界面语言 显示语言 Language"),
         page("备份与恢复", other, SettingsRoutes.Backup, "备份 恢复 导出 导入 本地备份 换机 迁移"),
@@ -360,28 +360,29 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         SettingsSearchEntry("手写训练", handwriting, SettingsRoutes.HandwritingTraining, "手写 训练 训练模式 样本 假名 字母 公式 贡献 上传 分享 采集 数据采集 笔迹 标注 自己的文字", anchor = null),
         // 自用包里贡献题并进「手写训练」的题库菜单，搜索只留上面那条
         SettingsSearchEntry("贡献手写样本", handwriting, SettingsRoutes.HandwritingContribute, "手写 贡献 样本 上传 分享 训练 改进 认不出", anchor = null),
-        // 系统 › 剪贴板与同步
-        SettingsSearchEntry("连接状态", clipboard, SettingsRoutes.ClipboardSync, "扫码连接电脑 连接电脑 Windows 配对 连接码 二维码 互联"),
-        SettingsSearchEntry("同步剪贴板", clipboard, SettingsRoutes.ClipboardSync, "同步 剪贴板 电脑 Windows 我的设备", section = "连接状态"),
-        SettingsSearchEntry("让其他手机或平板连接本机", clipboard, SettingsRoutes.ClipboardSync, "手机 平板 互相同步 二维码 允许其他设备连接"),
-        SettingsSearchEntry("新短信验证码自动复制", clipboard, SettingsRoutes.ClipboardSync, "验证码 短信 自动复制 code"),
-        SettingsSearchEntry("验证码发到其他设备", clipboard, SettingsRoutes.ClipboardSync, "验证码 短信 电脑 平板 同步 发送 code"),
-        SettingsSearchEntry("记录密码等敏感内容", clipboard, SettingsRoutes.ClipboardSync, "密码 敏感 银行卡 密码管理器 剪贴板 password"),
-        page("剪贴板面板", clipboard, SettingsRoutes.ClipboardPanel, "剪贴板 菜单 更多 设置 面板"),
-        SettingsSearchEntry("上屏后自动关闭剪贴板", clipboardPanel, SettingsRoutes.ClipboardPanel, "剪贴板 关闭 粘贴 连续贴"),
-        SettingsSearchEntry("卡片显示行数", clipboardPanel, SettingsRoutes.ClipboardPanel,
+        // 系统 › 剪贴板 › 剪贴板同步（同步插件的页面）
+        page("剪贴板同步", clipboard, SettingsRoutes.ClipboardSync, "剪贴板 同步 电脑 Windows 互联 插件"),
+        SettingsSearchEntry("连接状态", clipboardSync, SettingsRoutes.ClipboardSync, "扫码连接电脑 连接电脑 Windows 配对 连接码 二维码 互联"),
+        SettingsSearchEntry("同步剪贴板", clipboardSync, SettingsRoutes.ClipboardSync, "同步 剪贴板 电脑 Windows 我的设备", section = "连接状态"),
+        SettingsSearchEntry("让其他手机或平板连接本机", clipboardSync, SettingsRoutes.ClipboardSync, "手机 平板 互相同步 二维码 允许其他设备连接"),
+        // 系统 › 剪贴板
+        SettingsSearchEntry("新短信验证码自动复制", clipboard, SettingsRoutes.ClipboardPanel, "验证码 短信 自动复制 code"),
+        SettingsSearchEntry("验证码发到其他设备", clipboard, SettingsRoutes.ClipboardPanel, "验证码 短信 电脑 平板 同步 发送 code"),
+        SettingsSearchEntry("记录密码等敏感内容", clipboard, SettingsRoutes.ClipboardPanel, "密码 敏感 银行卡 密码管理器 剪贴板 password"),
+        SettingsSearchEntry("上屏后自动关闭剪贴板", clipboard, SettingsRoutes.ClipboardPanel, "剪贴板 关闭 粘贴 连续贴"),
+        SettingsSearchEntry("卡片显示行数", clipboard, SettingsRoutes.ClipboardPanel,
             "剪贴板 卡片 行数 几行 显示 记录 折叠 最多显示 剪贴板卡片最多显示 卡片最多显示"),
-        SettingsSearchEntry("图片高度", clipboardPanel, SettingsRoutes.ClipboardPanel,
+        SettingsSearchEntry("图片高度", clipboard, SettingsRoutes.ClipboardPanel,
             "剪贴板 图片 高度 太矮 比例 长图 截图 卡片"),
-        SettingsSearchEntry("最近截图", clipboardPanel, SettingsRoutes.ClipboardPanel, "剪贴板 截图 截屏 相册 图片 照片"),
-        SettingsSearchEntry("也显示相册照片", clipboardPanel, SettingsRoutes.ClipboardPanel, "剪贴板 相册 照片 最近 图片 不只截图"),
-        SettingsSearchEntry("剪贴板数量上限", clipboardPanel, SettingsRoutes.ClipboardPanel,
+        SettingsSearchEntry("最近截图", clipboard, SettingsRoutes.ClipboardPanel, "剪贴板 截图 截屏 相册 图片 照片"),
+        SettingsSearchEntry("也显示相册照片", clipboard, SettingsRoutes.ClipboardPanel, "剪贴板 相册 照片 最近 图片 不只截图"),
+        SettingsSearchEntry("剪贴板数量上限", clipboard, SettingsRoutes.ClipboardPanel,
             "剪贴板 条数 数量 最多 上限 保存 历史记录 不限 存文档", anchor = "数量上限", section = "历史记录"),
-        SettingsSearchEntry("剪贴板保留时间", clipboardPanel, SettingsRoutes.ClipboardPanel,
+        SettingsSearchEntry("剪贴板保留时间", clipboard, SettingsRoutes.ClipboardPanel,
             "剪贴板 定期清理 自动清理 自动删除 过期 天数 保留 历史记录", anchor = "保留时间", section = "历史记录"),
-        SettingsSearchEntry("导出剪贴板", clipboard, SettingsRoutes.ClipboardSync, "导出 剪贴板 记录 固定内容 备份"),
-        SettingsSearchEntry("导入剪贴板", clipboard, SettingsRoutes.ClipboardSync, "导入 剪贴板 记录 固定内容 分组 恢复 换机"),
-        SettingsSearchEntry("剪贴板分组", clipboardPanel, SettingsRoutes.ClipboardGroups,
+        SettingsSearchEntry("导出剪贴板", clipboard, SettingsRoutes.ClipboardPanel, "导出 剪贴板 记录 固定内容 备份"),
+        SettingsSearchEntry("导入剪贴板", clipboard, SettingsRoutes.ClipboardPanel, "导入 剪贴板 记录 固定内容 分组 恢复 换机"),
+        SettingsSearchEntry("剪贴板分组", clipboard, SettingsRoutes.ClipboardGroups,
             "分组 常用语 自定义分组 新建分组 分类 地址 图片 链接 电话 邮箱 话术 固定内容", anchor = null),
         page("插件市场", "$system › 扩展 › 插件", SettingsRoutes.MarketPlugins, "插件商店 下载 安装 API AI 翻译 帮写 回复 改写 润色 在线语音"),
         page("已安装的插件", "$system › 扩展 › 插件", SettingsRoutes.Plugins, "插件 已安装 插件管理 文件导入 xipk"),
