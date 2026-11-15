@@ -1012,7 +1012,7 @@ fun KeyboardLayout(
                         }
                     }
 
-                    // 蜂窝布局的第四行字母（zxcvbnm），与第二行同宽对齐。注音的第四行 10 键，删除键占第 11 列。
+                    // 蜂窝布局的第四行字母（zxcvbnm），与第二行同宽对齐。注音的第四行 10 键，删除键在末尾占一键半宽。
                     renderRows.getOrNull(3)?.let { row3 ->
                         Row(modifier = Modifier.weight(1f)) {
                             if (isVoiceMode && !isVoiceSticky) DummyKeyboardRow(
@@ -1042,7 +1042,8 @@ fun KeyboardLayout(
                                 onGestureAction = onGestureAction,
                                 configVersion = cfgVer,
                             )
-                            if (zhuyin && !(isVoiceMode && !isVoiceSticky)) deleteKey(Modifier.weight(1f))
+                            // 删除键原来只有一个注音键宽，挨着 ㄥ 容易按错（#375）：加宽到一键半，这一行十个键各窄一点。
+                            if (zhuyin && !(isVoiceMode && !isVoiceSticky)) deleteKey(Modifier.weight(ZHUYIN_DELETE_KEY_WEIGHT))
                         }
                         Spacer(Modifier.height(honeycombOverhang))
                     }
@@ -2187,3 +2188,6 @@ internal fun commitLongPressChoice(label: String, onCommitText: ((String) -> Uni
 internal fun letterLongPressMenuAllowed(key: String, enabled: Boolean): Boolean =
     // 字母键是 1～2 个字母（26 键 q、14 键 qw）；earth 之类的功能键名不算。
     enabled || key.length !in 1..2 || !key.all { it in 'a'..'z' || it in 'A'..'Z' }
+
+/** 注音第四行末尾删除键的宽度（按一个注音键算）。 */
+internal const val ZHUYIN_DELETE_KEY_WEIGHT = 1.5f
