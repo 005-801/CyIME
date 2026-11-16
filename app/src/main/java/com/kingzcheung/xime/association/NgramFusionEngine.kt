@@ -19,6 +19,8 @@ class NgramFusionEngine(private val context: Context, private val userNgramCache
     private var lambda = DEFAULT_LAMBDA
     private var isInitialized = false
     private var baseModel: BaseAssociationModel? = null
+    /** 整词后面常接什么（从内置词库生成）；安装包里没有这个文件时为 null，联想照旧只用联想表。 */
+    private var wordTable: WordContinuationTable? = null
     
     suspend fun initialize(): Boolean {
         if (isInitialized) return true
@@ -45,6 +47,16 @@ class NgramFusionEngine(private val context: Context, private val userNgramCache
                 null
             }
         }
+        wordTable = withContext(Dispatchers.IO) {
+            try {
+                context.assets.open(WordContinuationTable.ASSET).use { input ->
+                    java.util.zip.GZIPInputStream(input).reader(Charsets.UTF_8).use(WordContinuationTable::read)
+                }
+            } catch (error: Exception) {
+                Log.e(TAG, "Word continuation table failed to load", error)
+                null
+            }
+        }
         isInitialized = result || baseModel != null
         return isInitialized
     }
@@ -67,6 +79,9 @@ class NgramFusionEngine(private val context: Context, private val userNgramCache
         baseModel?.predict(context, BaseAssociationModel.MAX_PER_CONTEXT, afterWholeWord)?.forEach {
             allCandidates[it.text] = BASE_WEIGHT * it.score
         }
+        // The corpus table knows the last one or two characters only. When the context ends with a longer
+        // dictionary word (厄尔尼诺), what follows that whole word (现象) joins on the same scale.
+        mergeWordContinuations(allCandidates, baseModel?.contextLength(context) ?: 0, wordTable?.lookup(context), BASE_WEIGHT)
         // Imported personal corpora carry their own counts (0.4·share); typed observations are
         // shares over few events, so they earn weight gradually (n/USER_CONFIDENCE_EVENTS).
         userNgramCache.profileCandidates(context).forEach { candidate ->

@@ -19,6 +19,7 @@ apply(from = "build-logic/tasks-plugin-dev.gradle.kts")
 apply(from = "build-logic/tasks-japanese.gradle.kts")
 apply(from = "build-logic/tasks-offline-translate.gradle.kts")
 apply(from = "build-logic/tasks-chinese.gradle.kts")
+apply(from = "build-logic/tasks-word-association.gradle.kts")
 apply(from = "build-logic/tasks-stroke.gradle.kts")
 apply(from = "build-logic/tasks-cangjie.gradle.kts")
 apply(from = "build-logic/tasks-t9-grammar.gradle.kts")
@@ -77,6 +78,8 @@ android {
     // libcytranslate.so (arm64-v8a, x86_64; tasks-offline-translate.gradle.kts): offline translation engine.
     sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("generated/translate-jniLibs").get().asFile)
     sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/chinese-assets").get().asFile)
+    // association/dict-words-v1.gz (tasks-word-association.gradle.kts): what follows a whole word, for the association bar.
+    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/word-association-assets").get().asFile)
     sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/stroke-assets").get().asFile)
     sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/cangjie-assets").get().asFile)
     sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/rime-manifest").get().asFile)
