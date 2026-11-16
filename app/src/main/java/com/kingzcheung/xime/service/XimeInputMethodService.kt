@@ -5745,7 +5745,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             var end = editor.selectionEnd.coerceIn(start, editable.length)
             val overtype = caret.overtype
             if (overtype != null && start == end && editable.startsWith(overtype, end)) end += overtype.length
-            editable.replace(start, end, delivered)
+            editable.replace(start, end, if (isPaste) delivered else withTextLocale(delivered))
             editor.setSelection(start + delivered.length - caret.caretBack.coerceIn(0, delivered.length))
             return TextCommitResult.ACCEPTED_INTERNAL
         }
@@ -5754,7 +5754,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             caret != CommitCaret.NONE -> connection.commitTextWithCaret(delivered, caret)
             // 多行短语一行一行上屏（见 commitPhraseLines）。
             com.kingzcheung.xime.settings.PhraseLineBreaks.STORED in text && !isPaste -> connection.commitPhraseLines(delivered)
-            else -> connection.commitText(delivered, 1)
+            else -> connection.commitText(if (isPaste) delivered else withTextLocale(delivered), 1)
         }
         if (!committed) return TextCommitResult.REJECTED
         if (inlineComposition.text != null) inlineComposition.ended()
@@ -5771,6 +5771,15 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             if (!isPaste) predictionManager.recordInput(delivered)
         }
         return TextCommitResult.ACCEPTED_HOST
+    }
+
+    /** 打出来的汉字按当前输入语言的写法标上（和键盘上一样，见 inputTextLocaleTag）；粘贴的原文不标。 */
+    private fun withTextLocale(text: String): CharSequence {
+        val profile = uiState.value.inputProfile
+        val traditional = SettingsPreferences.getPrefsPublic(this)
+            .getBoolean(com.kingzcheung.xime.ui.keyboard.KeyboardInputPreferences.TRADITIONAL_OUTPUT_KEY, false)
+        return com.kingzcheung.xime.ui.keyboard.withTextLocale(text,
+            com.kingzcheung.xime.ui.keyboard.inputTextLocaleTag(profile.language, profile.scheme, traditional))
     }
 
     /** 打字统计按输入方式分类：只看当前状态，不看文字。 */
