@@ -846,6 +846,10 @@ val prepareChineseDictionaries by tasks.registering {
             })
         }
         val fullPinyinSchema = baseSchema.replace("  dependencies:\n", "  dependencies:\n    - $omissionId\n    - cyime_letter_swap\n    - cyime_cn_en\n") +
+            // full_pinyin/offer_homophone_tails: a whole sentence that ends in a single character also offers the
+            // same sentence with the other common characters of that last syllable (见了你吗 / 见了你妈), up to three
+            // sentences; data/cyime_tail.cyt (public chat, subtitles, wiki). The first choice is never changed.
+            "\nfull_pinyin:\n  offer_homophone_tails: true\n" +
             "\ncyime_omission_schema: $omissionId\ncyime_edit_schema: cyime_letter_swap\n" +
             "\ncyime_particle_shortcuts:\n  __include: cyime_particle_shortcuts:/common\n  alphabet: abcdefghijklmnopqrstuvwxyz\n  selected_tail: true\n"
         File(root, "rime_ice.schema.yaml").writeText(fullPinyinSchema)
