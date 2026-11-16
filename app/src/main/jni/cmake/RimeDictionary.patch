@@ -2482,7 +2482,7 @@ index 99e4511..e518976 100644
      config->GetInt(name_space_ + "/max_homophones", &max_homophones_);
 +    config->GetInt(name_space_ + "/sentence_char_homophones", &sentence_char_homophones_);
 +    config->GetInt(name_space_ + "/sentence_word_homophones", &sentence_word_homophones_);
-+    config->GetDouble(name_space_ + "/sentence_near_homophone_margin", &sentence_near_homophone_margin_);
++    if (ticket.schema == engine_->schema()) config->GetDouble(name_space_ + "/sentence_near_homophone_margin", &sentence_near_homophone_margin_);  // not on a helper prism (cyime_omission): the reading as typed would join its sentences and hide the slip
 +    config->GetInt(name_space_ + "/sentence_word_max_syllables", &sentence_word_max_syllables_);
 +    config->GetInt(name_space_ + "/sentence_short_max_sentences", &sentence_short_max_sentences_);
      config->GetBool(name_space_ + "/incremental_compose",
