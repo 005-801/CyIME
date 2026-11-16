@@ -219,6 +219,39 @@ internal fun HardwareKeyboardToolbar(
         val currentResting by rememberUpdatedState(displayedOffset)
         val currentDock by rememberUpdatedState(dockAtEdge)
         val currentLocked by rememberUpdatedState(positionLocked)
+        // 拖动中松手会停靠到哪：先画出那里的轮廓（设置里「拖近时有蓝色轮廓」），
+        // 底边只有中间一小段会吸住，没有提示时常以为吸附没生效。
+        val dockPreview = dragging?.takeIf { dockAtEdge }?.let { drag ->
+            val target = geometry.positionAt(drag.x, drag.y, position, snapX = true)
+            with(density) {
+                val margin = 8.dp.roundToPx()
+                when {
+                    target.isBottomDocked(true) && maxWidth >= 336.dp -> {
+                        val w = if (samsungBottomBar) constraints.maxWidth else minOf(720.dp, usableWidth).roundToPx()
+                        val h = (candidateRowHeight + padding * 2).roundToPx()
+                        val x = if (samsungBottomBar) 0 else (constraints.maxWidth - w) / 2
+                        val y = constraints.maxHeight - h - if (samsungBottomBar) 0 else margin
+                        IntOffset(x, y) to IntSize(w, h)
+                    }
+                    hardwareToolbarIsVertical(maxWidth.value, maxHeight.value, target, true) -> {
+                        val w = 56.dp.roundToPx()
+                        val h = (if (onVoice != null) 272.dp else 232.dp).roundToPx().coerceAtMost(constraints.maxHeight)
+                        val x = if (target.xFraction == 0f) margin else constraints.maxWidth - w - margin
+                        val travel = (constraints.maxHeight - h).coerceAtLeast(0)
+                        val m = margin.coerceAtMost(travel / 2)
+                        IntOffset(x, (m + (travel - 2 * m) * target.yFraction).roundToInt()) to IntSize(w, h)
+                    }
+                    else -> null
+                }
+            }
+        }
+        dockPreview?.let { (at, size) ->
+            Box(Modifier.absoluteOffset { at }
+                .size(with(density) { size.width.toDp() }, with(density) { size.height.toDp() })
+                .clip(shape).background(accentColor.copy(alpha = 0.12f))
+                .border(2.dp, accentColor.copy(alpha = 0.8f), shape)
+                .testTag("hardware-toolbar-dock-preview"))
+        }
         var gestureOrigin by remember { mutableStateOf<HardwareToolbarOffset?>(null) }
         // The receiver stays at the DOWN origin while its child follows the finger. It covers
         // the complete capsule, but never the transparent full-screen host.
