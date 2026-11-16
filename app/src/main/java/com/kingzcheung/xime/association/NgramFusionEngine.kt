@@ -29,9 +29,7 @@ class NgramFusionEngine(private val context: Context, private val userNgramCache
         baseModel = withContext(Dispatchers.IO) {
             // Without the marks the table still works; after a whole word it then behaves as before.
             val wordCompletions = try {
-                context.assets.open(BaseAssociationModel.WORD_COMPLETIONS_ASSET).use { input ->
-                    java.util.zip.GZIPInputStream(input).reader(Charsets.UTF_8).use(BaseAssociationModel::readWordCompletions)
-                }
+                openTextAsset(BaseAssociationModel.WORD_COMPLETIONS_ASSET).use(BaseAssociationModel::readWordCompletions)
             } catch (error: Exception) {
                 Log.e(TAG, "Association word completion marks failed to load", error)
                 emptyMap()
@@ -49,9 +47,7 @@ class NgramFusionEngine(private val context: Context, private val userNgramCache
         }
         wordTable = withContext(Dispatchers.IO) {
             try {
-                context.assets.open(WordContinuationTable.ASSET).use { input ->
-                    java.util.zip.GZIPInputStream(input).reader(Charsets.UTF_8).use(WordContinuationTable::read)
-                }
+                openTextAsset(WordContinuationTable.ASSET).use(WordContinuationTable::read)
             } catch (error: Exception) {
                 Log.e(TAG, "Word continuation table failed to load", error)
                 null
@@ -61,6 +57,21 @@ class NgramFusionEngine(private val context: Context, private val userNgramCache
         return isInitialized
     }
     
+    /**
+     * 打包时 .gz 资源会被解压、去掉 .gz 后缀放进安装包（AssetManager 只认去掉后缀的名字），
+     * 所以先按去掉后缀的名字读纯文本，找不到再按原名读 gzip。
+     */
+    private fun openTextAsset(name: String): java.io.Reader {
+        val plain = name.removeSuffix(".gz")
+        if (plain != name) {
+            try {
+                return context.assets.open(plain).reader(Charsets.UTF_8)
+            } catch (_: java.io.FileNotFoundException) {
+            }
+        }
+        return java.util.zip.GZIPInputStream(context.assets.open(name)).reader(Charsets.UTF_8)
+    }
+
     fun recordUserInput(text: String) {
         userNgramCache.recordInput(text)
     }
