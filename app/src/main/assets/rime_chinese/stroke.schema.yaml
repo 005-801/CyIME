@@ -65,11 +65,11 @@ translator:
   dictionary: stroke
   preedit_format:
 #   - xlit/hspnz/㇐㇑㇒㇏㇠/   # 中日韓筆畫（橫豎撇捺折）
-    - xlit/hspnz/⼀⼁⼃⼂⼄/   # 康熙部首（橫豎撇點折）
+    - xlit/hspnz/⼀⼁⼃⼂乛/   # 康熙部首（橫豎撇點），折用键面上的乛（#412）
   comment_format:
     - xform/~//
 #   - xlit/hspnz/㇐㇑㇒㇏㇠/   # 中日韓筆畫（橫豎撇捺折）
-    - xlit/hspnz/⼀⼁⼃⼂⼄/   # 康熙部首（橫豎撇點折）
+    - xlit/hspnz/⼀⼁⼃⼂乛/   # 康熙部首（橫豎撇點），折用键面上的乛（#412）
 
 # 通配符跨两个字时沿用笔画方案的组词，查询器只读，不重复学习上屏文字。
 stroke_word_lookup:

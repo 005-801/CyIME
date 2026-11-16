@@ -8,8 +8,8 @@ local MAX_CHARACTER_STROKES = 52
 local M = {}
 
 -- lua 造的候选没有 preedit 时，Rime 拿原始字母当编码显示（#372：分词后编码显示成 h s p n z）。
--- 和 stroke.schema.yaml 的 preedit_format 一样换成笔画（康熙部首）；分词号、通配符原样留着。
-local STROKE_GLYPHS = { h = "⼀", s = "⼁", p = "⼃", n = "⼂", z = "⼄" }
+-- 和 stroke.schema.yaml 的 preedit_format 一样换成笔画（康熙部首，折用键面上的乛）；分词号、通配符原样留着。
+local STROKE_GLYPHS = { h = "⼀", s = "⼁", p = "⼃", n = "⼂", z = "乛" }
 local function stroke_preedit(code)
   return (code:gsub("[hspnz]", STROKE_GLYPHS))
 end
