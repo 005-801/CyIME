@@ -480,9 +480,7 @@ fun CandidateBar(
     ) {
         PreeditBubbleHost(showPreedit && !previewPrefs.preeditInsideKeyboard) { hidden ->
             PreeditPreview(preeditText, protectedVisuals, onEditPreedit,
-                preeditBubbleColor(themeSurface, visuals.preeditBackgroundColor,
-                    blurBehind = glass.enabled && glass.normalized().blurRadiusDp >= 1f,
-                    opacity = previewPrefs.preeditBubbleOpacity), hidden)
+                floatingPreeditColor(themeSurface, visuals.preeditBackgroundColor), hidden)
         }
 
         if (state is CandidateBarState.ClipboardDisplay) {
@@ -1455,7 +1453,7 @@ private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (
         }
     }
     val glass = LocalKeyboardInputPreferences.current.frostedGlass.normalized()
-    if (glass.enabled && glass.blurRadiusDp >= 1f) {
+    if (floatingPreeditBlurBehind(glass)) {
         // 气泡内容最少 44dp 高、上下各留 6dp，真正的底色块在中间，圆角 4dp（见下面 PreeditLabel）。
         val inset = with(density) { 6.dp.roundToPx() }
         PreeditBubbleBlur(bubbleBounds.value?.let { IntRect(it.left, it.top + inset, it.right, it.bottom - inset) },
@@ -1494,6 +1492,10 @@ private const val PREEDIT_BUBBLE_CLEAR_FRAMES = 3
 /** 透明且没有语义节点：测试和无障碍都当气泡已经没了。 */
 private val HiddenPreeditBubble = Modifier.alpha(0f).clearAndSetSemantics {}
 
+/** 半透明拼音底色上的字要不要垫光晕：实底或没有底色时不垫。 */
+internal fun floatingPreeditHalo(text: Color, background: Color?): GlassTextHalo? =
+    background?.takeIf { it.alpha < 1f }?.let { glassTextHalo(listOf(text), it.copy(alpha = 1f), it.alpha) }
+
 /** 拼音气泡最多排几行；再长就在气泡里上下滚，始终露出光标所在的那行（没有光标时露出最后一行）。 */
 private const val PREEDIT_BUBBLE_MAX_LINES = 3
 
@@ -1512,6 +1514,20 @@ internal fun preeditBubbleColor(surface: Color, key: Color, blurBehind: Boolean,
 
 internal const val PREEDIT_BUBBLE_GLASS_ALPHA = 0.9f
 
+/** 开着玻璃且模糊半径够大时，浮在应用上的拼音气泡、拼音编辑条下面都垫一块实时模糊。 */
+internal fun floatingPreeditBlurBehind(glass: com.kingzcheung.xime.settings.FrostedGlassConfig): Boolean =
+    glass.normalized().let { it.enabled && it.blurRadiusDp >= 1f }
+
+/**
+ * 浮在应用上面的拼音底色：键盘上方的拼音气泡和点开后的拼音编辑条用同一个颜色、同一个不透明度
+ * （设置里的「拼音气泡不透明度」，默认 80%），点拼音编辑时不会从实底忽然变透（用户 11-16）。
+ */
+@Composable
+internal fun floatingPreeditColor(surface: Color, key: Color): Color {
+    val prefs = LocalKeyboardInputPreferences.current
+    return preeditBubbleColor(surface, key, floatingPreeditBlurBehind(prefs.frostedGlass), prefs.preeditBubbleOpacity)
+}
+
 /**
  * 编码清空、气泡变透明的那几帧里模糊窗口的透明度。模糊也是单独的小窗口，原来这一刻就拆掉，
  * 系统拿它最后一帧放退出动画，模糊比拼音晚一拍才没（用户 11-08 转来的反馈）。现在同一帧调成全透明，
@@ -1521,7 +1537,7 @@ internal fun preeditBubbleBlurAlpha(hidden: Boolean): Float = if (hidden) 0f els
 
 /** 拼音气泡下面的实时模糊：和键盘卡片的玻璃同一种子窗口，放在输入法窗口下面，只模糊气泡那一块应用画面。 */
 @Composable
-private fun PreeditBubbleBlur(region: IntRect?, blurRadiusDp: Float, cornerRadiusPx: Float, hidden: Boolean = false) {
+internal fun PreeditBubbleBlur(region: IntRect?, blurRadiusDp: Float, cornerRadiusPx: Float, hidden: Boolean = false) {
     val view = LocalView.current
     val context = LocalContext.current
     // 模糊半径按屏幕真实密度算，和键盘卡片那块一样；候选栏放大只放大气泡，不改模糊强度。
@@ -1607,7 +1623,9 @@ internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals, onEdit: ((
     } ?: Modifier.preeditSurface(background)
     val textColor = solidBackground?.let { readableThemeText(visuals.textColor, it.copy(alpha = 1f)) }
         ?: visuals.textColor.copy(alpha = if (visuals.opaqueComments) 1f else 0.9f)
-    Box(modifier.then(surface)
+    // 半透明的气泡：后面是白是黑都按最坏情况算，拼音不够 4.5:1 时垫和候选栏玻璃同一种柔光托底。
+    val halo = remember(textColor, solidBackground) { floatingPreeditHalo(textColor, solidBackground) }
+    Box(modifier.then(surface).glassTextHalo(halo)
         .testTag("candidate-preedit")
         .then(if (onEdit != null) Modifier.clickable(role = Role.Button,
             onClickLabel = "编辑拼音", onClick = onEdit) else Modifier),

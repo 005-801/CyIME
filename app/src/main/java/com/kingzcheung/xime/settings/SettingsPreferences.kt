@@ -471,11 +471,16 @@ object SettingsPreferences {
     fun inlinePreeditPreview(context: Context) = getPrefs(context).getBoolean(KEY_INLINE_PREEDIT_PREVIEW, false)
     fun setInlinePreeditPreview(context: Context, inline: Boolean) =
         getPrefs(context).edit().putBoolean(KEY_INLINE_PREEDIT_PREVIEW, inline).apply()
-    /** 拼音气泡底色的不透明度：20%~100%，按 5% 一档；默认 100%（实底，看得清），用户喜欢透的可以调低（11-01）。 */
+    /**
+     * 浮在应用上面的拼音气泡和点开后的拼音编辑条共用这一个底色不透明度：20%~100%，按 5% 一档。
+     * 默认 80%：能隐约看到下面的应用，拼音照样清楚（用户 11-16：实底挡住下面，点拼音编辑又变透明，两样不统一）。
+     * 原来默认 100%（10-31「透了看着乱」改的实底）；手动拖过滑条的保留自己的值。
+     */
+    const val DEFAULT_PREEDIT_BUBBLE_OPACITY = 0.8f
     fun normalizePreeditBubbleOpacity(value: Float): Float =
-        if (!value.isFinite()) 1f else kotlin.math.round(value.coerceIn(0.2f, 1f) * 20f) / 20f
+        if (!value.isFinite()) DEFAULT_PREEDIT_BUBBLE_OPACITY else kotlin.math.round(value.coerceIn(0.2f, 1f) * 20f) / 20f
     fun preeditBubbleOpacity(context: Context) =
-        normalizePreeditBubbleOpacity(getPrefs(context).getFloat(KEY_PREEDIT_BUBBLE_OPACITY, 1f))
+        normalizePreeditBubbleOpacity(getPrefs(context).getFloat(KEY_PREEDIT_BUBBLE_OPACITY, DEFAULT_PREEDIT_BUBBLE_OPACITY))
     fun setPreeditBubbleOpacity(context: Context, opacity: Float) =
         getPrefs(context).edit().putFloat(KEY_PREEDIT_BUBBLE_OPACITY, normalizePreeditBubbleOpacity(opacity)).apply()
     private const val KEY_PAGE_SIZE = "page_size"

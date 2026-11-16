@@ -96,8 +96,8 @@ data class KeyboardInputPreferences(
     val showPreeditPreview: Boolean = true,
     val inputTextLocation: String = SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR,
     val inlinePreeditPreview: Boolean = false,
-    /** 拼音气泡底色的不透明度，见 [SettingsPreferences.preeditBubbleOpacity]。 */
-    val preeditBubbleOpacity: Float = 1f,
+    /** 拼音气泡和拼音编辑条底色的不透明度，见 [SettingsPreferences.preeditBubbleOpacity]。 */
+    val preeditBubbleOpacity: Float = SettingsPreferences.DEFAULT_PREEDIT_BUBBLE_OPACITY,
     val chineseLetterSwipes: Map<String, String> = emptyMap(),
     val englishLetterSwipes: Map<String, String> = emptyMap(),
     val splitKeyboardEnabled: Boolean = false,
