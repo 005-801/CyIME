@@ -59,6 +59,15 @@ local function trim(s)
   return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
+local SPARK = "https://spark-api-open.xf-yun.com/x2"
+local function usesSpark() return host.config.get("provider") == SPARK end
+local ITS = "https://itrans.xf-yun.com/v1/its"
+local function usesIts() return host.config.get("provider") == ITS end
+local function providerKey()
+  if usesIts() then return trim(host.config.get("itsKey")) end
+  return trim(host.config.get(usesSpark() and "sparkPassword" or KEY_API_KEY) or "")
+end
+
 local function charCount(s)
   local n = 0
   for _ in tostring(s or ""):gmatch(UTF8_CHAR) do n = n + 1 end
@@ -144,7 +153,6 @@ local function swapLangs()
   end
 end
 
-local function apiKey() return trim(host.config.get(KEY_API_KEY) or "") end
 
 -- ================= 离线翻译 =================
 
@@ -366,20 +374,21 @@ end
 
 -- 这次请求的接口地址 + 模型（记哪些不能带 temperature）
 local function endpointKey()
-  return trim(configOr(KEY_BASE_URL, DEFAULT_BASE_URL)):gsub("/+$", "") .. "|" .. trim(configOr(KEY_MODEL, DEFAULT_MODEL))
+  return (usesSpark() and SPARK or trim(configOr(KEY_BASE_URL, DEFAULT_BASE_URL)):gsub("/+$", "")) .. "|" .. (usesSpark() and "spark-x" or trim(configOr(KEY_MODEL, DEFAULT_MODEL)))
 end
 
 local function requestParts(text, stream)
-  local apiKey = trim(host.config.get(KEY_API_KEY) or "")
-  local baseUrl = trim(configOr(KEY_BASE_URL, DEFAULT_BASE_URL)):gsub("/+$", "")
+  local apiKey = providerKey()
+  local baseUrl = (usesSpark() and SPARK or trim(configOr(KEY_BASE_URL, DEFAULT_BASE_URL)):gsub("/+$", ""))
   local req = {
-    model = trim(configOr(KEY_MODEL, DEFAULT_MODEL)),
+    model = (usesSpark() and "spark-x" or trim(configOr(KEY_MODEL, DEFAULT_MODEL))),
     messages = {
       { role = "system", content = SYSTEM_PROMPT },
       { role = "user", content = userMessage(text, targetLang().name, sourceLang() and sourceLang().name) },
     },
     stream = stream,
   }
+  if usesSpark() then req.thinking = { type = "disabled" } end
   if not noTemperature[endpointKey()] then req.temperature = 0.2 end
   local headers = {
     ["Content-Type"] = "application/json",
@@ -399,7 +408,67 @@ local function contentOf(text)
 end
 
 -- 同步请求：宿主没有流式接口时用，也给「测试接口」用。返回 content, err
+local function base64Decode(encoded)
+  local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+  local bytes, bits, value = {}, 0, 0
+  for c in encoded:gmatch(".") do
+    if c == "=" then break end
+    local digit = alphabet:find(c, 1, true)
+    if not digit then return nil end
+    value, bits = value * 64 + digit - 1, bits + 6
+    if bits >= 8 then
+      bits = bits - 8
+      bytes[#bytes + 1] = string.char(math.floor(value / 2^bits))
+      value = value % 2^bits
+    end
+  end
+  return table.concat(bytes)
+end
+
+local function itsSource(text)
+  local source = sourceLang()
+  if source then return source.code end
+  -- The API requires a source language. Kana and Hangul distinguish mixed Japanese/Korean from Chinese.
+  for c in text:gmatch(UTF8_CHAR) do
+    if (c >= "ぁ" and c <= "ヿ") or (c >= "ｦ" and c <= "ﾟ") then return "ja" end
+    if (c >= "가" and c <= "힣") or (c >= "ㄱ" and c <= "ㆎ") then return "ko" end
+  end
+  return hasCjk(text) and "zh" or "en"
+end
+
+local function itsRequest(text, from, to)
+  local id, key, secret = trim(host.config.get("itsAppId")), providerKey(), trim(host.config.get("itsSecret"))
+  if id == "" or key == "" or secret == "" then return nil, "请填写机器翻译的 APPID、APIKey 和 APISecret" end
+  if from == to then return text end
+  if not host.crypto then return nil, "请升级输入法以使用讯飞机器翻译" end
+  local domain = "itrans.xf-yun.com"
+  local date = host.crypto.utcTime("EEE, dd MMM yyyy HH:mm:ss 'GMT'")
+  local signature = host.crypto.base64(host.crypto.hmacSha256(secret,
+    "host: " .. domain .. "\ndate: " .. date .. "\nPOST /v1/its HTTP/1.1"))
+  local authorization = host.crypto.base64('api_key="' .. key .. '", algorithm="hmac-sha256", headers="host date request-line", signature="' .. signature .. '"')
+  local function escape(value)
+    return (value:gsub("[^%w%-._~]", function(c) return string.format("%%%02X", c:byte()) end))
+  end
+  local url = "https://" .. domain .. "/v1/its?host=" .. domain .. "&date=" .. escape(date) .. "&authorization=" .. escape(authorization)
+  local body = { header = { app_id = id, status = 3 },
+    parameter = { its = { from = from == "zh" and "cn" or from, to = to == "zh" and "cn" or to, result = {} } },
+    payload = { input_data = { encoding = "utf8", status = 3, text = host.crypto.base64(text) } } }
+  local resp = host.http.request("POST", url, { ["Content-Type"] = "application/json" }, host.json.encode(body), TIMEOUT_MS)
+  if not resp then return nil, "连不上接口：讯飞机器翻译" end
+  if resp.status ~= 200 then return nil, httpErrorText(resp.status, "") end
+  local data = host.json.decode(resp.text or "")
+  if not data or not data.header then return nil, "讯飞机器翻译返回的数据格式有误" end
+  if tonumber(data.header.code) ~= 0 then return nil, "讯飞机器翻译错误 " .. tostring(data.header.code) end
+  local encoded = data.payload and data.payload.result and data.payload.result.text
+  local decoded = type(encoded) == "string" and base64Decode(encoded)
+  local result = decoded and host.json.decode(decoded)
+  local dst = result and result.trans_result and result.trans_result.dst
+  if type(dst) ~= "string" or dst == "" then return nil, "讯飞机器翻译未返回译文" end
+  return dst
+end
+
 local function requestOnce(text)
+  if usesIts() then return itsRequest(text, itsSource(text), targetLang().code) end
   local key = endpointKey()
   local withTemperature = not noTemperature[key]
   local url, headers, body = requestParts(text, false)
@@ -413,7 +482,7 @@ local function requestOnce(text)
     return nil, "连不上接口：" .. (host.http.lastError() or "未知错误")
   end
   if resp.status ~= 200 then
-    return nil, httpErrorText(resp.status, serverMessage(resp.text, trim(host.config.get(KEY_API_KEY) or "")))
+    return nil, httpErrorText(resp.status, serverMessage(resp.text, providerKey()))
   end
   local content = contentOf(resp.text)
   if content == nil then return nil, "接口返回的格式看不懂" end
@@ -430,7 +499,11 @@ local function translate(text)
     fail("字太多了（超过 " .. MAX_CHARS .. " 字），分几句翻")
     return
   end
-  if apiKey() == "" then
+  if usesSpark() and providerKey() == "" then
+    fail("请填写讯飞星火 X2 的 APIPassword")
+    return
+  end
+  if not usesIts() and providerKey() == "" then
     if hasOffline() then
       translateOffline(text)
     else
@@ -438,7 +511,7 @@ local function translate(text)
     end
     return
   end
-  if host.http.stream == nil then
+  if usesIts() or host.http.stream == nil then
     generating = true
     local content, err = requestOnce(text)
     generating = false
@@ -485,7 +558,7 @@ local function translate(text)
           translate(text)  -- 不带 temperature 再翻一次
           return
         end
-        fail(httpErrorText(status, serverMessage(rest, trim(host.config.get(KEY_API_KEY) or ""))))
+        fail(httpErrorText(status, serverMessage(rest, providerKey())))
         return
       end
       -- 不是接口报错，是网络断了：离线模型在就这一句改用离线
@@ -519,14 +592,9 @@ function plugin.getSettingsSchema()
   if trim(host.config.get(KEY_MODEL) or "") == "" then host.config.set(KEY_MODEL, DEFAULT_MODEL) end
   local names = langNames()
   local fields = {
-    { key = KEY_API_KEY, label = "API 密钥", type = "secret", placeholder = "sk-…", required = not hasOffline(),
-      section = "接口", helpText = hasOffline()
-        and "只存在这台手机里，不进备份，只发给下面的接口地址。不填就用离线翻译（只有中英互译）"
-        or "只存在这台手机里，不进备份，只发给下面的接口地址" },
-    { key = KEY_BASE_URL, label = "接口地址", type = "text", defaultValue = DEFAULT_BASE_URL, section = "接口",
-      helpText = "OpenAI 兼容接口，到 /v1 为止。例：https://api.deepseek.com/v1、https://api.siliconflow.cn/v1" },
-    { key = KEY_MODEL, label = "模型", type = "text", defaultValue = DEFAULT_MODEL, section = "接口",
-      helpText = "例：gpt-4o-mini、deepseek-chat、Qwen/Qwen2.5-7B-Instruct" },
+    { key = "provider", label = "服务商", type = "select", options = { "自定义兼容接口", SPARK, ITS },
+      helpText = "讯飞星火 X2 对应 spark-api-open.xf-yun.com，机器翻译对应 itrans.xf-yun.com。",
+      optionLabels = { [SPARK] = "讯飞星火 X2", [ITS] = "讯飞机器翻译" }, defaultValue = "自定义兼容接口", section = "接口" },
     { key = "testConnection", label = "测试接口", type = "button", section = "接口" },
     { key = KEY_SOURCE_LANG, label = "原文语言", type = "select", options = sourceNames(),
       defaultValue = AUTO, section = "翻译", helpText = "翻译栏左边点「" .. AUTO .. "」也能换" },
@@ -536,6 +604,35 @@ function plugin.getSettingsSchema()
   if hasOffline() then
     fields[#fields + 1] = { key = "downloadOffline", label = "下载离线模型", type = "button", section = "离线翻译",
       helpText = "中译英、英译中两个模型，共约 100 MB。没填 API 密钥、或连不上接口时用，不联网" }
+  end
+  -- 旧宿主显示全部服务的独立字段；新版按所选服务显示并校验。
+  local providerFields = {
+    { value = "自定义兼容接口", fields = {
+      { key = KEY_API_KEY, label = "API 密钥", type = "secret", placeholder = "sk-…", requiredWhenVisible = not hasOffline(),
+        section = "接口", helpText = hasOffline()
+          and "只存在这台手机里，不进备份，只发给下面的接口地址。不填就用离线翻译（只有中英互译）"
+          or "只存在这台手机里，不进备份，只发给下面的接口地址" },
+      { key = KEY_BASE_URL, label = "接口地址", type = "text", defaultValue = DEFAULT_BASE_URL, section = "接口",
+        helpText = "OpenAI 兼容接口，到 /v1 为止。例：https://api.deepseek.com/v1、https://api.siliconflow.cn/v1" },
+      { key = KEY_MODEL, label = "模型", type = "text", defaultValue = DEFAULT_MODEL, section = "接口",
+        helpText = "例：gpt-4o-mini、deepseek-chat、Qwen/Qwen2.5-7B-Instruct" },
+    } },
+    { value = SPARK, fields = {
+      { key = "sparkPassword", label = "星火 X2 APIPassword", type = "secret", requiredWhenVisible = true, section = "接口", helpText = "选择讯飞星火 X2 时填写，使用星火控制台的 HTTP 凭据" },
+    } },
+    { value = ITS, fields = {
+      { key = "itsAppId", label = "APPID", type = "text", requiredWhenVisible = true, section = "接口" },
+      { key = "itsKey", label = "APIKey", type = "secret", requiredWhenVisible = true, section = "接口" },
+      { key = "itsSecret", label = "APISecret", type = "secret", requiredWhenVisible = true, section = "接口" },
+    } },
+  }
+  local index = 2
+  for _, group in ipairs(providerFields) do
+    for _, field in ipairs(group.fields) do
+      field.visibleWhen = { key = "provider", value = group.value }
+      table.insert(fields, index, field)
+      index = index + 1
+    end
   end
   return fields
 end
@@ -562,7 +659,11 @@ end
 
 -- 设置页「测试接口」按钮：nil = 成功，字符串 = 失败原因
 function plugin.testConnection()
-  if trim(host.config.get(KEY_API_KEY) or "") == "" then return "还没填 API 密钥" end
+  if usesIts() then
+    local _, err = itsRequest("你好，明天见。", "zh", "en")
+    return err
+  end
+  if providerKey() == "" then return "还没填 API 密钥" end
   local content, err = requestOnce("你好，明天见。")
   if err ~= nil then return err end
   if trim(content) == "" then return "接口能用，但没有返回译文" end
@@ -616,7 +717,13 @@ local function offlineUi()
 end
 
 local function buildUi()
-  if apiKey() == "" then
+  if usesSpark() and providerKey() == "" then
+    return withLangs({ type = "button", key = "host:settings", label = "设置" }, "请填写讯飞星火 X2 的 APIPassword")
+  end
+  if usesIts() and (providerKey() == "" or trim(host.config.get("itsAppId")) == "" or trim(host.config.get("itsSecret")) == "") then
+    return withLangs({ type = "button", key = "host:settings", label = "设置" }, "请填写讯飞机器翻译的 APPID、APIKey 和 APISecret")
+  end
+  if providerKey() == "" then
     if hasOffline() then return offlineUi() end
     return {
       { type = "button", key = "host:settings", label = "设置" },
@@ -631,7 +738,7 @@ end
 function plugin.getPanelState(_)
   local items = {}
   -- 离线译文不用剥外壳（那是给大模型的回答用的），原文带的引号要留着
-  local out = (generating or offlineUsed) and trim(buffer) or cleanOutput(buffer)
+  local out = (generating or offlineUsed or usesIts()) and trim(buffer) or cleanOutput(buffer)
   if out ~= "" then items[1] = { id = "result", text = out } end
   return { items = items, loading = generating, ui = buildUi() }
 end
