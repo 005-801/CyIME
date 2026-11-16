@@ -14,7 +14,7 @@ index 5242f6d5..38314ca8 100644
    // 疊加運算規則, 將運算規則產生的屬性應用到當前拼寫上
    void Compose(const SpellingProperties& delta);
 diff --git a/src/rime/algo/syllabifier.cc b/src/rime/algo/syllabifier.cc
-index a575178..1762dae 100644
+index a575178..fc2a9f3 100644
 --- a/src/rime/algo/syllabifier.cc
 +++ b/src/rime/algo/syllabifier.cc
 @@ -6,6 +6,7 @@
@@ -138,7 +138,7 @@ index a575178..1762dae 100644
              } else {
                it->second.type = (std::min)(it->second.type, props.type);
              }
-@@ -208,9 +281,56 @@ int Syllabifier::BuildSyllableGraph(const string& input,
+@@ -208,9 +281,77 @@ int Syllabifier::BuildSyllableGraph(const string& input,
    DLOG(INFO) << "remove stale vertices and edges";
    set<int> good;
    good.insert(farthest);
@@ -168,40 +168,60 @@ index a575178..1762dae 100644
 +          input.size() == 1 && ((input[0] >= '2' && input[0] <= '9') ||
 +                                (input[0] >= 'a' && input[0] <= 'z'))
 +              ? kAbbreviation : kFuzzySpelling);
-+  // CyIME: while the last key is the initial of the syllable being typed (women m), the end is reached only
-+  // through an initial, so nothing here removed the initial readings of the letters before it either: every key
-+  // of a long sentence that starts a syllable looked up w o m e n ... as initials again and cost three times an
-+  // ordinary key, more with every word. Letters that read in full from the start (no initials, no corrections)
-+  // keep only their full readings, as they had one key earlier and will have one key later. The last
-+  // kSpelledInitialsWindow of them still keep their initials: short input that happens to spell a syllable is
-+  // often initials (kad 可爱的, eq 而且, awm 爱我吗). Letters only; nine-key input is unchanged.
++  // CyIME: while the end is reached only through an initial, nothing here removed the initial readings of the
++  // letters before it either. That is every key that starts a syllable (women m), and every key after a slip the
++  // letters cannot be read across in full (shj): a long sentence then looked up w o m e n ... as initials again at
++  // each such key and cost three times an ordinary key, more with every word. Letters inside a stretch that reads
++  // in full (no initials, no corrections) keep only their full readings, as they have when the end is a whole
++  // syllable. The last kSpelledInitialsWindow letters of a stretch still keep their initials: short input that
++  // happens to spell a syllable is often initials (kad 可爱的, eq 而且, awm 爱我吗). Letters only; nine-key input
++  // is unchanged.
 +  const int kSpelledInitialsWindow = 8;
-+  const bool spelled_prefix = input.size() > 1 && last_type >= kAbbreviation &&
++  const bool spelled_stretches = input.size() > 1 && last_type >= kAbbreviation &&
 +      input.find_first_not_of("23456789' ") != std::string::npos;
-+  // Positions the letters before them read in full: no initials, no corrections.
-+  set<int> reads_in_full;
-+  if (spelled_prefix) {
-+    reads_in_full.insert(0);
-+    for (const auto& from : graph->edges) {
-+      if (!reads_in_full.count(from.first)) continue;
-+      for (const auto& to : from.second) {
-+        if (std::any_of(to.second.begin(), to.second.end(), [](const auto& s) {
-+              return s.second.type < kAbbreviation && !s.second.is_correction; }))
-+          reads_in_full.insert(to.first);
++  // spelled_until[i]: the farthest position, still connected to the end, that the letters read in full up to from
++  // a position at or before i; -1 when there is none.
++  vector<int> spelled_until(farthest + 1, -1);
++  if (spelled_stretches) {
++    set<int> connected{static_cast<int>(farthest)};
++    map<int, int> full_until;
++    for (auto v = graph->vertices.rbegin(); v != graph->vertices.rend(); ++v) {
++      const int at = static_cast<int>(v->first);
++      if (at >= static_cast<int>(farthest)) continue;
++      const auto edges = graph->edges.find(at);
++      if (edges == graph->edges.end()) continue;
++      int until = -1;
++      for (const auto& to : edges->second) {
++        const int end = static_cast<int>(to.first);
++        if (!connected.count(end)) continue;
++        connected.insert(at);
++        if (std::any_of(to.second.begin(), to.second.end(), [](const auto& spelling) {
++              return spelling.second.type < kAbbreviation && !spelling.second.is_correction; })) {
++          const auto next = full_until.find(end);
++          until = (std::max)(until, next == full_until.end() ? end : (std::max)(end, next->second));
++        }
 +      }
++      if (until >= 0) full_until[at] = until;
++    }
++    int until = -1;
++    for (int i = 0; i <= static_cast<int>(farthest); ++i) {
++      const auto at = full_until.find(i);
++      if (at != full_until.end()) until = (std::max)(until, at->second);
++      spelled_until[i] = until;
 +    }
 +  }
-+  int spelled_end = -1;   // last such position still connected to the end
-+  int spelled = -1;       // letters before this position keep only their full readings
++  // Letters from `from` to `to` lie inside such a stretch, its last kSpelledInitialsWindow letters aside.
++  const auto spelled = [&](int from, int to) {
++    return from >= 0 && spelled_until[from] >= to + kSpelledInitialsWindow;
++  };
    for (int i = farthest - 1; i >= 0; --i) {
      if (graph->vertices.find(i) == graph->vertices.end())
        continue;
-@@ -221,17 +341,48 @@ int Syllabifier::BuildSyllableGraph(const string& input,
+@@ -221,17 +362,47 @@ int Syllabifier::BuildSyllableGraph(const string& input,
          graph->edges[i].erase(j++);
          continue;
        }
-+      const SpellingType limit =
-+          spelled >= 0 && j->first <= static_cast<size_t>(spelled) ? kFuzzySpelling : last_type;
++      const SpellingType limit = spelled(i, static_cast<int>(j->first)) ? kFuzzySpelling : last_type;
        // remove disqualified syllables (eg. matching abbreviated spellings)
        // when there is a path of more favored type
        SpellingType edge_type = kInvalidSpelling;
@@ -246,29 +266,66 @@ index a575178..1762dae 100644
            if (k->second.type < edge_type)
              edge_type = k->second.type;
            ++k;
-@@ -245,7 +396,9 @@ int Syllabifier::BuildSyllableGraph(const string& input,
+@@ -245,7 +416,9 @@ int Syllabifier::BuildSyllableGraph(const string& input,
          ++j;
        }
      }
 -    if (graph->vertices[i] > last_type || graph->edges[i].empty()) {
-+    if ((graph->vertices[i] > (spelled >= 0 && i < spelled ? kFuzzySpelling : last_type) &&
++    if ((graph->vertices[i] > last_type &&
 +         (input.empty() || input.find_first_not_of("23456789' ") != std::string::npos)) ||
 +        graph->edges[i].empty()) {
        DLOG(INFO) << "remove stale vertex at " << i;
        graph->vertices.erase(i);
        graph->edges.erase(i);
-@@ -253,6 +406,10 @@ int Syllabifier::BuildSyllableGraph(const string& input,
-     }
+@@ -254,6 +427,47 @@ int Syllabifier::BuildSyllableGraph(const string& input,
      // keep the valid vertex
      good.insert(i);
-+    if (spelled_prefix && spelled < 0 && reads_in_full.count(i)) {
-+      if (spelled_end < 0) spelled_end = i;
-+      if (i + kSpelledInitialsWindow <= spelled_end) spelled = i;
-+    }
    }
++  if (spelled_stretches) {
++    // Positions inside a stretch that only an initial removed above, or only a correction, led to have no
++    // reading from the start any more; what only led to them goes with them. One key earlier and one key later
++    // they are not there either.
++    set<size_t> reached{0};
++    for (auto v = graph->vertices.begin(); v != graph->vertices.end();) {
++      if (!reached.count(v->first)) {
++        graph->edges.erase(v->first);
++        v = graph->vertices.erase(v);
++        continue;
++      }
++      const auto edges = graph->edges.find(v->first);
++      if (edges != graph->edges.end()) {
++        for (const auto& to : edges->second) {
++          const bool only_corrections = spelled(static_cast<int>(v->first), static_cast<int>(to.first)) &&
++              std::all_of(to.second.begin(), to.second.end(), [](const auto& spelling) {
++                return spelling.second.is_correction; });
++          if (!only_corrections) reached.insert(to.first);
++        }
++      }
++      ++v;
++    }
++    for (auto v = graph->vertices.rbegin(); v != graph->vertices.rend();) {
++      const size_t at = v->first;
++      const auto edges = graph->edges.find(at);
++      if (at >= farthest || edges == graph->edges.end()) {
++        ++v;
++        continue;
++      }
++      for (auto to = edges->second.begin(); to != edges->second.end();) {
++        if (graph->vertices.find(to->first) == graph->vertices.end()) to = edges->second.erase(to);
++        else ++to;
++      }
++      if (edges->second.empty()) {
++        graph->edges.erase(edges);
++        v = decltype(v)(graph->vertices.erase(std::next(v).base()));
++      } else {
++        ++v;
++      }
++    }
++  }
  
    if (enable_completion_ && farthest < input.length()) {
-@@ -298,6 +455,23 @@ int Syllabifier::BuildSyllableGraph(const string& input,
+     DLOG(INFO) << "completion enabled";
+@@ -298,6 +512,23 @@ int Syllabifier::BuildSyllableGraph(const string& input,
      }
    }
  
@@ -292,7 +349,7 @@ index a575178..1762dae 100644
    graph->input_length = input.length();
    graph->interpreted_length = farthest;
    DLOG(INFO) << "input length: " << graph->input_length;
-@@ -427,7 +601,10 @@ bool Syllabifier::TryExtendSyllableGraph(const string& input,
+@@ -427,7 +658,10 @@ bool Syllabifier::TryExtendSyllableGraph(const string& input,
    set<int> good;
    good.insert(farthest);
    SpellingType last_type =
@@ -304,7 +361,7 @@ index a575178..1762dae 100644
    for (int i = farthest - 1; i >= 0; --i) {
      if (graph->vertices.find(i) == graph->vertices.end())
        continue;
-@@ -442,9 +619,27 @@ bool Syllabifier::TryExtendSyllableGraph(const string& input,
+@@ -442,9 +676,27 @@ bool Syllabifier::TryExtendSyllableGraph(const string& input,
            ++k;
            continue;
          }
@@ -333,7 +390,7 @@ index a575178..1762dae 100644
            if (k->second.type < edge_type)
              edge_type = k->second.type;
            ++k;
-@@ -458,7 +653,9 @@ bool Syllabifier::TryExtendSyllableGraph(const string& input,
+@@ -458,7 +710,9 @@ bool Syllabifier::TryExtendSyllableGraph(const string& input,
          ++j;
        }
      }
@@ -344,7 +401,7 @@ index a575178..1762dae 100644
        graph->vertices.erase(i);
        graph->edges.erase(i);
        continue;
-@@ -541,6 +738,90 @@ void Syllabifier::CheckOverlappedSpellings(SyllableGraph* graph,
+@@ -541,6 +795,90 @@ void Syllabifier::CheckOverlappedSpellings(SyllableGraph* graph,
    }
  }
  
