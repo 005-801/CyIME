@@ -357,8 +357,8 @@ fun AboutContent(
                             )
                             SettingsToggleItem(
                                 icon = Icons.TwoTone.EmojiEmotions,
-                                title = "启动广告（彩蛋）",
-                                subtitle = "每次打开设置先看 5 秒假广告，可以跳过。画着玩的，不联网。",
+                                title = "启用开屏广告",
+                                subtitle = "",
                                 checked = launchAdEgg,
                                 onCheckedChange = { enabled ->
                                     launchAdEgg = enabled
