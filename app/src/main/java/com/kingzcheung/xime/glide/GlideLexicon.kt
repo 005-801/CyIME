@@ -90,8 +90,33 @@ object GlideLexicon {
      * 不闪退：这一笔当没认出，日志只记第一次（用户 11-12）。须在后台线程调用。
      */
     fun decodeStroke(context: Context, keyboard: GlideKeyboard, chinese: Boolean, doublePinyin: DoublePinyinScheme?,
-        xs: FloatArray, ys: FloatArray): List<GlideCandidate> = decodeOrEmpty {
-        if (chinese) chineseDecoder(context, keyboard, doublePinyin).decode(xs, ys) else decoder(context, keyboard).decode(xs, ys)
+        xs: FloatArray, ys: FloatArray, left: String? = null): List<GlideCandidate> = decodeOrEmpty {
+        if (!chinese) return@decodeOrEmpty decoder(context, keyboard).decode(xs, ys)
+        val candidates = chineseDecoder(context, keyboard, doublePinyin).decode(xs, ys)
+        // 中文按前文重排（[ChineseGlideContext]）；没有前文就不碰词组模型。
+        if (left.isNullOrEmpty() || candidates.size < 2) candidates
+        else ChineseGlideContext.rerank(candidates, left, chineseWordOf(context, doublePinyin),
+            ChineseGlideContext.model(context.applicationContext.filesDir))
+    }
+
+    /** 中文滑行编码（全拼或双拼）→ 它最常用的词；全拼、各双拼方案各一份。两份词表行数对不上时一律查不到。 */
+    private val chineseWords = HashMap<Any, Map<String, String>>()
+
+    private fun chineseWordOf(context: Context, doublePinyin: DoublePinyinScheme?): (String) -> String? {
+        val map = synchronized(this) {
+            val key: Any = doublePinyin ?: "py"
+            chineseWords[key] ?: run {
+                val entries = pinyin(context); val words = pinyinWords(context)
+                val out = HashMap<String, String>()
+                if (words.size == entries.size) entries.forEachIndexed { index, syllables ->
+                    val code = if (doublePinyin == null) syllables.joinToString("")
+                        else syllables.map { doublePinyin.code(it) ?: return@forEachIndexed }.joinToString("")
+                    out.putIfAbsent(code, words[index])
+                }
+                out.also { chineseWords[key] = it }
+            }
+        }
+        return { map[it] }
     }
 
     @Volatile private var failureLogged = false

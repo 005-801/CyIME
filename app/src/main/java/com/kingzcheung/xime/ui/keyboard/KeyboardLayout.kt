@@ -443,6 +443,7 @@ fun KeyboardLayout(
         if (glidePreview.gesture != gesture) {
             glidePreview.start(gesture)
             glidePreview.english = if (chineseGlide) null else runCatching { callbacks.glidePreviewer?.invoke() }.getOrNull()
+            glidePreview.left = if (chineseGlide) runCatching { callbacks.t9LeftContext() }.getOrNull() else null
         }
         glidePreview.points = points
         if (glidePreview.job?.isActive == true) { glidePreview.moved = true; return@progress }
@@ -450,6 +451,7 @@ fun KeyboardLayout(
         val doublePinyin = if (chinese && glideProfile.scheme == com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN)
             com.kingzcheung.xime.settings.DoublePinyinSchemes.find(uiState.currentSchemaId) else null
         val english = glidePreview.english
+        val left = glidePreview.left
         val shift = viewModel.shiftMode.value
         val case: (String) -> String = { word -> com.kingzcheung.xime.glide.glideCased(word, shift.isShifted,
             shift == com.kingzcheung.xime.viewmodel.ShiftMode.CAPS) }
@@ -463,7 +465,8 @@ fun KeyboardLayout(
                     runCatching {
                         val keyboard = com.kingzcheung.xime.glide.GlideLexicon.keyboard(keys)
                         if (chinese) {
-                            com.kingzcheung.xime.glide.GlideLexicon.chineseDecoder(glideContext, keyboard, doublePinyin).decode(xs, ys, limit = 1)
+                            (if (left.isNullOrEmpty()) com.kingzcheung.xime.glide.GlideLexicon.chineseDecoder(glideContext, keyboard, doublePinyin).decode(xs, ys, limit = 1)
+                            else com.kingzcheung.xime.glide.GlideLexicon.decodeStroke(glideContext, keyboard, true, doublePinyin, xs, ys, left))
                                 .firstOrNull()?.word?.let { it to null }
                         } else {
                             val candidates = com.kingzcheung.xime.glide.GlideLexicon.decoder(glideContext, keyboard).decode(xs, ys)
@@ -499,13 +502,15 @@ fun KeyboardLayout(
         val doublePinyin = if (chineseGlide && glideProfile.scheme == com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN)
             com.kingzcheung.xime.settings.DoublePinyinSchemes.find(uiState.currentSchemaId) else null
         val chinese = chineseGlide
+        // 中文按前文选编码（组合为空时光标前已上屏的字，和九键组句同一个来源）；在主线程读，识别在后台。
+        val left = if (chinese) runCatching { callbacks.t9LeftContext() }.getOrNull() else null
         glideScope.launch {
             var handedOff = false
             try {
             val candidates = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                 // 词表读不出来时这一笔当没认出，不闪退（用户 11-12）。
                 com.kingzcheung.xime.glide.GlideLexicon.decodeStroke(glideContext,
-                    com.kingzcheung.xime.glide.GlideLexicon.keyboard(keys), chinese, doublePinyin, xs, ys)
+                    com.kingzcheung.xime.glide.GlideLexicon.keyboard(keys), chinese, doublePinyin, xs, ys, left)
             }
             if (candidates.isEmpty()) {
                 // 很短又认不出词：快打时手指一抖被当成了滑行，按点了起点那个键算，不吞这一下（用户 11-11）。
