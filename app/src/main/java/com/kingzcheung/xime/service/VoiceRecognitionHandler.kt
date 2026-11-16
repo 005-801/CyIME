@@ -137,7 +137,9 @@ class VoiceRecognitionHandler(
         val languages = getState().voiceKeyboardLanguages
         val language = languages.recognitionLanguage
         if (inputLanguage != null && inputLanguage != language) endInputSession()
-        // 上一次会话若还在收尾等待中（快速再次开始），直接废弃收尾状态
+        // 上一次会话若还在收尾等待中（快速再次开始），直接废弃收尾状态。那份最终结果会随新会话作废，先把已显示的字上屏，
+        // 免得它留在组字区里被这一次的临时结果盖掉（2026-11-16 用户：重按会盖掉前一次）。
+        if (finishing && !sessionAbandoned) commitPendingOnRelease()
         finishing = false
         mainHandler.removeCallbacks(finishTimeoutRunnable)
         suppressDuplicateFinal = false
