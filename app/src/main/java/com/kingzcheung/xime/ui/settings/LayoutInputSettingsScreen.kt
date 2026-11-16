@@ -274,14 +274,16 @@ internal fun NeighborCorrectionSection() {
     var typos by remember { mutableStateOf(SpellingPatches.Typo.entries.associateWith { SpellingPatches.typo(context, it) }) }
     val needsNeighbor = if (settings.neighborCorrection) null else "要先打开「邻键纠错」"
     val fullOnly = if (support.fullPinyin) null else "只用于 26 键全拼"
+    // 九键全拼停一下后也补邻键、顺序、漏键三种（多键没有）。
+    val fullOrNineKey = if (support.fullPinyin || support.nineKey) null else "只用于 26 键全拼、九键"
     SettingsSection(title = "拼音纠错", content = {
-        Text("26 键全拼四种都有，双拼只有邻键纠错，九键、14 键不纠错。", style = MaterialTheme.typography.bodySmall,
+        Text("26 键全拼四种都有，双拼只有邻键纠错，九键有邻键、顺序、漏键三种(停一下才出)，14 键不纠错。", style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         SettingsToggleItem(Icons.TwoTone.Spellcheck, "邻键纠错",
             "按偏到旁边的键时，也给出本来想打的词，原来的候选还在",
             checked = settings.neighborCorrection, onCheckedChange = {
                 settings.copy(neighborCorrection = it).save(context)
-            }, lockMessage = if (support.fullPinyin || support.doublePinyin) null else "只用于 26 键全拼、双拼",
+            }, lockMessage = if (support.fullPinyin || support.doublePinyin || support.nineKey) null else "只用于 26 键全拼、双拼、九键",
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.NEIGHBOR_CORRECTION)
         if (showDouble) {
             HorizontalDivider()
@@ -300,33 +302,37 @@ internal fun NeighborCorrectionSection() {
                     SpellingPatches.setTypo(context, typo, on)
                     typos = typos + (typo to on)
                     scope.launch(Dispatchers.IO) { runCatching { SpellingPatches.apply(context) } }
-                }, lockMessage = fullOnly ?: if (typo == SpellingPatches.Typo.OMISSION) null else needsNeighbor,
+                }, lockMessage = (if (typo == SpellingPatches.Typo.EXTRA) fullOnly else fullOrNineKey)
+                    ?: if (typo == SpellingPatches.Typo.OMISSION) null else needsNeighbor,
                 costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.typo(typo))
         }
     })
 }
 
 private fun typoCaption(typo: SpellingPatches.Typo): String = when (typo) {
-    SpellingPatches.Typo.TRANSPOSITION -> "相邻两个字母打反也出想打的词(如 shenem 出“什么”)；改完要几秒重新部署"
+    SpellingPatches.Typo.TRANSPOSITION -> "相邻两个字母打反也出想打的词(如 shenem 出“什么”)，九键是两个数字按反、停一下才出；改完要几秒重新部署"
     SpellingPatches.Typo.EXTRA -> "多按一下或多碰到旁边的键也出想打的词(如 woomen 出“我们”)；改完要几秒重新部署"
     SpellingPatches.Typo.OMISSION -> "漏打一个字母也出想打的词(如 chengong 出“成功”)，有的停一下才出；改完要几秒重新部署"
 }
 
-/** 已启用的中文方案里有没有 26 键全拼、26 键双拼：纠错只在这两种上起作用，都没有时对应的开关灰掉。 */
-internal data class TypoCorrectionSupport(val fullPinyin: Boolean, val doublePinyin: Boolean) {
+/** 已启用的中文方案里有没有 26 键全拼、26 键双拼、九键全拼：纠错只在这三种上起作用（九键只有邻键、顺序、漏键，停一下才出），都没有时对应的开关灰掉。 */
+internal data class TypoCorrectionSupport(val fullPinyin: Boolean, val doublePinyin: Boolean, val nineKey: Boolean = false) {
     companion object {
-        val ALL = TypoCorrectionSupport(fullPinyin = true, doublePinyin = true)
+        val ALL = TypoCorrectionSupport(fullPinyin = true, doublePinyin = true, nineKey = true)
 
         fun of(context: android.content.Context): TypoCorrectionSupport =
             of(com.kingzcheung.xime.settings.SchemaManager.getEnabledSchemas(context) + SettingsPreferences.getCurrentSchema(context))
 
         fun of(schemas: Collection<String>): TypoCorrectionSupport {
-            val profiles = schemas.distinct().map { com.kingzcheung.xime.settings.InputProfiles.describe(it) }
-                .filter { it.language == com.kingzcheung.xime.settings.InputLanguage.CHINESE &&
-                    it.layout.kind == com.kingzcheung.xime.settings.LayoutKind.ALPHABETIC }
+            val chinese = schemas.distinct().map { com.kingzcheung.xime.settings.InputProfiles.describe(it) }
+                .filter { it.language == com.kingzcheung.xime.settings.InputLanguage.CHINESE }
+            val profiles = chinese.filter { it.layout.kind == com.kingzcheung.xime.settings.LayoutKind.ALPHABETIC }
             return TypoCorrectionSupport(
                 fullPinyin = profiles.any { it.scheme == com.kingzcheung.xime.settings.InputScheme.PINYIN },
-                doublePinyin = profiles.any { it.scheme == com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN })
+                doublePinyin = profiles.any { it.scheme == com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN },
+                // 九键双拼不算：它不用九键全拼的数字纠错表。
+                nineKey = chinese.any { it.layout.kind == com.kingzcheung.xime.settings.LayoutKind.T9 &&
+                    it.scheme == com.kingzcheung.xime.settings.InputScheme.PINYIN })
         }
     }
 }

@@ -609,6 +609,14 @@ internal class ImeSessionController(private val service: XimeInputMethodService)
             val cylmAlternative = prefs.getBoolean(KeyboardInputPreferences.CYLM_LONG_ALTERNATIVE_KEY, false)
             if (persist || cylmAlternative) add("cyime_cylm_alternative" to cylmAlternative)
             add("cyime_rare_chars" to prefs.getBoolean(KeyboardInputPreferences.RARE_CHARACTERS_KEY, false))
+            // 九键停一下后的数字纠错跟「拼音纠错」的开关走：按到上下左右的键跟邻键纠错，两个数字按反跟顺序纠错
+            // （设置页里它要先开邻键纠错），少按一个跟漏键纠错。选项为真 = 关，没写过时都开。
+            val neighbor = prefs.getBoolean("neighbor_correction", true)
+            add("_cyime_digit_tap_off" to !neighbor)
+            add("_cyime_digit_swap_off" to
+                !(neighbor && com.kingzcheung.xime.settings.SpellingPatches.typo(service, com.kingzcheung.xime.settings.SpellingPatches.Typo.TRANSPOSITION)))
+            add("_cyime_digit_omission_off" to
+                !com.kingzcheung.xime.settings.SpellingPatches.typo(service, com.kingzcheung.xime.settings.SpellingPatches.Typo.OMISSION))
             add("_cyime_l_letter" to lLetter)
         }
         var changed = false

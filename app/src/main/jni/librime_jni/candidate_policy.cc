@@ -21,7 +21,10 @@
 #include <rime/gear/translator_commons.h>
 #include <rime/language.h>
 #include <rime/registry.h>
+#include <rime/resource.h>
+#include <rime/service.h>
 #include <rime/translation.h>
+#include <t9_ngram_model.h>
 #include <t9_pinyin_map.h>
 
 namespace cyime {
@@ -113,9 +116,13 @@ double SpellingCoverage(const an<Phrase>& phrase) {
   return complete / std::max<size_t>(1, phrase->end() - phrase->start());
 }
 
+// Kinds of single edit a nine-key lookup may offer (the keyboard's 拼音纠错 switches, see RefineOmission).
+enum : int { kEditOmission = 1, kEditSwap = 2, kEditTap = 4, kEditAll = 7 };
+
 // The auxiliary prism can match an edit in several syllables. Only offer a
 // whole reading that differs from the actual input by one edit in total.
-bool IsSingleSpellingEdit(const string& input, const string& pinyin, bool digits, Config* tap_grid = nullptr) {
+bool IsSingleSpellingEdit(const string& input, const string& pinyin, bool digits, Config* tap_grid = nullptr,
+                          int kinds = kEditAll) {
   string expected;
   for (char ch : pinyin) {
     if (ch == ' ') continue;
@@ -132,8 +139,8 @@ bool IsSingleSpellingEdit(const string& input, const string& pinyin, bool digits
            adjacent.find(expected[pos]) != string::npos;
   }
   if (digits && expected.size() == input.size() + 1)
-    return expected.compare(pos + 1, string::npos, input, pos, string::npos) == 0;
-  return expected.size() == input.size() && pos + 1 < input.size() &&
+    return (kinds & kEditOmission) && expected.compare(pos + 1, string::npos, input, pos, string::npos) == 0;
+  return (kinds & kEditSwap) && expected.size() == input.size() && pos + 1 < input.size() &&
          input[pos] == expected[pos + 1] && input[pos + 1] == expected[pos] &&
          input.compare(pos + 2, string::npos, expected, pos + 2, string::npos) == 0;
 }
@@ -154,12 +161,12 @@ class EditLookup : public Engine {
     }
   }
 
-  an<Candidate> Best(const string& input, bool digits, const string& original_first) {
+  an<Candidate> Best(const string& input, bool digits, const string& original_first, int kinds = kEditAll) {
     auto hit = Lookup(input);
-    if (hit && IsSingleSpellingEdit(input, hit->comment(), digits)) return hit;
+    if (hit && IsSingleSpellingEdit(input, hit->comment(), digits, nullptr, kinds)) return hit;
     // Two independent decodings agree with the original reading. Looking for
     // a substituted key here mostly introduces alternatives to correctly typed text.
-    if (!digits || tap_schema_.empty() || (hit && hit->text() == original_first)) return nullptr;
+    if (!digits || tap_schema_.empty() || !(kinds & kEditTap) || (hit && hit->text() == original_first)) return nullptr;
     if (!taps_) taps_.reset(new EditLookup(tap_schema_, dictionary_));
     auto neighbor = taps_->Lookup(input);
     return neighbor && IsSingleSpellingEdit(input, neighbor->comment(), true, taps_->schema()->config()) ?
@@ -603,6 +610,18 @@ class CandidatePolicy : public Filter {
     engine_->schema()->config()->GetBool("translator/cyime_transposition_correction", &full_pinyin_);
     if (engine_->schema()->config()->GetString("cyime_edit_schema", &edit_id_))
       spelling_policies[engine_->context()] = this;
+    // t9/digit_edit_margin (nine keys): a reading with one digit edited is offered after a pause only when the
+    // word model finds its text more likely than the first candidate's by this margin (ln units). Digits are
+    // ambiguous enough that an edited reading exists for most correctly typed input (16% of everyday clauses got
+    // one in third place, like 你老板我的小姨了吗 for 你看到我的消息了吗); a slip leaves a first candidate the model
+    // finds unlikely. Without the option or the model file every edited reading is offered.
+    string model;
+    if (engine_->schema()->config()->GetDouble("t9/digit_edit_margin", &edit_margin_) &&
+        engine_->schema()->config()->GetString("t9/ngram_model", &model) && !model.empty()) {
+      const ResourceType type{"t9_ngram", "", ".lm"};
+      the<ResourceResolver> resolver(Service::instance().CreateResourceResolver(type));
+      edit_model_ = T9NgramModel::Open(resolver->ResolvePath(model).string());
+    }
   }
   ~CandidatePolicy() override {
     const auto it = spelling_policies.find(engine_->context());
@@ -616,6 +635,15 @@ class CandidatePolicy : public Filter {
     return edits_.get();
   }
   bool HasOmission() const { return !omission_id_.empty(); }
+  bool EditLikely(const string& edited, const string& first) const {
+    if (!edit_model_) return true;
+    auto score = [&](const string& text) {
+      std::vector<int32_t> parts;
+      edit_model_->Decompose(text, &parts);
+      return edit_model_->Chain(T9NgramModel::kUnseen, T9NgramModel::kUnseen, true, true, parts, nullptr, nullptr);
+    };
+    return score(edited) >= score(first) + edit_margin_;
+  }
   an<Translation> Apply(an<Translation> source, CandidateList*) override {
     const auto& input = engine_->context()->input();
     const bool numeric = !input.empty() && input.find_first_not_of("23456789' ") == std::string::npos;
@@ -651,6 +679,8 @@ class CandidatePolicy : public Filter {
   the<Translator> omission_;
   the<EditLookup> edits_;
   string edit_id_, omission_id_;
+  std::shared_ptr<const T9NgramModel> edit_model_;
+  double edit_margin_ = 0.0;
   BasicParticleChoices particles_;
   bool selected_tail_ = false;
   bool full_pinyin_ = false;
@@ -685,9 +715,14 @@ bool RefineOmission(rime::Context* context) {
   if (policy != spelling_policies.end()) {
     auto* edits = policy->second->Edits();
     auto first = original.menu->GetCandidateAt(0);
-    if (edits && first)
-      digit_edit = edits->Best(context->input(), true, Candidate::GetGenuineCandidate(first)->text());
-    if (digit_edit && (hidden.count(digit_edit->text()) || HanCharacters(digit_edit->text()).empty()))
+    // The keyboard's switches (邻键纠错, 顺序纠错, 漏键纠错) reach nine keys as session options, off when set.
+    const int kinds = (context->get_option("_cyime_digit_omission_off") ? 0 : kEditOmission) |
+                      (context->get_option("_cyime_digit_swap_off") ? 0 : kEditSwap) |
+                      (context->get_option("_cyime_digit_tap_off") ? 0 : kEditTap);
+    if (edits && first && kinds)
+      digit_edit = edits->Best(context->input(), true, Candidate::GetGenuineCandidate(first)->text(), kinds);
+    if (digit_edit && (hidden.count(digit_edit->text()) || HanCharacters(digit_edit->text()).empty() ||
+                       !policy->second->EditLikely(digit_edit->text(), Candidate::GetGenuineCandidate(first)->text())))
       digit_edit.reset();
     for (size_t i = 0; digit_edit && i < 5; ++i) {
       auto present = original.menu->GetCandidateAt(i);
