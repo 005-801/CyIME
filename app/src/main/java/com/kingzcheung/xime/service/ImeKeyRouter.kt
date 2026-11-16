@@ -513,7 +513,15 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         windowStep = if (service.uiState.value.isCompact) hardwareNavigation.step(state) else HARDWARE_PAGE_SIZE)
 
     /** The physical-keyboard candidate row drew [words] and [count] of them fit; paging follows it. */
-    internal fun reportHardwareShown(words: List<String>, count: Int) = hardwareNavigation.reportShown(words, count)
+    internal fun reportHardwareShown(words: List<String>, count: Int) {
+        // 放得下几个变了：工具条按它重新分组（见 hardwareWindowSize），量完再画一次。在布局回调里调用，不能当场改状态。
+        if (hardwareNavigation.reportShown(words, count)) service.mainHandler.post { hardwareSelectionRevision.intValue++ }
+    }
+
+    /** 工具条这一组按几个分（放得下的个数）；在组合里读，量完会重画。 */
+    internal fun hardwareWindowStep(state: CandidateState, start: Int): Int = hardwareSelectionRevision.intValue.let {
+        if (service.uiState.value.isCompact) hardwareNavigation.step(state, start) else HARDWARE_PAGE_SIZE
+    }
 
     /** First engine-page index the physical-keyboard toolbar shows; read in composition, so window moves redraw it. */
     internal fun hardwareWindowStart(state: CandidateState): Int = hardwareSelectionRevision.intValue.let {

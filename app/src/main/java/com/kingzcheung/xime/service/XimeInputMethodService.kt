@@ -2443,7 +2443,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                 state.inputProfile.language == com.kingzcheung.xime.settings.InputLanguage.CHINESE &&
                                 com.kingzcheung.xime.gloss.CandidateGlossary.isLoaded
                             val hardwareCandidates = hardwareCandidatePresentation(cand, hardwareEnglish,
-                                predictionPending = pendingPrediction != 0L).window(hardwareWindow).let { shown ->
+                                predictionPending = pendingPrediction != 0L).window(hardwareWindow,
+                                    if (hardwareExample) HARDWARE_PAGE_SIZE else keyRouter.hardwareWindowStep(cand, hardwareWindow)).let { shown ->
                                     // 释义只换显示用注释，与屏幕候选栏同一规则。
                                     if (hardwareEnglish || shown.association ||
                                         state.inputProfile.language != com.kingzcheung.xime.settings.InputLanguage.CHINESE) shown
