@@ -562,6 +562,38 @@ class PolicyTranslation : public Translation {
         omission_inserted = true;
       }
     }
+    // After a pause the most common corrected whole word comes third when only made-up sentences, initials and
+    // shorter words are ahead of it (2026-11-16): while typing, the translator lists every sentence it can compose
+    // from the letters as typed before any corrected word, so a doubled or extra letter left the wanted word fourth
+    // to tenth (duuole: 都有了, 度U哦了, 度过了 before 多了). A word typed out in full, a learned word and a more
+    // common pause reading keep their places before it, and so do the first two candidates. Not in double pinyin
+    // (pause_kinds >= 0): its pause readings cover these slips already, and the corrected words listed for a correctly
+    // typed clause there are longer phrases it could begin (是这样的 gained 一个运动员 third, 10 of 670 clauses).
+    if (!numeric && pause_kinds < 0 && (omission || edits) && head_.size() > 3) {
+      size_t best = 0;
+      double best_weight = 0;
+      for (size_t i = 2; i < head_.size(); ++i) {
+        if (!corrected(head_[i]) || head_[i]->start() != 0) continue;
+        const auto p = As<Phrase>(Candidate::GetGenuineCandidate(head_[i]));
+        if (As<Sentence>(p) || p->type() == "user_phrase" || HanCharacters(p->text()).size() < 2) continue;
+        if (!best || p->weight() > best_weight) { best = i; best_weight = p->weight(); }
+      }
+      auto stays = [&](const an<Candidate>& item) {
+        if (item->type() == "cyime_omission" || item->type() == "cyime_spelling_edit")
+          return weight(item) >= best_weight;
+        const auto p = As<Phrase>(Candidate::GetGenuineCandidate(item));
+        if (!p || HanCharacters(p->text()).empty()) return false;
+        if (p->type() == "user_phrase") return true;
+        return !As<Sentence>(p) && item->start() == 0 && p->end() == end_ && SpellingCoverage(p) >= 0.5 &&
+               p->correction_marks().find('=') == std::string::npos;
+      };
+      size_t at = 2;
+      while (best > 2 && at < std::min<size_t>(5, best) && stays(head_[at])) ++at;
+      if (best > 2 && at < std::min<size_t>(5, best)) {
+        std::rotate(head_.begin() + at, head_.begin() + best, head_.begin() + best + 1);
+        omission_inserted = true;
+      }
+    }
     for (const auto& [index, cand] : kept) {
       const auto now = std::find(head_.begin(), head_.end(), cand);
       if (now != head_.end() && static_cast<size_t>(now - head_.begin()) > index)
