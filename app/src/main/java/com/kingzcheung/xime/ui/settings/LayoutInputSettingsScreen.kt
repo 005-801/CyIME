@@ -21,6 +21,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.settings.SpellingPatches
+import com.kingzcheung.xime.settings.TypoEffects
+import com.kingzcheung.xime.settings.TypoStrength
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.kingzcheung.xime.ui.keyboard.normalizeLetterSwipeDistance
@@ -276,6 +279,13 @@ internal fun NeighborCorrectionSection() {
     val fullOnly = if (support.fullPinyin) null else "只用于 26 键全拼"
     // 九键全拼停一下后也补邻键、顺序、漏键三种（多键没有）。
     val fullOrNineKey = if (support.fullPinyin || support.nineKey) null else "只用于 26 键全拼、九键"
+    // 强度（11-16）：邻键纠错和九键各一条滑条，每一档下面写实测效果；最后几行是现在这种开关和强度组合测出来的效果。
+    val on = typos.filterValues { it }.keys
+    var lead by remember { mutableStateOf(TypoStrength.lead(context)) }
+    var digit by remember { mutableStateOf(TypoStrength.digit(context)) }
+    val effects by produceState<TypoEffects.Table?>(null) {
+        value = kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { TypoEffects.table(context) }.getOrNull() }
+    }
     SettingsSection(title = "拼音纠错", content = {
         Text("26 键全拼四种都有，双拼只有邻键纠错，九键有邻键、顺序、漏键三种(停一下才出)，14 键不纠错。", style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
@@ -285,6 +295,15 @@ internal fun NeighborCorrectionSection() {
                 settings.copy(neighborCorrection = it).save(context)
             }, lockMessage = if (support.fullPinyin || support.doublePinyin || support.nineKey) null else "只用于 26 键全拼、双拼、九键",
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.NEIGHBOR_CORRECTION)
+        if (settings.neighborCorrection && support.fullPinyin) {
+            TypoLevelSlider("邻键纠错强度", TypoStrength.Lead.entries, lead, { it.title },
+                "纠正出来的词什么时候排到你打的词前面。越保守越少抢第一，纠正的词仍在后面几个候选里。只用于 26 键全拼；改完要几秒重新部署",
+                effect = { level -> effects?.let { TypoEffects.leadText(it.fullPinyin, level, on) } }, tag = "typo-lead-strength") { chosen ->
+                TypoStrength.setLead(context, chosen)
+                lead = chosen
+                scope.launch(Dispatchers.IO) { runCatching { SpellingPatches.apply(context) } }
+            }
+        }
         if (showDouble) {
             HorizontalDivider()
             SettingsToggleItem(Icons.TwoTone.Spellcheck, "双拼邻键纠错",
@@ -304,9 +323,86 @@ internal fun NeighborCorrectionSection() {
                     scope.launch(Dispatchers.IO) { runCatching { SpellingPatches.apply(context) } }
                 }, lockMessage = (if (typo == SpellingPatches.Typo.EXTRA) fullOnly else fullOrNineKey)
                     ?: if (typo == SpellingPatches.Typo.OMISSION) null else needsNeighbor,
-                costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.typo(typo))
+                costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.typo(typo),
+                extraCost = {
+                    val text = if (support.fullPinyin) effects?.let { TypoEffects.typoText(it.fullPinyin, typo, settings.neighborCorrection, lead, on) } else null
+                    if (text != null) TypoEffectNote(text, "typo-effect:${typo.key}")
+                })
+        }
+        if (support.nineKey) {
+            HorizontalDivider()
+            TypoLevelSlider("九键纠错强度", TypoStrength.Digit.entries, digit, { it.title },
+                "九键停一下后补出来的纠正给得多还是少(按到上下左右的键、少按一个、两个按反，各跟上面的邻键、漏键、顺序开关)；改完要几秒重新部署",
+                effect = { level -> effects?.let { TypoEffects.digitText(it.nineKey, level) } }, tag = "typo-t9-strength") { chosen ->
+                TypoStrength.setDigit(context, chosen)
+                digit = chosen
+                scope.launch(Dispatchers.IO) { runCatching { SpellingPatches.apply(context) } }
+            }
+        }
+        val summary = if (!support.fullPinyin) emptyList<String>() else effects?.let {
+            TypoEffects.summary(it.fullPinyin, settings.neighborCorrection, lead, on)
+        }.orEmpty()
+        if (summary.isNotEmpty()) {
+            HorizontalDivider()
+            Column(Modifier.fillMaxWidth().padding(16.dp).testTag("typo-effect-summary"), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("按现在的设置(26 键全拼，实测)", style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                summary.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                // 速度只跟开关有关，强度不改每键的工作量（各档实测每键耗时一样）。
+                val costs = buildSet<com.kingzcheung.xime.settings.PerformanceCosts.Item> {
+                    if (settings.neighborCorrection) add(com.kingzcheung.xime.settings.PerformanceCosts.Item.NEIGHBOR_CORRECTION)
+                    on.forEach { typo ->
+                        if (typo == SpellingPatches.Typo.OMISSION || settings.neighborCorrection)
+                            add(com.kingzcheung.xime.settings.PerformanceCosts.Item.typo(typo))
+                    }
+                }
+                PerformanceCostTotalNote(costs, label = "性能开销(开着的 ${costs.size} 种合计)", tag = "typo-correction")
+            }
         }
     })
+}
+
+/** 开关说明下面的实测效果一行，样式同 [PerformanceCostNote]。 */
+@Composable
+private fun TypoEffectNote(text: String, tag: String) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 2.dp).testTag(tag))
+}
+
+/**
+ * 纠错强度的滑条：标题 + 当前档名，一句说明，滑条，两端档名，最下面是滑到的那一档的实测效果（拖动中就换）。
+ * 写法同「性能与省电」里空闲释放的滑条（松手时按滑块位置取值）。
+ */
+@Composable
+private fun <T> TypoLevelSlider(
+    title: String, levels: List<T>, current: T, label: (T) -> String, description: String,
+    effect: (T) -> String?, tag: String, onChoose: (T) -> Unit,
+) {
+    var position by remember(current) { mutableStateOf(levels.indexOf(current).coerceAtLeast(0).toFloat()) }
+    val shown = levels[position.roundToInt().coerceIn(levels.indices)]
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+            Spacer(Modifier.width(8.dp))
+            Text(label(shown), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        }
+        Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Slider(value = position, onValueChange = { position = it }, modifier = Modifier.testTag(tag),
+            onValueChangeFinished = {
+                val chosen = levels[position.roundToInt().coerceIn(levels.indices)]
+                if (chosen != current) onChoose(chosen)
+            },
+            valueRange = 0f..(levels.size - 1).toFloat(), steps = levels.size - 2)
+        Row(Modifier.fillMaxWidth()) {
+            Text(label(levels.first()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.weight(1f))
+            Text(label(levels.last()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        effect(shown)?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("$tag-effect"))
+        }
+    }
 }
 
 private fun typoCaption(typo: SpellingPatches.Typo): String = when (typo) {

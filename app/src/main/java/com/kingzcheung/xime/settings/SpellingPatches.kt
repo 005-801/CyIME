@@ -232,12 +232,15 @@ object SpellingPatches {
         val rawPreedit = doublePinyinRawPreedit(context)
         val typos = enabledTypos(context)
         val auxCode = auxCode(context)
+        val lead = TypoStrength.lead(context)
+        val digit = TypoStrength.digit(context)
         var changed = false
         for (id in fullPinyinSchemas(context)) {
             changed = write(rimeDir, id) { schema ->
                 // 三种都开着（默认）时不读方案文件：什么都不写，同以前。
                 listOf(fuzzyPart(schema, fuzzy) ?: return@write null) +
-                    if (typos.size == Typo.entries.size) emptyList<Part>() else typoParts(schema(), typos)
+                    (if (typos.size == Typo.entries.size) emptyList<Part>() else typoParts(schema(), typos)) +
+                    Part(LEAD_BIAS, leadLines(schema, lead))
             } || changed
         }
         // 双拼：拼写规则先按全拼派生模糊音，再换成双拼编码（同雾凇双拼方案注释里的位置），所以两段写在同一个文件里。
@@ -273,7 +276,8 @@ object SpellingPatches {
                     algebraLines(nineKeyRules(algebra, groups, near, t9Digits))
                 }
                 listOf(Part(ALGEBRA, lines), Part("t9/left_panel_mode",
-                    if (doubleScheme != null && groups.isNotEmpty()) listOf("\"t9/left_panel_mode\": pinyin") else emptyList()))
+                    if (doubleScheme != null && groups.isNotEmpty()) listOf("\"t9/left_panel_mode\": pinyin") else emptyList()),
+                    Part(DIGIT_MARGIN, if (doubleScheme == null) digitLines(schema, digit) else emptyList()))
             } || changed
         }
         return changed
@@ -301,6 +305,22 @@ object SpellingPatches {
         Part(key, if (present && typo !in enabled) listOf("\"$key\": $off") else emptyList())
     }
 
+    /**
+     * 邻键纠错的强度（[TypoStrength.Lead]）：和出厂方案里的一样（默认档）时不写、不读方案文件；方案里没有这个键的
+     * （14 键等不纠错的方案）不写。
+     */
+    internal fun leadLines(schema: () -> String, lead: TypoStrength.Lead): List<String> =
+        if (lead == TypoStrength.LEAD_DEFAULT || !hasKey(schema(), LEAD_BIAS)) emptyList() else listOf("\"$LEAD_BIAS\": ${lead.bias}")
+
+    /** 九键停一下后数字纠错的门槛（[TypoStrength.Digit]），规则同 [leadLines]。 */
+    internal fun digitLines(schema: () -> String, digit: TypoStrength.Digit): List<String> =
+        if (digit == TypoStrength.DIGIT_DEFAULT || !hasKey(schema(), DIGIT_MARGIN)) emptyList() else listOf("\"$DIGIT_MARGIN\": ${digit.margin}")
+
+    private fun hasKey(schema: String, key: String): Boolean =
+        Regex("(?m)^\\s*" + Regex.escape(key.substringAfterLast('/')) + ":[ \\t]*\\S").containsMatchIn(schema)
+
+    private const val LEAD_BIAS = "t9/correction_lead_bias"
+    private const val DIGIT_MARGIN = "t9/digit_edit_margin"
     private const val TRANSPOSITION = "translator/cyime_transposition_correction"
     private const val EXTRA = "translator/cyime_extra_letter_correction"
     private const val DOUBLED = "translator/cyime_doubled_letter_correction"

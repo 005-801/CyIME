@@ -193,7 +193,7 @@ class PolicyTranslation : public Translation {
  public:
   PolicyTranslation(an<Translation> source, const std::string& input, bool numeric, Translator* omission,
                     EditLookup* edits, an<Candidate> edit, BasicParticleChoices* particles, size_t particle_start,
-                    bool drop_corrections = false)
+                    bool drop_corrections = false, double correction_lead_bias = 0.0)
       : source_(source), end_(input.size()), drop_corrections_(drop_corrections) {
     // Bound the work independently of dictionary size. This is native candidate
     // identity-preserving ordering, not a separate UI list with stale indices.
@@ -443,7 +443,9 @@ class PolicyTranslation : public Translation {
           return p && !As<Sentence>(p) && p->end() == end_ && !HanCharacters(p->text()).empty() &&
                  (count = corrections(p)) > 0;
         });
-        static const double kPenalty = std::log(100.0), kMargin = std::log(2000.0);
+        // t9/correction_lead_bias (the keyboard's correction strength, ln units) is added to the 2000.
+        static const double kPenalty = std::log(100.0);
+        const double kMargin = std::log(2000.0) + correction_lead_bias;
         if (corrected != limit && corrections(top) == 0) {
           const auto p = As<Phrase>(Candidate::GetGenuineCandidate(*corrected));
           // Only the first corrected syllable's penalty is given back (2026-11-12): a word that needs two or three
@@ -610,6 +612,7 @@ class CandidatePolicy : public Filter {
     engine_->schema()->config()->GetBool("translator/cyime_transposition_correction", &full_pinyin_);
     if (engine_->schema()->config()->GetString("cyime_edit_schema", &edit_id_))
       spelling_policies[engine_->context()] = this;
+    engine_->schema()->config()->GetDouble("t9/correction_lead_bias", &correction_lead_bias_);
     // t9/digit_edit_margin (nine keys): a reading with one digit edited is offered after a pause only when the
     // word model finds its text more likely than the first candidate's by this margin (ln units). Digits are
     // ambiguous enough that an edited reading exists for most correctly typed input (16% of everyday clauses got
@@ -660,7 +663,7 @@ class CandidatePolicy : public Filter {
         input.find_first_not_of("abcdefghijklmnopqrstuvwxyz") == std::string::npos;
     return New<PolicyTranslation>(source, input, numeric, idle ? Omission() : nullptr, edits,
                                   idle && numeric ? pending_digit_edit : nullptr, whole || tail ? &particles_ : nullptr,
-                                  tail ? comp.back().start : 0, short_letters);
+                                  tail ? comp.back().start : 0, short_letters, correction_lead_bias_);
   }
  private:
   Translator* Omission() {
@@ -681,6 +684,8 @@ class CandidatePolicy : public Filter {
   string edit_id_, omission_id_;
   std::shared_ptr<const T9NgramModel> edit_model_;
   double edit_margin_ = 0.0;
+  // How much more common than 2000 times (ln units, either sign) a corrected word must be to lead the word as typed.
+  double correction_lead_bias_ = 0.0;
   BasicParticleChoices particles_;
   bool selected_tail_ = false;
   bool full_pinyin_ = false;

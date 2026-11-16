@@ -724,6 +724,12 @@ val prepareChineseDictionaries by tasks.registering {
             // 能找到, tuolaile 拖来了 -> 过来了). Swept on the short-sentence patches: ln 2000 broke 7 of them
             // (zaipushang 再铺上 -> 在路上) for 528 clauses, ln 100000 none for 509. 0 = off.
             "  slip_correction_margin: 9.2\n" +
+            // correction_lead_bias: the keyboard's 邻键纠错强度 (TypoStrength.Lead; ln units), added to the three margins a
+            // corrected reading must win by before it leads what was typed: the 2000 times of a corrected word
+            // (candidate_policy.cc), slip_correction_margin and tail_correction_margin above. Not applied on the
+            // omission prism read after a pause. 2.3 (ten times each) is the shipped default since 2026-11-16
+            // (「不要把纠错的词组放到前面」): figures per level in assets/typo_effects.json.
+            "  correction_lead_bias: 2.3\n" +
             // initials_choices: input typed as initials only (wmjs, xydj) kept the dictionary's order and made no sentence
             // when a dictionary word had those initials. With a count above 0 the leading whole words and the sentences
             // made of words are ordered by the same score as full input (word model + rescore_rime_weight of Rime's
