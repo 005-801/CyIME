@@ -161,10 +161,16 @@ fun KeyboardLayout(
     val fourteenKey = !isAsciiMode && uiState.inputProfile.layout == com.kingzcheung.xime.settings.InputLayout.MERGED14
     // 逗号键分词（默认关）：中文全拼、双拼时标点键多一个 ' 角标，字母键角标里的 ' 打拼音时也是分词。
     val syllableSplit = syllableSplitActive(LocalKeyboardInputPreferences.current.syllableSplitKey, isAsciiMode, uiState.inputProfile)
+    // 英文和西、德、法、意语：同一个开关让标点键多一个 ' 角标，打单词时它接进词里（what's），见 apostropheSplitActive。
+    val apostropheKey = apostropheSplitActive(LocalKeyboardInputPreferences.current.syllableSplitKey, isAsciiMode, uiState.inputProfile)
     // Shift 键分词（默认关）：同样只管中文全拼、双拼；关着时 Shift 键原样不动。
     val shiftSplit = syllableSplitActive(LocalKeyboardInputPreferences.current.shiftSyllableSplit, isAsciiMode, uiState.inputProfile)
+    // 英文和西、德、法、意语：打单词时 Shift 键写 '，点一下打撇号（what's）；没在打词时照旧是 Shift。
+    val shiftApostrophe = apostropheSplitActive(LocalKeyboardInputPreferences.current.shiftSyllableSplit, isAsciiMode, uiState.inputProfile)
     val shiftComposingSplit: (() -> Boolean)? = if (shiftSplit && candidateState != null)
-        remember(candidateState) { { shiftTapTypesSeparator(true, candidateState.value.isComposing) } } else null
+        remember(candidateState) { { shiftTapTypesSeparator(true, candidateState.value.isComposing) } }
+        else if (shiftApostrophe && candidateState != null)
+        remember(candidateState) { { typingWord(candidateState.value.pendingEnglishText) } } else null
     // 双拼键位提示（默认关）：双拼 26 键每个键写出 zh/ch/sh 和韵母，和双拼方案页的键位图一样；14 键、九键不显示。
     // 自己排的合并键布局（一个键两个字母）也不显示：合并键写不下两个字母的提示，只有单字母键有会前后不一。
     val dpKeyHints = if (doublePinyin && !isAsciiMode && !fourteenKey && keyRows.all { row -> row.all { it.length <= 1 } } &&
@@ -879,6 +885,7 @@ fun KeyboardLayout(
                                 shadowElevation = shadowElevation,
                                 shadowShapeRadius = shadowShapeRadius,
                                 composingSplit = shiftComposingSplit,
+                                composingSplitLabel = if (shiftSplit) "分词" else SYLLABLE_SEPARATOR,
                                 tapKey = CHOONPU_INPUT.takeIf { choonpuOnShift },
                                 tapLabel = CHOONPU_KEY.takeIf { choonpuOnShift },
                             )
@@ -1081,7 +1088,7 @@ fun KeyboardLayout(
                         else (callbacks.onCommitExactText ?: onCommitText ?: onKeyPress)(text)
                     }
                     // 逗号键分词：有逗号键放逗号键左下角，只开句号键放句号键。
-                    val (leftSplit, rightSplit) = syllableSplitOnPunctuation(syllableSplit, leftPunctuation, rightPunctuation)
+                    val (leftSplit, rightSplit) = syllableSplitOnPunctuation(syllableSplit || apostropheKey, leftPunctuation, rightPunctuation)
                     @Composable
                     fun RowScope.PunctuationKey(key: SpacePunctuationKey, tag: String, split: Boolean = false) =
                         // 主副字符已按全角/半角写定并原样上屏；键面不能再转一次，否则角标与副字符的宽度相反。
@@ -1797,8 +1804,10 @@ internal fun ShiftCapsKeyButton(
     shadowEnabled: Boolean = true,
     shadowElevation: Dp = 1.dp,
     shadowShapeRadius: Dp = 8.dp,
-    /** Shift 键分词（默认关）：返回 true 时点按是分词 '，键面写「分词」；null 为普通 Shift。 */
+    /** Shift 键分词（默认关）：返回 true 时点按是分词 '，键面写 [composingSplitLabel]；null 为普通 Shift。 */
     composingSplit: (() -> Boolean)? = null,
+    /** 中文打拼音时写「分词」；英文等打单词时写 '（打的就是撇号）。 */
+    composingSplitLabel: String = "分词",
     /**
      * 点按送出的键（日语长音键「代替 Shift」：ー）；非 null 时键面写 [tapLabel]，按住满 [SHIFT_TAP_KEY_HOLD_MS] 才是按住 Shift，
      * 松手前没打别的键就照 Shift 的点按切换大小写（[shiftTapKeyLongPressAction]）。null 为普通 Shift。
@@ -1949,7 +1958,8 @@ internal fun ShiftCapsKeyButton(
     ) {
         // 空心箭头＝小写，实心＝下一个字母大写，实心加底横线＝大写锁定。
         // Shift 键分词开着并且在打拼音：键面写「分词」，点了就是它（印什么出什么）。
-        if (splitLabel) Text("分词", color = colors.foreground, fontSize = 14.sp, maxLines = 1,
+        if (splitLabel) Text(composingSplitLabel, color = colors.foreground,
+            fontSize = if (composingSplitLabel.length > 1) 14.sp else 20.sp, maxLines = 1,
             modifier = Modifier.testTag("shift-key-split"))
         else if (tapLabel != null) {
             // 长音键：中间是 ー，右上角小箭头表示长按是 Shift（实心、带横线同普通 Shift 键）。

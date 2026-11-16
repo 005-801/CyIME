@@ -9,6 +9,20 @@ import com.kingzcheung.xime.settings.SettingsPreferences
 internal fun isDirectLetter(key: String, extraLetters: String): Boolean = key.length == 1 &&
     (key[0] in 'a'..'z' || key[0] in 'A'..'Z' || key[0] in extraLetters)
 
+/** 打单词时接在词里的撇号（what's、don't、l'eau）。 */
+internal const val WORD_APOSTROPHE = "'"
+
+/**
+ * 撇号算进正在打的词：英文和西、德、法、意语，光标前是这个词的字母时（刚打过 ' 不算，连点两下第二个照旧是标点）。
+ * 俄语、韩语不用撇号，中文、日语不走这里。
+ */
+internal fun apostropheJoinsWord(language: com.kingzcheung.xime.settings.InputLanguage, pending: String): Boolean =
+    pending.lastOrNull()?.isLetter() == true && (language == com.kingzcheung.xime.settings.InputLanguage.ENGLISH ||
+        com.kingzcheung.xime.settings.LetterLanguage.of(language).let {
+            it != null && it != com.kingzcheung.xime.settings.LetterLanguage.RUSSIAN &&
+                it != com.kingzcheung.xime.settings.LetterLanguage.KOREAN
+        })
+
 /** English letters are literal editor input, never a request to the Chinese decoder. */
 internal fun commitEnglishLetter(
     state: CandidateState,
@@ -19,7 +33,8 @@ internal fun commitEnglishLetter(
     afterGlide: Boolean = false,
     commit: (String) -> Boolean,
 ): CandidateState? {
-    require(key.length == 1 && key[0].isLetter())
+    // 撇号（[apostropheJoinsWord]）也像字母一样接进当前词，补全按整个词找。
+    require(key.length == 1 && (key[0].isLetter() || key == WORD_APOSTROPHE))
     // ß 没有单个大写字母（uppercase 是 SS）：Shift 时照旧打 ß。
     val text = if (shifted) key.uppercase().takeIf { it.length == 1 } ?: key else key.lowercase()
     if (!commit(if (afterGlide) " $text" else text)) return null

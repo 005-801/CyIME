@@ -220,8 +220,10 @@ class PredictionManager(
     suspend fun getEnglishAssociations(text: String, limit: Int = MAX_ASSOCIATION_COUNT): List<String> {
         return try {
             val letters = com.kingzcheung.xime.settings.LetterLanguage.of(completionLanguage())
-            val words = if (letters != null) com.kingzcheung.xime.association.WordCompletion.complete(context, letters, text, limit)
-            else AssociationService.getAssociations(context, text, true, limit)
+            // 带撇号的词（l'e、what'）：法语、意大利语按撇号后面那段补，英文出缩写，见 ApostropheCompletion。
+            val words = if (letters != null) com.kingzcheung.xime.association.ApostropheCompletion.complete(text, letters.language) {
+                com.kingzcheung.xime.association.WordCompletion.complete(context, letters, it, limit)
+            } else AssociationService.getAssociations(context, text, true, limit)
             // 英文出短语（默认关）：编码正好是这串字母的「我的短语」排在补全词前面，见 EnglishPhrases。
             if (!EnglishPhrases.isEnabled(context)) words
             else EnglishPhrases.merge(withContext(Dispatchers.IO) {

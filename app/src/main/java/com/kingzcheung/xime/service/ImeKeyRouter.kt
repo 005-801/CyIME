@@ -577,6 +577,47 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         return commandOwner(admission).context()
     }
 
+    /** 英文（西、德、法、意…）打了一个字母或撇号后，按整个词要补全。 */
+    private fun requestEnglishCompletions(next: CandidateState) {
+        if (service.isSecretEditor() || !next.englishReplaceSupported) return
+        val pending = next.pendingEnglishText
+        service.serviceScope.launch(InputCommandOwner.requireOwner().context()) {
+            val words = service.predictionManager.getEnglishAssociations(pending)
+            withEditor {
+                val current = service.candidateState.value
+                if (current.pendingEnglishText == pending && service.uiState.value.let {
+                        it.isAsciiMode || it.inputProfile.typesLettersDirectly }) {
+                    service.candidateState.value = current.copy(associationCandidates = words)
+                }
+            }
+        }
+    }
+
+    /**
+     * 打单词时的撇号（Shift 键分词、逗号键分词、角标、长按都走这里）：光标前是正在打的词时，' 像字母一样上屏并接进这个词，
+     * 补全接着按 what'、l'e 找（what's、l'eau）。没在打词、或不是用撇号的语言时返回 false，照旧当标点。
+     */
+    internal suspend fun commitWordApostrophe(): Boolean {
+        val next = withEditor {
+            val state = service.uiState.value
+            if (!state.isAsciiMode && !state.inputProfile.typesLettersDirectly) return@withEditor null
+            val language = if (state.isAsciiMode) com.kingzcheung.xime.settings.InputLanguage.ENGLISH else state.inputProfile.language
+            val current = service.candidateState.value
+            if (!apostropheJoinsWord(language, current.pendingEnglishText)) return@withEditor null
+            service.predictionManager.invalidatePendingPredictions()
+            val cleared = current.copy(associationCandidates = emptyList())
+            service.candidateState.value = cleared
+            val committed = commitEnglishLetter(cleared, WORD_APOSTROPHE, false, service::supportsEnglishCandidateReplace) {
+                service.commitTextAndPredict(it, isPaste = false, allowPrediction = false).accepted
+            }
+            if (committed != null) service.candidateState.value = committed
+            // 编辑框没收下也算处理过了，不再当标点补打一次。
+            committed ?: cleared
+        } ?: return false
+        if (next.pendingEnglishText.endsWith(WORD_APOSTROPHE)) requestEnglishCompletions(next)
+        return true
+    }
+
     private suspend fun <T> withEditor(block: suspend CoroutineScope.() -> T): T =
         withContext(Dispatchers.Main) {
             InputCommandOwner.requireOwner().requireCurrent(service.inputReadiness, service.uiState.value.inputSessionId)
@@ -1255,6 +1296,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
             val english = service.uiState.value.let {
                 it.isAsciiMode || it.inputProfile.typesLettersDirectly
             }
+            // 打单词时的撇号（what's、l'eau）接进这个词；没在打词时照旧走下面的标点。
+            if (english && key == WORD_APOSTROPHE && hardwareEvent == null && commitWordApostrophe()) return@command
             // 西班牙、德、法、俄语键盘上 ñ、ä、é、й 这些也是字母：同样逐字上屏、参与补全。
             val letterLanguage = service.uiState.value.let {
                 if (it.isAsciiMode) null else com.kingzcheung.xime.settings.LetterLanguage.of(it.inputProfile.language)
@@ -1297,19 +1340,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     }
                     next
                 }
-                if (next != null && !service.isSecretEditor() && next.englishReplaceSupported) {
-                    val pending = next.pendingEnglishText
-                    service.serviceScope.launch(InputCommandOwner.requireOwner().context()) {
-                        val words = service.predictionManager.getEnglishAssociations(pending)
-                        withEditor {
-                            val current = service.candidateState.value
-                            if (current.pendingEnglishText == pending && service.uiState.value.let {
-                                    it.isAsciiMode || it.inputProfile.typesLettersDirectly }) {
-                                service.candidateState.value = current.copy(associationCandidates = words)
-                            }
-                        }
-                    }
-                }
+                if (next != null) requestEnglishCompletions(next)
                 return@command
             }
             // 给着邮箱后缀时接着打的数字（中文键盘下还有字母）：对得上某个后缀就原样上屏、筛后缀，不进拼音。

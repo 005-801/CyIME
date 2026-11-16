@@ -120,7 +120,7 @@ internal fun LayoutInputSettingsContent(category: LayoutInputCategory, onBack: (
                     SettingsToggleItem(Icons.TwoTone.ContentCut, "逗号键分词",
                         "中文全拼、双拼的 26 键和 14 键：逗号键左下角加 '(只开句号键时在句号键上)，" +
                             "打拼音时${if (settings.bottomPunctuationSwipeUp || settings.reverseSymbolSwipe) "下滑" else "上滑"}插入分词(xi'an)，F 键的 ' 仍跟随字母键手势；" +
-                            "没在打拼音时输入 '。九键照旧用 1 键分词。",
+                            "没在打拼音时输入 '。英文和西、德、法、意语也有这个 '，打单词时接进词里(what's、l'eau)。九键照旧用 1 键分词。",
                         checked = settings.syllableSplitKey, onCheckedChange = {
                             settings = settings.copy(syllableSplitKey = it); settings.save(context)
                         })
@@ -129,7 +129,8 @@ internal fun LayoutInputSettingsContent(category: LayoutInputCategory, onBack: (
                     HorizontalDivider()
                     SettingsToggleItem(Icons.TwoTone.ContentCut, "Shift 键分词",
                         "中文全拼、双拼的 26 键和 14 键：打拼音时 Shift 键写「分词」，点一下插入分词(xi'an)；" +
-                            "没在打拼音时照旧切换大小写，按住 Shift 打大写也不变。",
+                            "没在打拼音时照旧切换大小写，按住 Shift 打大写也不变。" +
+                            "英文和西、德、法、意语打单词时 Shift 键写 '，点一下打撇号(what's、l'eau)。",
                         checked = settings.shiftSyllableSplit, onCheckedChange = {
                             settings = settings.copy(shiftSyllableSplit = it); settings.save(context)
                         },

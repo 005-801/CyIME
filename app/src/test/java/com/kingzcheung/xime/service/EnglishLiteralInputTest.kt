@@ -176,4 +176,32 @@ class EnglishLiteralInputTest {
         assertFalse(takesWordsAutoSpace("123"))
         assertFalse(takesWordsAutoSpace("hello "))
     }
+
+    /** 用户 11-16：英文打 what's 时撇号接进词里，补全按整个词接着出。 */
+    @Test fun apostropheJoinsTheWordBeingTyped() {
+        val english = com.kingzcheung.xime.settings.InputLanguage.ENGLISH
+        assertTrue(apostropheJoinsWord(english, "what"))
+        assertTrue(apostropheJoinsWord(com.kingzcheung.xime.settings.InputLanguage.FRENCH, "l"))
+        assertTrue(apostropheJoinsWord(com.kingzcheung.xime.settings.InputLanguage.ITALIAN, "dell"))
+        assertTrue(apostropheJoinsWord(com.kingzcheung.xime.settings.InputLanguage.GERMAN, "geht"))
+        assertTrue(apostropheJoinsWord(com.kingzcheung.xime.settings.InputLanguage.SPANISH, "d"))
+        // 反例：没在打词、刚打过撇号（第二个照旧是标点）、俄语韩语不用撇号、中文日语不走这里。
+        assertFalse(apostropheJoinsWord(english, ""))
+        assertFalse(apostropheJoinsWord(english, "what'"))
+        assertFalse(apostropheJoinsWord(english, "3"))
+        for (language in listOf(com.kingzcheung.xime.settings.InputLanguage.RUSSIAN, com.kingzcheung.xime.settings.InputLanguage.KOREAN,
+                com.kingzcheung.xime.settings.InputLanguage.CHINESE, com.kingzcheung.xime.settings.InputLanguage.JAPANESE))
+            assertFalse(language.id, apostropheJoinsWord(language, "abc"))
+
+        val editor = StringBuilder()
+        var state = CandidateState()
+        for (key in listOf("W", "h", "a", "t", "'", "s")) {
+            state = requireNotNull(commitEnglishLetter(state, key, key == "W", { true }) { editor.append(it); true })
+        }
+        assertEquals("What's", editor.toString())
+        assertEquals("What's", state.pendingEnglishText)
+        // 撇号不会被当成大写，也不补空格。
+        val glided = CandidateState(pendingEnglishText = "don", glidedWord = "don")
+        assertEquals("don'", requireNotNull(commitEnglishLetter(glided, "'", true, { true }) { true }).pendingEnglishText)
+    }
 }
