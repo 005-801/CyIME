@@ -2454,6 +2454,17 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     }
                                     else shown.copy(comments = com.kingzcheung.xime.gloss.CandidateGlossary.annotate(shown.words, shown.comments))
                                 }
+                            // 诊断（DeX 反馈「浮窗有时空白」）：正在打字却没有一个候选可显示，持续 0.8 秒就记一条。
+                            val hardwareBlank = !hardwareEnglish && !hardwareExample && hardwareCandidates.words.isEmpty() &&
+                                (cand.isComposing || cand.inputText.isNotEmpty())
+                            if (hardwareBlank) androidx.compose.runtime.LaunchedEffect(cand.engineRevision, hardwareWindow) {
+                                kotlinx.coroutines.delay(800)
+                                val display = window.window?.decorView?.display
+                                android.util.Log.w("CyIME-HW", "hardware-blank input=${cand.inputText.length} " +
+                                    "candidates=${cand.candidates.size} windowStart=$hardwareWindow rev=${cand.engineRevision} " +
+                                    "pending=$pendingPrediction docked=$bottomDocked pos=$position " +
+                                    "viewport=${maxWidth.value}x${maxHeight.value}dp display=${display?.displayId}:${display?.name}")
+                            }
                             val hardwareHighlight = keyRouter.hardwareCandidateHighlight(cand, hardwareEnglish,
                                 predictionPending = pendingPrediction != 0L)
                             val hardwareLanguage = if (state.isAsciiMode) "EN" else when (state.inputProfile.language) {
