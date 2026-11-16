@@ -519,7 +519,7 @@ fun KeyboardLayout(
             viewModel.onCharacterTyped()
             if (chinese) {
                 kotlinx.coroutines.withContext(inputContext) { callbacks.onGlideCode?.invoke(candidates.first().word,
-                    candidates.drop(1).map { it.word }, heldPreview) }
+                    com.kingzcheung.xime.glide.chineseGlideAlternatives(candidates), heldPreview) }
                 handedOff = true
                 return@launch
             }
