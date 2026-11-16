@@ -983,7 +983,7 @@ object SchemaManager {
 
     internal fun fallbackNativeSchema(available: Set<String>): List<String> = listOfNotNull(
         CyimeInputDefaults.recommended.firstOrNull { it in available }
-            ?: available.firstOrNull { it !in CyimeInputDefaults.dependencies && it != InputModes.ENGLISH }
+            ?: available.firstOrNull { !CyimeInputDefaults.isDependency(it) && it != InputModes.ENGLISH }
             ?: available.firstOrNull()
     )
 

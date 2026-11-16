@@ -216,7 +216,7 @@ object RimeConfigHelper {
     /** 当前方案没编译出来时换用的方案：同语言优先，其次任一能用的输入方案；都不能用返回 null。 */
     internal fun fallbackSchema(current: String, enabled: List<String>, broken: Set<String>): String? {
         val working = enabled.filter {
-            it !in broken && it !in com.kingzcheung.xime.settings.CyimeInputDefaults.dependencies &&
+            it !in broken && !com.kingzcheung.xime.settings.CyimeInputDefaults.isDependency(it) &&
                 it != com.kingzcheung.xime.settings.InputModes.ENGLISH
         }
         val language = com.kingzcheung.xime.settings.InputLanguage.forSchema(current)

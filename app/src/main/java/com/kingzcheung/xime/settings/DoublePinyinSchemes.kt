@@ -103,6 +103,9 @@ object DoublePinyinSchemes {
         check(base.isFile) { "请先完成小鹤双拼部署" }
         writeLayoutVariants(rimeDir, scheme, base.readText(), layouts)
         if (scheme.id != BASE) {
+            // 停顿纠错索引先写：方案文件里把它列为依赖，部署时得已经在。小鹤方案还没带这项（旧安装包的文件）时不写。
+            if (base.readText().contains(DoublePinyinScheme.pauseId(BASE)))
+                writeIfChanged(File(rimeDir, "${DoublePinyinScheme.pauseId(scheme.id)}.schema.yaml"), scheme.pauseSchema())
             writeIfChanged(File(rimeDir, "${scheme.id}.schema.yaml"), scheme.schema(base.readText()))
             val base14 = File(rimeDir, "${DoublePinyinScheme.k14Id(BASE)}.schema.yaml")
             // 14 键、九键没有分号键：ing 在分号上的方案（微软双拼）把分号并到 L 键（DoublePinyinScheme.k14Schema、t9Schema）。
@@ -224,6 +227,7 @@ object DoublePinyinSchemes {
             File(rimeDir, "$id.schema.yaml").delete()
             File(rimeDir, "${DoublePinyinScheme.t9Id(id)}.schema.yaml").delete()
             File(rimeDir, "${DoublePinyinScheme.k14Id(id)}.schema.yaml").delete()
+            File(rimeDir, "${DoublePinyinScheme.pauseId(id)}.schema.yaml").delete()
             File(rimeDir, "en_dicts/${DoublePinyinScheme.cnEnName(id)}.txt").delete()
             layoutVariantFiles(rimeDir, id).forEach { (file, _) -> file.delete() }
         }

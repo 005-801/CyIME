@@ -276,9 +276,10 @@ internal fun NeighborCorrectionSection() {
     val showDouble = support.doublePinyin || settings.doublePinyinCorrection != defaults.doublePinyinCorrection
     var typos by remember { mutableStateOf(SpellingPatches.Typo.entries.associateWith { SpellingPatches.typo(context, it) }) }
     val needsNeighbor = if (settings.neighborCorrection) null else "要先打开「邻键纠错」"
-    val fullOnly = if (support.fullPinyin) null else "只用于 26 键全拼"
+    // 双拼 26 键停一下后也补顺序、多键（只有同一个键多按一下）、漏键三种（11-16）。
+    val fullOrDouble = if (support.fullPinyin || support.doublePinyin) null else "只用于 26 键全拼、双拼"
     // 九键全拼停一下后也补邻键、顺序、漏键三种（多键没有）。
-    val fullOrNineKey = if (support.fullPinyin || support.nineKey) null else "只用于 26 键全拼、九键"
+    val anyKeyboard = if (support.fullPinyin || support.doublePinyin || support.nineKey) null else "只用于 26 键全拼、双拼、九键"
     // 强度（11-16）：邻键纠错和九键各一条滑条，每一档下面写实测效果；最后几行是现在这种开关和强度组合测出来的效果。
     val on = typos.filterValues { it }.keys
     var lead by remember { mutableStateOf(TypoStrength.lead(context)) }
@@ -287,13 +288,13 @@ internal fun NeighborCorrectionSection() {
         value = kotlinx.coroutines.withContext(Dispatchers.IO) { runCatching { TypoEffects.table(context) }.getOrNull() }
     }
     SettingsSection(title = "拼音纠错", content = {
-        Text("26 键全拼四种都有，双拼只有邻键纠错，九键有邻键、顺序、漏键三种(停一下才出)，14 键不纠错。", style = MaterialTheme.typography.bodySmall,
+        Text("26 键全拼四种都有；双拼 26 键有邻键纠错，停一下后还补顺序、多键(只有同一个键多按一下)、漏键；九键有邻键、顺序、漏键三种(停一下才出)；14 键不纠错。", style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
         SettingsToggleItem(Icons.TwoTone.Spellcheck, "邻键纠错",
             "按偏到旁边的键时，也给出本来想打的词，原来的候选还在",
             checked = settings.neighborCorrection, onCheckedChange = {
                 settings.copy(neighborCorrection = it).save(context)
-            }, lockMessage = if (support.fullPinyin || support.doublePinyin || support.nineKey) null else "只用于 26 键全拼、双拼、九键",
+            }, lockMessage = anyKeyboard,
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.NEIGHBOR_CORRECTION)
         if (settings.neighborCorrection && support.fullPinyin) {
             TypoLevelSlider("邻键纠错强度", TypoStrength.Lead.entries, lead, { it.title },
@@ -321,7 +322,7 @@ internal fun NeighborCorrectionSection() {
                     SpellingPatches.setTypo(context, typo, on)
                     typos = typos + (typo to on)
                     scope.launch(Dispatchers.IO) { runCatching { SpellingPatches.apply(context) } }
-                }, lockMessage = (if (typo == SpellingPatches.Typo.EXTRA) fullOnly else fullOrNineKey)
+                }, lockMessage = (if (typo == SpellingPatches.Typo.EXTRA) fullOrDouble else anyKeyboard)
                     ?: if (typo == SpellingPatches.Typo.OMISSION) null else needsNeighbor,
                 costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.typo(typo),
                 extraCost = {
@@ -406,12 +407,12 @@ private fun <T> TypoLevelSlider(
 }
 
 private fun typoCaption(typo: SpellingPatches.Typo): String = when (typo) {
-    SpellingPatches.Typo.TRANSPOSITION -> "相邻两个字母打反也出想打的词(如 shenem 出“什么”)，九键是两个数字按反、停一下才出；改完要几秒重新部署"
-    SpellingPatches.Typo.EXTRA -> "多按一下或多碰到旁边的键也出想打的词(如 woomen 出“我们”)；改完要几秒重新部署"
-    SpellingPatches.Typo.OMISSION -> "漏打一个字母也出想打的词(如 chengong 出“成功”)，有的停一下才出；改完要几秒重新部署"
+    SpellingPatches.Typo.TRANSPOSITION -> "相邻两个字母打反也出想打的词(如 shenem 出“什么”)，双拼是两个键按反、九键是两个数字按反，这两种停一下才出；改完要几秒重新部署"
+    SpellingPatches.Typo.EXTRA -> "多按一下或多碰到旁边的键也出想打的词(如 woomen 出“我们”)，双拼只补同一个键多按一下、停一下才出；改完要几秒重新部署"
+    SpellingPatches.Typo.OMISSION -> "漏打一个字母也出想打的词(如 chengong 出“成功”)，有的停一下才出，双拼是少按一个键、停一下才出；改完要几秒重新部署"
 }
 
-/** 已启用的中文方案里有没有 26 键全拼、26 键双拼、九键全拼：纠错只在这三种上起作用（九键只有邻键、顺序、漏键，停一下才出），都没有时对应的开关灰掉。 */
+/** 已启用的中文方案里有没有 26 键全拼、26 键双拼、九键全拼：纠错只在这三种上起作用（九键只有邻键、顺序、漏键，停一下才出；双拼的顺序、多键、漏键也是停一下才出），都没有时对应的开关灰掉。 */
 internal data class TypoCorrectionSupport(val fullPinyin: Boolean, val doublePinyin: Boolean, val nineKey: Boolean = false) {
     companion object {
         val ALL = TypoCorrectionSupport(fullPinyin = true, doublePinyin = true, nineKey = true)
