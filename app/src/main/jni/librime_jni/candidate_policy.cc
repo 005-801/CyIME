@@ -474,6 +474,15 @@ class PolicyTranslation : public Translation {
           kept.emplace_back(i, head_[i]);
       }
     }
+    auto weight = [](const an<Candidate>& item) {
+      const auto p = As<Phrase>(Candidate::GetGenuineCandidate(item));
+      return p ? p->weight() : 0.0;
+    };
+    auto corrected = [&](const an<Candidate>& item) {
+      if (numeric || item->type() == "cyime_omission" || item->end() != end_) return false;
+      const auto p = As<Phrase>(Candidate::GetGenuineCandidate(item));
+      return p && p->correction_marks().find('=') != std::string::npos;
+    };
     size_t inserted = 0;
     if (omission && head_.size() >= 2) {
       Segment segment(0, input.size());
@@ -487,15 +496,6 @@ class PolicyTranslation : public Translation {
         // first five only when its word weight is higher (2026-11-03: a pause moved 今天 for jintiab from 3rd to
         // 6th; jntian still gets 今天 above 纪念日). The two translators' qualities are on different scales.
         // Only corrections of the whole input count: a shorter word's weight is not comparable with a sentence's.
-        auto weight = [](const an<Candidate>& item) {
-          const auto p = As<Phrase>(Candidate::GetGenuineCandidate(item));
-          return p ? p->weight() : 0.0;
-        };
-        auto corrected = [&](const an<Candidate>& item) {
-          if (numeric || item->type() == "cyime_omission" || item->end() != end_) return false;
-          const auto p = As<Phrase>(Candidate::GetGenuineCandidate(item));
-          return p && p->correction_marks().find('=') != std::string::npos;
-        };
         for (size_t i = 0; i < 10 && inserted < 2 && !alternatives->exhausted(); ++i) {
           auto c = alternatives->Peek();
           alternatives->Next();
@@ -529,7 +529,17 @@ class PolicyTranslation : public Translation {
       if (original >= head_.begin() + std::min<size_t>(5, head_.size())) {
         if (original != head_.end()) head_.erase(original);
         seen_.insert(edit->text());
-        head_.insert(head_.begin() + 2 + inserted, New<ShadowCandidate>(
+        // Among the readings added after a pause and the corrections found while typing, the more common word comes
+        // first (2026-11-16): the swapped-letter reading used to go behind the omission readings, which the omission
+        // prism finds for nearly any input, so it was fifth (26-key words with two letters swapped, wanted word in
+        // the first three after the pause 58%, 79% with the omission readings off). It now passes those of lower
+        // word weight only: put third outright, it pushed 你说 for nihuo behind 你后 (uo read as ou).
+        const double own = weight(edit);
+        size_t at = 2;
+        while (at < std::min<size_t>(5 + inserted, head_.size()) &&
+               (head_[at]->type() == "cyime_omission" || corrected(head_[at])) && weight(head_[at]) >= own)
+          ++at;
+        head_.insert(head_.begin() + std::min(at, head_.size()), New<ShadowCandidate>(
             edit, "cyime_spelling_edit", edit->text(), numeric ? edit->comment() : "纠错", false));
         omission_inserted = true;
       }

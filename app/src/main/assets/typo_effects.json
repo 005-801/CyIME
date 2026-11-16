@@ -7,11 +7,11 @@
    "lead:never": {
     "cleanBroken": 2,
     "kinds": {
-     "sub": {"wordFirst": 29.8, "wordTop3": 96.0, "sentenceFirst": 40.0, "sentenceTop3": 90.8},
-     "double": {"wordFirst": 0.0, "wordTop3": 74.0, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
-     "extra": {"wordFirst": 0.4, "wordTop3": 46.7, "sentenceFirst": 0.0, "sentenceTop3": 18.3},
-     "omit": {"wordFirst": 20.0, "wordTop3": 55.1, "sentenceFirst": 14.2, "sentenceTop3": 64.2},
-     "swapin": {"wordFirst": 32.2, "wordTop3": 57.6, "sentenceFirst": 29.2, "sentenceTop3": 43.3}
+     "sub": {"wordFirst": 29.8, "wordTop3": 95.8, "sentenceFirst": 40.0, "sentenceTop3": 90.8},
+     "double": {"wordFirst": 0.0, "wordTop3": 74.7, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 0.4, "wordTop3": 46.9, "sentenceFirst": 0.0, "sentenceTop3": 19.2},
+     "omit": {"wordFirst": 20.0, "wordTop3": 54.9, "sentenceFirst": 14.2, "sentenceTop3": 64.2},
+     "swapin": {"wordFirst": 32.2, "wordTop3": 78.4, "sentenceFirst": 29.2, "sentenceTop3": 71.7}
     }
    },
    "lead:never-swap": {
@@ -27,19 +27,19 @@
    "lead:never-extra": {
     "cleanBroken": 2,
     "kinds": {
-     "sub": {"wordFirst": 30.4, "wordTop3": 96.4, "sentenceFirst": 42.5, "sentenceTop3": 91.7},
+     "sub": {"wordFirst": 30.4, "wordTop3": 96.2, "sentenceFirst": 42.5, "sentenceTop3": 91.7},
      "double": {"wordFirst": 0.0, "wordTop3": 6.9, "sentenceFirst": 0.0, "sentenceTop3": 0.8},
      "extra": {"wordFirst": 0.4, "wordTop3": 4.2, "sentenceFirst": 0.0, "sentenceTop3": 0.8},
-     "omit": {"wordFirst": 20.0, "wordTop3": 55.3, "sentenceFirst": 14.2, "sentenceTop3": 65.0},
-     "swapin": {"wordFirst": 32.2, "wordTop3": 55.5, "sentenceFirst": 29.2, "sentenceTop3": 40.8}
+     "omit": {"wordFirst": 20.0, "wordTop3": 55.1, "sentenceFirst": 14.2, "sentenceTop3": 65.0},
+     "swapin": {"wordFirst": 32.2, "wordTop3": 76.2, "sentenceFirst": 29.2, "sentenceTop3": 70.8}
     }
    },
    "lead:never-omit": {
     "cleanBroken": 2,
     "kinds": {
      "sub": {"wordFirst": 29.8, "wordTop3": 98.0, "sentenceFirst": 40.0, "sentenceTop3": 88.3},
-     "double": {"wordFirst": 0.0, "wordTop3": 72.7, "sentenceFirst": 0.0, "sentenceTop3": 27.5},
-     "extra": {"wordFirst": 0.4, "wordTop3": 45.3, "sentenceFirst": 0.0, "sentenceTop3": 19.2},
+     "double": {"wordFirst": 0.0, "wordTop3": 75.3, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 0.4, "wordTop3": 46.9, "sentenceFirst": 0.0, "sentenceTop3": 20.0},
      "omit": {"wordFirst": 20.0, "wordTop3": 23.6, "sentenceFirst": 14.2, "sentenceTop3": 17.5},
      "swapin": {"wordFirst": 32.2, "wordTop3": 78.7, "sentenceFirst": 29.2, "sentenceTop3": 72.5}
     }
@@ -87,11 +87,11 @@
    "lead:careful_more": {
     "cleanBroken": 4,
     "kinds": {
-     "sub": {"wordFirst": 49.8, "wordTop3": 95.8, "sentenceFirst": 82.5, "sentenceTop3": 94.2},
-     "double": {"wordFirst": 7.3, "wordTop3": 74.0, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
-     "extra": {"wordFirst": 2.4, "wordTop3": 46.7, "sentenceFirst": 0.8, "sentenceTop3": 20.0},
-     "omit": {"wordFirst": 20.5, "wordTop3": 54.9, "sentenceFirst": 15.8, "sentenceTop3": 64.2},
-     "swapin": {"wordFirst": 38.5, "wordTop3": 58.0, "sentenceFirst": 32.5, "sentenceTop3": 43.3}
+     "sub": {"wordFirst": 49.8, "wordTop3": 95.6, "sentenceFirst": 82.5, "sentenceTop3": 94.2},
+     "double": {"wordFirst": 7.3, "wordTop3": 74.7, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 2.4, "wordTop3": 46.9, "sentenceFirst": 0.8, "sentenceTop3": 20.8},
+     "omit": {"wordFirst": 20.5, "wordTop3": 54.7, "sentenceFirst": 15.8, "sentenceTop3": 64.2},
+     "swapin": {"wordFirst": 38.5, "wordTop3": 78.4, "sentenceFirst": 32.5, "sentenceTop3": 72.5}
     }
    },
    "lead:careful_more-swap": {
@@ -107,19 +107,19 @@
    "lead:careful_more-extra": {
     "cleanBroken": 4,
     "kinds": {
-     "sub": {"wordFirst": 50.2, "wordTop3": 96.2, "sentenceFirst": 84.2, "sentenceTop3": 95.0},
+     "sub": {"wordFirst": 50.2, "wordTop3": 96.0, "sentenceFirst": 84.2, "sentenceTop3": 95.0},
      "double": {"wordFirst": 0.0, "wordTop3": 7.1, "sentenceFirst": 0.0, "sentenceTop3": 0.8},
      "extra": {"wordFirst": 0.7, "wordTop3": 4.7, "sentenceFirst": 0.8, "sentenceTop3": 1.7},
-     "omit": {"wordFirst": 20.5, "wordTop3": 55.1, "sentenceFirst": 15.8, "sentenceTop3": 65.0},
-     "swapin": {"wordFirst": 38.4, "wordTop3": 55.8, "sentenceFirst": 32.5, "sentenceTop3": 40.8}
+     "omit": {"wordFirst": 20.5, "wordTop3": 54.9, "sentenceFirst": 15.8, "sentenceTop3": 65.0},
+     "swapin": {"wordFirst": 38.4, "wordTop3": 76.2, "sentenceFirst": 32.5, "sentenceTop3": 71.7}
     }
    },
    "lead:careful_more-omit": {
     "cleanBroken": 4,
     "kinds": {
      "sub": {"wordFirst": 49.8, "wordTop3": 97.8, "sentenceFirst": 82.5, "sentenceTop3": 93.3},
-     "double": {"wordFirst": 7.3, "wordTop3": 72.7, "sentenceFirst": 0.0, "sentenceTop3": 27.5},
-     "extra": {"wordFirst": 2.4, "wordTop3": 45.1, "sentenceFirst": 0.8, "sentenceTop3": 20.0},
+     "double": {"wordFirst": 7.3, "wordTop3": 75.3, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 2.4, "wordTop3": 46.9, "sentenceFirst": 0.8, "sentenceTop3": 20.8},
      "omit": {"wordFirst": 20.4, "wordTop3": 23.6, "sentenceFirst": 15.8, "sentenceTop3": 17.5},
      "swapin": {"wordFirst": 38.5, "wordTop3": 78.7, "sentenceFirst": 32.5, "sentenceTop3": 73.3}
     }
@@ -167,11 +167,11 @@
    "lead:careful": {
     "cleanBroken": 14,
     "kinds": {
-     "sub": {"wordFirst": 55.8, "wordTop3": 95.8, "sentenceFirst": 82.5, "sentenceTop3": 94.2},
-     "double": {"wordFirst": 10.9, "wordTop3": 74.0, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
-     "extra": {"wordFirst": 3.5, "wordTop3": 46.7, "sentenceFirst": 0.8, "sentenceTop3": 20.0},
-     "omit": {"wordFirst": 20.7, "wordTop3": 55.6, "sentenceFirst": 15.8, "sentenceTop3": 64.2},
-     "swapin": {"wordFirst": 39.8, "wordTop3": 57.8, "sentenceFirst": 32.5, "sentenceTop3": 43.3}
+     "sub": {"wordFirst": 55.8, "wordTop3": 95.6, "sentenceFirst": 82.5, "sentenceTop3": 94.2},
+     "double": {"wordFirst": 10.9, "wordTop3": 74.7, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 3.5, "wordTop3": 46.9, "sentenceFirst": 0.8, "sentenceTop3": 20.8},
+     "omit": {"wordFirst": 20.7, "wordTop3": 55.5, "sentenceFirst": 15.8, "sentenceTop3": 64.2},
+     "swapin": {"wordFirst": 39.8, "wordTop3": 78.4, "sentenceFirst": 32.5, "sentenceTop3": 72.5}
     }
    },
    "lead:careful-swap": {
@@ -187,19 +187,19 @@
    "lead:careful-extra": {
     "cleanBroken": 13,
     "kinds": {
-     "sub": {"wordFirst": 56.0, "wordTop3": 96.2, "sentenceFirst": 84.2, "sentenceTop3": 95.0},
+     "sub": {"wordFirst": 56.0, "wordTop3": 96.0, "sentenceFirst": 84.2, "sentenceTop3": 95.0},
      "double": {"wordFirst": 0.0, "wordTop3": 7.1, "sentenceFirst": 0.0, "sentenceTop3": 0.8},
      "extra": {"wordFirst": 0.7, "wordTop3": 4.7, "sentenceFirst": 0.8, "sentenceTop3": 1.7},
-     "omit": {"wordFirst": 20.7, "wordTop3": 56.0, "sentenceFirst": 15.8, "sentenceTop3": 65.0},
-     "swapin": {"wordFirst": 39.6, "wordTop3": 55.6, "sentenceFirst": 32.5, "sentenceTop3": 40.8}
+     "omit": {"wordFirst": 20.7, "wordTop3": 55.8, "sentenceFirst": 15.8, "sentenceTop3": 65.0},
+     "swapin": {"wordFirst": 39.6, "wordTop3": 76.2, "sentenceFirst": 32.5, "sentenceTop3": 71.7}
     }
    },
    "lead:careful-omit": {
     "cleanBroken": 14,
     "kinds": {
      "sub": {"wordFirst": 55.8, "wordTop3": 97.8, "sentenceFirst": 82.5, "sentenceTop3": 93.3},
-     "double": {"wordFirst": 10.9, "wordTop3": 72.7, "sentenceFirst": 0.0, "sentenceTop3": 27.5},
-     "extra": {"wordFirst": 3.5, "wordTop3": 45.1, "sentenceFirst": 0.8, "sentenceTop3": 20.0},
+     "double": {"wordFirst": 10.9, "wordTop3": 75.3, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 3.5, "wordTop3": 46.9, "sentenceFirst": 0.8, "sentenceTop3": 20.8},
      "omit": {"wordFirst": 20.5, "wordTop3": 23.6, "sentenceFirst": 15.8, "sentenceTop3": 17.5},
      "swapin": {"wordFirst": 39.8, "wordTop3": 78.7, "sentenceFirst": 32.5, "sentenceTop3": 73.3}
     }
@@ -247,11 +247,11 @@
    "lead:standard": {
     "cleanBroken": 47,
     "kinds": {
-     "sub": {"wordFirst": 62.2, "wordTop3": 95.8, "sentenceFirst": 84.2, "sentenceTop3": 94.2},
-     "double": {"wordFirst": 16.9, "wordTop3": 74.0, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
-     "extra": {"wordFirst": 5.3, "wordTop3": 46.5, "sentenceFirst": 0.8, "sentenceTop3": 20.0},
-     "omit": {"wordFirst": 20.7, "wordTop3": 56.2, "sentenceFirst": 15.8, "sentenceTop3": 64.2},
-     "swapin": {"wordFirst": 40.2, "wordTop3": 57.5, "sentenceFirst": 32.5, "sentenceTop3": 44.2}
+     "sub": {"wordFirst": 62.2, "wordTop3": 95.6, "sentenceFirst": 84.2, "sentenceTop3": 94.2},
+     "double": {"wordFirst": 16.9, "wordTop3": 74.7, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 5.3, "wordTop3": 46.7, "sentenceFirst": 0.8, "sentenceTop3": 20.8},
+     "omit": {"wordFirst": 20.7, "wordTop3": 56.0, "sentenceFirst": 15.8, "sentenceTop3": 64.2},
+     "swapin": {"wordFirst": 40.2, "wordTop3": 78.4, "sentenceFirst": 32.5, "sentenceTop3": 72.5}
     }
    },
    "lead:standard-swap": {
@@ -267,19 +267,19 @@
    "lead:standard-extra": {
     "cleanBroken": 44,
     "kinds": {
-     "sub": {"wordFirst": 62.7, "wordTop3": 96.2, "sentenceFirst": 85.8, "sentenceTop3": 95.0},
+     "sub": {"wordFirst": 62.7, "wordTop3": 96.0, "sentenceFirst": 85.8, "sentenceTop3": 95.0},
      "double": {"wordFirst": 0.0, "wordTop3": 7.1, "sentenceFirst": 0.0, "sentenceTop3": 0.8},
      "extra": {"wordFirst": 0.7, "wordTop3": 4.4, "sentenceFirst": 0.8, "sentenceTop3": 1.7},
-     "omit": {"wordFirst": 20.7, "wordTop3": 56.5, "sentenceFirst": 15.8, "sentenceTop3": 65.0},
-     "swapin": {"wordFirst": 40.0, "wordTop3": 55.3, "sentenceFirst": 32.5, "sentenceTop3": 41.7}
+     "omit": {"wordFirst": 20.7, "wordTop3": 56.4, "sentenceFirst": 15.8, "sentenceTop3": 65.0},
+     "swapin": {"wordFirst": 40.0, "wordTop3": 76.2, "sentenceFirst": 32.5, "sentenceTop3": 71.7}
     }
    },
    "lead:standard-omit": {
     "cleanBroken": 47,
     "kinds": {
      "sub": {"wordFirst": 62.2, "wordTop3": 97.8, "sentenceFirst": 84.2, "sentenceTop3": 93.3},
-     "double": {"wordFirst": 16.9, "wordTop3": 72.7, "sentenceFirst": 0.0, "sentenceTop3": 27.5},
-     "extra": {"wordFirst": 5.3, "wordTop3": 44.9, "sentenceFirst": 0.8, "sentenceTop3": 20.0},
+     "double": {"wordFirst": 16.9, "wordTop3": 75.3, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 5.3, "wordTop3": 46.7, "sentenceFirst": 0.8, "sentenceTop3": 20.8},
      "omit": {"wordFirst": 20.5, "wordTop3": 23.6, "sentenceFirst": 15.8, "sentenceTop3": 17.5},
      "swapin": {"wordFirst": 40.2, "wordTop3": 78.9, "sentenceFirst": 32.5, "sentenceTop3": 73.3}
     }
@@ -327,11 +327,11 @@
    "lead:eager": {
     "cleanBroken": 109,
     "kinds": {
-     "sub": {"wordFirst": 68.0, "wordTop3": 95.8, "sentenceFirst": 85.8, "sentenceTop3": 93.3},
-     "double": {"wordFirst": 20.2, "wordTop3": 73.6, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
-     "extra": {"wordFirst": 6.2, "wordTop3": 46.2, "sentenceFirst": 0.8, "sentenceTop3": 20.0},
-     "omit": {"wordFirst": 20.7, "wordTop3": 57.3, "sentenceFirst": 15.8, "sentenceTop3": 64.2},
-     "swapin": {"wordFirst": 40.4, "wordTop3": 56.7, "sentenceFirst": 32.5, "sentenceTop3": 44.2}
+     "sub": {"wordFirst": 68.0, "wordTop3": 95.6, "sentenceFirst": 85.8, "sentenceTop3": 93.3},
+     "double": {"wordFirst": 20.2, "wordTop3": 74.7, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 6.2, "wordTop3": 46.4, "sentenceFirst": 0.8, "sentenceTop3": 20.8},
+     "omit": {"wordFirst": 20.7, "wordTop3": 57.1, "sentenceFirst": 15.8, "sentenceTop3": 64.2},
+     "swapin": {"wordFirst": 40.4, "wordTop3": 78.4, "sentenceFirst": 32.5, "sentenceTop3": 72.5}
     }
    },
    "lead:eager-swap": {
@@ -347,19 +347,19 @@
    "lead:eager-extra": {
     "cleanBroken": 98,
     "kinds": {
-     "sub": {"wordFirst": 68.7, "wordTop3": 96.2, "sentenceFirst": 87.5, "sentenceTop3": 94.2},
+     "sub": {"wordFirst": 68.7, "wordTop3": 96.0, "sentenceFirst": 87.5, "sentenceTop3": 94.2},
      "double": {"wordFirst": 0.0, "wordTop3": 6.9, "sentenceFirst": 0.0, "sentenceTop3": 0.8},
      "extra": {"wordFirst": 0.7, "wordTop3": 4.4, "sentenceFirst": 0.8, "sentenceTop3": 1.7},
-     "omit": {"wordFirst": 20.9, "wordTop3": 57.5, "sentenceFirst": 15.8, "sentenceTop3": 65.0},
-     "swapin": {"wordFirst": 40.2, "wordTop3": 54.7, "sentenceFirst": 32.5, "sentenceTop3": 41.7}
+     "omit": {"wordFirst": 20.9, "wordTop3": 57.3, "sentenceFirst": 15.8, "sentenceTop3": 65.0},
+     "swapin": {"wordFirst": 40.2, "wordTop3": 76.2, "sentenceFirst": 32.5, "sentenceTop3": 71.7}
     }
    },
    "lead:eager-omit": {
     "cleanBroken": 109,
     "kinds": {
      "sub": {"wordFirst": 68.0, "wordTop3": 97.8, "sentenceFirst": 85.8, "sentenceTop3": 93.3},
-     "double": {"wordFirst": 20.2, "wordTop3": 72.7, "sentenceFirst": 0.0, "sentenceTop3": 27.5},
-     "extra": {"wordFirst": 6.2, "wordTop3": 44.5, "sentenceFirst": 0.8, "sentenceTop3": 20.0},
+     "double": {"wordFirst": 20.2, "wordTop3": 75.3, "sentenceFirst": 0.0, "sentenceTop3": 28.3},
+     "extra": {"wordFirst": 6.2, "wordTop3": 46.4, "sentenceFirst": 0.8, "sentenceTop3": 20.8},
      "omit": {"wordFirst": 20.4, "wordTop3": 23.6, "sentenceFirst": 15.8, "sentenceTop3": 17.5},
      "swapin": {"wordFirst": 40.4, "wordTop3": 78.9, "sentenceFirst": 32.5, "sentenceTop3": 73.3}
     }
