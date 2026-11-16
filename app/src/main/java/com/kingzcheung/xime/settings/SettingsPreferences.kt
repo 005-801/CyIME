@@ -45,6 +45,17 @@ object SettingsPreferences {
     fun setGlassLiquid(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_GLASS_LIQUID, enabled).apply()
     }
+    /**
+     * 「液态玻璃强度」：standard（默认，就是加这一项之前的样子）／strong／strongest，
+     * 见 ui/theme/LiquidGlassStrength.kt。只在液态玻璃开着时起作用；没存过或认不得的值按 standard。
+     */
+    const val KEY_GLASS_LIQUID_STRENGTH = "glass_liquid_strength"
+    const val GLASS_LIQUID_STRENGTH_DEFAULT = "standard"
+    fun glassLiquidStrength(context: Context): String =
+        getPrefs(context).getString(KEY_GLASS_LIQUID_STRENGTH, null) ?: GLASS_LIQUID_STRENGTH_DEFAULT
+    fun setGlassLiquidStrength(context: Context, id: String) {
+        getPrefs(context).edit().putString(KEY_GLASS_LIQUID_STRENGTH, id).apply()
+    }
     const val KEY_PUNCTUATION_FULL_WIDTH = "punctuation_full_width"
     fun punctuationFullWidth(context: Context, default: Boolean): Boolean =
         getPrefs(context).getBoolean(KEY_PUNCTUATION_FULL_WIDTH, default)

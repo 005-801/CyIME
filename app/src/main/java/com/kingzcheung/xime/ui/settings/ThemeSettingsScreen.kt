@@ -183,6 +183,12 @@ private fun ThemeSettingsPage(
                                 SettingsPreferences.setGlassLiquid(context, enabled)
                             }
                         }, costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.LIQUID_GLASS)
+                    // 11-15「有用户想加强液态玻璃的效果」：三档，标准就是原来的样子、是默认。液态玻璃开着才显示。
+                    if (glass.dark.enabled && com.kingzcheung.xime.ui.theme.LiquidGlass.enabled(context)) {
+                        LiquidGlassStrengthChoice(com.kingzcheung.xime.ui.theme.LiquidGlass.strength(context)) { level ->
+                            changeAppearance(context, onThemeChanged) { SettingsPreferences.setGlassLiquidStrength(context, level.id) }
+                        }
+                    }
                     if (glass.dark.enabled) {
                         SettingsItem(icon = Icons.TwoTone.Opacity, title = "透明度与模糊",
                             subtitle = "浅色、深色分开设置", showArrow = true,
