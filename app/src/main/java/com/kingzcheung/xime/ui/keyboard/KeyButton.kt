@@ -620,6 +620,12 @@ fun SwipeableKeyButton(
     }
     val slideHovered = shiftTargets?.slideHovered === slideToken
     val pressedLook = (isPressed && !(shiftTargets?.sliding == true && !slideHovered)) || shiftHovered || slideHovered
+    // 炫光跟着手指走（用户 11-16）：滑到的键亮，起手的键滑走就淡出；其余键不参与（null），不因开始滑动而重组动画。
+    val slideGlow = when {
+        slideHovered -> true
+        isPressed && shiftTargets?.sliding == true -> false
+        else -> null
+    }
     // 按住符号键当 Ctrl：单字母键换成快捷键键面（用户 10-24）；按满时限才换，渐变出来，松手立刻换回（用户 10-31）。
     // 九键数字键换成它代表的字母的用途，左上角写数字（用户 11-03）。
     val ctrlLetter = (ctrlShortcutLetter ?: shiftLetters?.singleOrNull())?.takeIf { shiftTargets?.ctrlFaces == true }
@@ -701,7 +707,8 @@ fun SwipeableKeyButton(
             )).keyHeldHighlight(pressedLook),
                 // 键缝动效的长按进度：按这个键实际生效的那套手势算（角标长按、长按菜单、九键数字），没有长按就不画。
                 gapLightHoldMillis = effectiveActions.longPressDelayMillis(
-                    androidx.compose.ui.platform.LocalViewConfiguration.current.longPressTimeoutMillis))
+                    androidx.compose.ui.platform.LocalViewConfiguration.current.longPressTimeoutMillis),
+                slideLit = slideGlow)
             .then(if (hexagonal) Modifier.honeycombLabelArea() else Modifier),
         contentAlignment = if (layoutMode == ButtonLayout.COMPACT) Alignment.TopStart else Alignment.Center
     ) {

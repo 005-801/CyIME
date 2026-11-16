@@ -1018,6 +1018,8 @@ internal fun keyGapLightSource(
     holdMillis: Long? = null,
     /** 键自己报「点了一下并且生效了」、移光标；给了它，就不再靠旁观触摸判断点按。 */
     trigger: KeyGapLightTrigger? = null,
+    /** 滑到哪个键按哪个键：手指滑到这个键上（用户 11-16），像按下一样走一次线。 */
+    slideLit: Boolean = false,
 ): Modifier {
     val field = LocalKeyGapLight.current ?: return Modifier
     val token = remember(field) { Any() }
@@ -1043,6 +1045,7 @@ internal fun keyGapLightSource(
         SideEffect { trigger.kind = kind }
     }
     DisposableEffect(field, token) { onDispose { field.remove(token) } }
+    if (slideLit) LaunchedEffect(field, token) { field.press(token, currentKind) }
     if (caseAnchor) SideEffect { field.anchorCase(token) }
     return Modifier
         .onGloballyPositioned { field.place(token, it, currentPads) }
