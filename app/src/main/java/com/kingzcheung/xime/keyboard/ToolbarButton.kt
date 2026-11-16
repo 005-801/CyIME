@@ -112,4 +112,11 @@ class ToolbarPressMenu(
 )
 
 /** 一组选项：[key] 是插件里这一项设置的名字，[selected] 是现在选着的。 */
-data class PressMenuOptions(val key: String, val title: String, val options: List<String>, val selected: String?)
+data class PressMenuOptions(
+    val key: String,
+    val title: String,
+    val options: List<String>,
+    val selected: String?,
+    /** 选项显示成什么（插件的 optionLabels，如「英文」→「英」）；没有的照原值画。 */
+    val labels: Map<String, String> = emptyMap(),
+)
