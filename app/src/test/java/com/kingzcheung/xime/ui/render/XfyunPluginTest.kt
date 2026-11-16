@@ -150,6 +150,8 @@ class XfyunPluginTest {
 
     @Test fun translateSignsTheSelectedLanguagePairAndDecodesTheTranslation() {
         values["provider"] = its
+        // 自动检测是和界面语言互译（0.4.2）；这里指定原文语言，验证签名和所选的语言对
+        values["sourceLang"] = "日文"
         values["targetLang"] = "韩文"
         val app = rule.activity.application
         val id = "com.kingzcheung.xime.plugin.translate"
