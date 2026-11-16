@@ -662,6 +662,12 @@ val prepareChineseDictionaries by tasks.registering {
             // full: first choice 48351 -> 50613 (2500 gained, 238 lost); long input keeps one word per span (with two,
             // 我用纸折成了一个纸船 became 我用指着成了一个只穿).
             "  sentence_word_homophones: 2\n  sentence_word_max_syllables: 4\n  sentence_other_prefixes: 4\n" +
+            // sentence_near_homophone_margin: a sentence may also use the second dictionary word of a span of letters
+            // when its dictionary weight is within this much (ln) of the first word's; such sentences are searched
+            // in a beam of their own and come after the n-best, so no sentence made before is lost. Long input kept
+            // one word per span, so the word model never saw 我妈 beside 我吗 or 充了 beside 冲了 (49707 : 13049).
+            // The numbers are with t9/near_homophone_penalty below.
+            "  sentence_near_homophone_margin: 3.5\n" +
             // Short input (the same four syllables) also gets eight sentences to choose from, not four, and long
             // input goes without the other-prefix sentences. Of the short phrases still wrong with four, the right
             // one was not among the sentences 1469 times in 1555 (shazhushi: 杀猪是 刹住是 啥注释 啥主食, no 杀猪时).
@@ -729,6 +735,12 @@ val prepareChineseDictionaries by tasks.registering {
             // the reported zdky 这都可以 to 真的可以 (1.71). With 2.0: 1007 -> 1068, none of them moves.
             "  initials_choices: 5\n" +
             "  initials_lead_margin: 2.0\n" +
+            // near_homophone_penalty: what a sentence pays (ln) for each second dictionary word it uses (see
+            // translator/sentence_near_homophone_margin); corrections are judged against the typed choice made
+            // without those sentences, as before. 2026-11-15 cloud engine, 14k cases with public sentences added:
+            // 2.0 lost three right first choices (看到他 -> 看到她, 偷一个 -> 头一个, 实战 -> 施展), 3.0 one, 3.5 pushed
+            // one slip correction out of the first three, 4.0 none; 42 first choices gained (我妈/我吗, 又/有, 再/在).
+            "  near_homophone_penalty: 4.0\n" +
             // final_g_word_margin: a dictionary word read with the final g added (cyime_final_g_correction) leads the
             // sentence of the typed letters when the word model finds it more likely by this margin (ln 100, the
             // weight of a correction): 已安装 -14.8 against 一按转 -22.2. Of 68843 correctly typed short phrases 12
