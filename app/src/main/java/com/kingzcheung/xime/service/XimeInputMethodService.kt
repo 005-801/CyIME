@@ -5231,7 +5231,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val inCall = audio.mode == android.media.AudioManager.MODE_IN_CALL ||
             audio.mode == android.media.AudioManager.MODE_IN_COMMUNICATION
         return voicePillResumeFieldAllows(com.kingzcheung.xime.settings.IncognitoState.sensitiveEditor,
-            editorInputPolicy.locksNativeInput, inCall,
+            editorInputPolicy.field.blocksVoice, inCall,
             com.kingzcheung.xime.util.PermissionHelper.hasRecordAudioPermission(this))
     }
 
