@@ -30,6 +30,12 @@ end
 
 local KEYPAD = "22233344455566677778889999"
 
+-- 分词符（' 和空格）不算读音：组词时先选了前面的字，剩下那一节从分词符开始（aaa'bbb 选完 aaa 剩 'bbb），
+-- 原来整段对不上读音，生僻字一个也不补（11-16 用户反馈）。
+local function reading(input)
+  return (input:gsub("^[' ]+", ""):gsub("[' ]+$", ""))
+end
+
 -- Loaded once per Lua state, only after the option is first on. Each list is one string, not a table per character:
 -- librime-lua runs a full garbage collection every 256 Lua translations, and with 2 万 small tables each one stalled
 -- a key for about 3 ms on the PC host engine (16–21 times in 4,000 keys), also after the switch was turned off
@@ -142,7 +148,7 @@ local function merged_syllables(map, input)
 end
 
 local function merged_translate(input, seg, env)
-  local syllables = merged_syllables(merged_map(env), input)
+  local syllables = merged_syllables(merged_map(env), reading(input))
   for _, syllable in ipairs(syllables) do
     local comment = #syllables > 1 and syllable or ""
     local common = yield_common(syllable, seg, comment)
@@ -158,6 +164,8 @@ end
 
 local function translator(input, seg, env)
   if not env.engine.context:get_option(OPTION) then return end
+  input = reading(input)
+  if input == "" then return end
   if env.rare_merged_keys == nil then
     local config = env.engine.schema.config
     env.rare_merged_keys = config:get_bool("cyime_rare_merged_keys") == true or
