@@ -504,13 +504,13 @@ private fun T9KeyboardContent(
         Column(
             modifier = Modifier
                 .fillMaxHeight()
-                .weight(0.8f).testTag("t9-left-rail"),
+                .weight(NineGridFrame.SIDE).testTag("t9-left-rail"),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .weight(3f)
+                    .weight(NineGridFrame.SIDE_PANEL_ROWS)
                     .padding(scaledKeyVisualPadding())
                     // 键缝动效：左边这块面板不是键，按它不画；登记位置是为了线能绕着它走、半透明时光不从它底下透出来。
                     .then(keyGapLightSource(GapLightKind.NONE))
@@ -606,7 +606,7 @@ private fun T9KeyboardContent(
         Column(
             modifier = Modifier
                 .fillMaxHeight()
-                .weight(3.4f),
+                .weight(NineGridFrame.MAIN),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().weight(1f),
@@ -733,7 +733,7 @@ private fun T9KeyboardContent(
                 KeyboardModeKey(
                     slot = 2, onKeyPress = onKeyPress,
                     backgroundColor = specialKeyBackgroundColor, textColor = specialKeyTextColor,
-                    modifier = Modifier.weight(0.8f), onKeyPressDown = onKeyPressDown,
+                    modifier = Modifier.weight(NineGridFrame.BOTTOM_MODE), onKeyPressDown = onKeyPressDown,
                     shadowEnabled = shadowEnabled, shadowElevation = shadowElevation, shadowShapeRadius = shadowShapeRadius,
                     ctrlTargets = ctrlTargets, onCtrlShortcut = onCtrlShortcut,
                 )
@@ -743,14 +743,14 @@ private fun T9KeyboardContent(
                     onKeyPress = onKeyPress, onKeyPressDown = onKeyPressDown,
                     onVoiceModeChange = callbacks.onVoiceModeChange,
                     backgroundColor = keyBackgroundColor, textColor = keyTextColor,
-                    modifier = Modifier.weight(1.8f),
+                    modifier = Modifier.weight(NineGridFrame.BOTTOM_SPACE),
                     shadowEnabled = shadowEnabled, shadowElevation = shadowElevation, shadowShapeRadius = shadowShapeRadius,
                 )
                 LanguageKeyButton(
                     icon = rememberVectorPainter(Icons.Default.Language),
                     onClick = { onKeyPress("ime_switch") },
                     backgroundColor = specialKeyBackgroundColor, iconColor = specialKeyTextColor,
-                    modifier = Modifier.weight(0.8f),
+                    modifier = Modifier.weight(NineGridFrame.BOTTOM_LANGUAGE),
                     onPress = { onKeyPressDown?.invoke("ime_switch") },
                     shadowEnabled = shadowEnabled, shadowElevation = shadowElevation, shadowShapeRadius = shadowShapeRadius,
                 )
@@ -761,7 +761,7 @@ private fun T9KeyboardContent(
         Column(
             modifier = Modifier
                 .fillMaxHeight()
-                .weight(0.8f).testTag("t9-right-rail"),
+                .weight(NineGridFrame.ACTION).testTag("t9-right-rail"),
         ) {
             // 按住 !@# 点删除：Ctrl+删除（用户 11-13）；还在打字时照常删编码，九键的删除要先经过它自己的选音节撤回。
             val ctrlDelete: () -> Unit = {

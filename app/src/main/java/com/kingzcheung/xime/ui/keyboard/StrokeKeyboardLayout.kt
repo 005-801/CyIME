@@ -252,7 +252,7 @@ onKeyPressDown: ((String) -> Unit)?,
 
 // ─── 笔画键盘三列主体 ──────────────────────────────────────────────
 
-private data class StrokeKeyDef(
+internal data class StrokeKeyDef(
     val mainLabel: String,
     val swipeDigit: String,
     val commit: String,
@@ -270,7 +270,7 @@ private data class StrokeKeySwipes(
     val swipeDownKeyLabel: String? = null,
 )
 
-private val strokeKeys = listOf(
+internal val strokeKeys = listOf(
     StrokeKeyDef("一", "1", "h"),
     StrokeKeyDef("丨", "2", "s"),
     StrokeKeyDef("丿", "3", "p"),
@@ -377,13 +377,13 @@ private fun StrokeKeyboardContent(
     ) {
         // ── 第1列：左侧符号区（面板样式与九键左栏对齐：统一圆角/阴影/内边距） ──
         Column(
-            modifier = Modifier.fillMaxHeight().weight(0.8f),
+            modifier = Modifier.fillMaxHeight().weight(NineGridFrame.SIDE),
             verticalArrangement = Arrangement.Top
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .weight(3f)
+                    .weight(NineGridFrame.SIDE_PANEL_ROWS)
                     .padding(scaledKeyVisualPadding())
                     // 键缝动效：左栏不是键，按它不画；登记位置是为了线能绕着它走。
                     .then(keyGapLightSource(GapLightKind.NONE))
@@ -391,7 +391,7 @@ private fun StrokeKeyboardContent(
                     .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
                     .background(frostedKeyColor(keyBackgroundColor, keyTextColor, frostedGlass))
             ) {
-                if (strokeSideSymbols.size <= 4) {
+                if (strokeSideSymbols.size <= NineGridFrame.SIDE_VISIBLE_SLOTS) {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(0.dp)
@@ -440,7 +440,7 @@ private fun StrokeKeyboardContent(
 
         // ── 第2列：笔画键区 ──
         Column(
-            modifier = Modifier.fillMaxHeight().weight(3.4f),
+            modifier = Modifier.fillMaxHeight().weight(NineGridFrame.MAIN),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().weight(1f),
@@ -552,7 +552,7 @@ private fun StrokeKeyboardContent(
                 KeyboardModeKey(
                     slot = 2, onKeyPress = onKeyPress,
                     backgroundColor = specialKeyBackgroundColor, textColor = specialKeyTextColor,
-                    modifier = Modifier.weight(0.8f), onKeyPressDown = onKeyPressDown,
+                    modifier = Modifier.weight(NineGridFrame.BOTTOM_MODE), onKeyPressDown = onKeyPressDown,
                     shadowEnabled = shadowEnabled, shadowElevation = shadowElevation, shadowShapeRadius = shadowShapeRadius,
                 )
                 StrokeSpaceButton(
@@ -560,7 +560,7 @@ private fun StrokeKeyboardContent(
                     onKeyPressDown = onKeyPressDown,
                     backgroundColor = keyBackgroundColor,
                     textColor = keyTextColor,
-                    modifier = Modifier.weight(1.8f),
+                    modifier = Modifier.weight(NineGridFrame.BOTTOM_SPACE),
                     shadowEnabled = shadowEnabled,
                     shadowElevation = shadowElevation,
                     shadowShapeRadius = shadowShapeRadius,
@@ -570,7 +570,7 @@ private fun StrokeKeyboardContent(
                     icon = rememberVectorPainter(Icons.Default.Language),
                     onClick = { onKeyPress("ime_switch") },
                     backgroundColor = specialKeyBackgroundColor, iconColor = specialKeyTextColor,
-                    modifier = Modifier.weight(0.8f),
+                    modifier = Modifier.weight(NineGridFrame.BOTTOM_LANGUAGE),
                     onPress = { onKeyPressDown?.invoke("ime_switch") },
                     shadowEnabled = shadowEnabled, shadowElevation = shadowElevation, shadowShapeRadius = shadowShapeRadius,
                 )
@@ -579,7 +579,7 @@ private fun StrokeKeyboardContent(
 
         // ── 第3列：功能键区 ──
         Column(
-            modifier = Modifier.fillMaxHeight().weight(0.8f),
+            modifier = Modifier.fillMaxHeight().weight(NineGridFrame.ACTION),
         ) {
             SwipeableIconKeyButton(
                 icon = rememberVectorPainter(Icons.AutoMirrored.Filled.Backspace),
