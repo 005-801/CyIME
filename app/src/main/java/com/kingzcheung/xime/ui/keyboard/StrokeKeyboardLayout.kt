@@ -261,6 +261,8 @@ internal data class StrokeKeyDef(
 /** 笔画键的滑动配置：回调 + 提示文本（keyboard.stroke.keys 配置，无配置时回退内置默认）。 */
 private data class StrokeKeySwipes(
     val symbolInputText: String? = null,
+    /** 下滑直接上屏的符号：「上下滑输入符号」关着时这一滑不输入、键上不画（用户 11-16）。 */
+    val symbolInputDownText: String? = null,
     val onSwipeUp: (() -> Unit)? = null,
     val onSwipeDown: (() -> Unit)? = null,
     val swipeUpText: String? = null,
@@ -357,6 +359,7 @@ private fun StrokeKeyboardContent(
         }
         return StrokeKeySwipes(
             symbolInputText = gesture.swipeUp?.let { symbolInputValue(it.value.ifEmpty { it.label }, it.action) },
+            symbolInputDownText = gesture.swipeDown?.let { symbolInputValue(it.value.ifEmpty { it.label }, it.action) },
             onSwipeUp = swipeHandlerFor(gesture.swipeUp, onKeyPress, onGestureAction),
             onSwipeDown = swipeHandlerFor(gesture.swipeDown, onKeyPress, onGestureAction),
             swipeUpText = if (swipeHints.up && hintsActive &&
@@ -722,6 +725,7 @@ private fun StrokeKeyItem(
         badgeText = swipeDigit,
         swipeText = swipes.swipeUpText,
         symbolInputText = swipes.symbolInputText,
+        symbolInputDownText = swipes.symbolInputDownText,
         swipeDownText = swipes.swipeDownText,
         swipeUpKeyLabel = swipes.swipeUpKeyLabel,
         swipeDownKeyLabel = swipes.swipeDownKeyLabel,
@@ -761,6 +765,7 @@ private fun StrokeDigitKey(
         badgeText = swipeDigit,
         swipeText = swipes.swipeUpText,
         symbolInputText = swipes.symbolInputText,
+        symbolInputDownText = swipes.symbolInputDownText,
         swipeDownText = swipes.swipeDownText,
         swipeUpKeyLabel = swipes.swipeUpKeyLabel,
         swipeDownKeyLabel = swipes.swipeDownKeyLabel,

@@ -460,6 +460,7 @@ private fun T9KeyboardContent(
         }
         return T9KeySwipes(
             symbolInputText = gesture.swipeUp?.let { symbolInputValue(it.value.ifEmpty { it.label }, it.action) },
+            symbolInputDownText = gesture.swipeDown?.let { symbolInputValue(it.value.ifEmpty { it.label }, it.action) },
             onSwipeUp = swipeHandlerFor(gesture.swipeUp, commitDirect, onGestureAction),
             onSwipeDown = swipeHandlerFor(gesture.swipeDown, commitDirect, onGestureAction),
             swipeUpText = if (swipeHints.up &&
@@ -878,7 +879,8 @@ private fun T9KeyboardContent(
                 // 没在选候选时（原来 0 键点一下打 0 的时候）往角标方向滑打 0，方向和 1~9 的数字一样；
                 // 关了「上下滑输入符号」就不接（同其他数字角标），0 只在数字键盘里有。
                 onZero = if (!nextCandidate && LocalKeyboardInputPreferences.current.cornerSymbolInput) ({ commitDirect("0") }) else null,
-                showZeroHint = hintsActive && swipeHints.up,
+                // 打不出 0 时回车上也不画 0（用户 11-16：功能关了还显示角标）。
+                showZeroHint = hintsActive && swipeHints.up && LocalKeyboardInputPreferences.current.cornerSymbolInput,
                 backgroundColor = specialKeyBackgroundColor, textColor = specialKeyTextColor,
                 modifier = enterModifier,
                 onPress = { onKeyPressDown?.invoke("enter") },
@@ -941,6 +943,8 @@ internal fun T9MergedEnterKey(
 /** 九键数字键的滑动配置：回调 + 提示文本（均受 keyboard.t9.keys 配置与提示开关控制）。 */
 internal data class T9KeySwipes(
     val symbolInputText: String? = null,
+    /** 下滑直接上屏的符号：「上下滑输入符号」关着时这一滑不输入、键上不画（用户 11-16）。 */
+    val symbolInputDownText: String? = null,
     val onSwipeUp: (() -> Unit)? = null,
     val onSwipeDown: (() -> Unit)? = null,
     /** 上滑滑动气泡文本（display: key 时不传） */
@@ -1013,6 +1017,7 @@ private fun T9DigitKey(
         badgeText = digit,
         swipeText = currentSwipes.swipeUpText,
         symbolInputText = currentSwipes.symbolInputText,
+        symbolInputDownText = currentSwipes.symbolInputDownText,
         swipeDownText = currentSwipes.swipeDownText,
         swipeUpKeyLabel = currentSwipes.swipeUpKeyLabel,
         swipeDownKeyLabel = currentSwipes.swipeDownKeyLabel,
@@ -1186,6 +1191,7 @@ internal fun NineKeyButton(
         badgeText = digit,
         swipeText = swipes.swipeUpText,
         symbolInputText = swipes.symbolInputText,
+        symbolInputDownText = swipes.symbolInputDownText,
         swipeDownText = swipes.swipeDownText,
         swipeUpKeyLabel = swipes.swipeUpKeyLabel,
         swipeDownKeyLabel = swipes.swipeDownKeyLabel,

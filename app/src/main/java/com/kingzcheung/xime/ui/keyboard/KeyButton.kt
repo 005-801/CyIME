@@ -430,18 +430,25 @@ fun SwipeableKeyButton(
     val reserveDragForGlide = letterGlideOwnsDrag || t9GlideOwnsDrag
     // 九键滑行接管拖动的数字键往下滑打不出下角标：左下角不画（用户 11-11）。26 键字母滑行改成长按弹出上下两个角标
     // （[withGlideCornerMenu]），下角标打得到，照旧画（用户 11-11「关闭数字行滑行打不出 !@#」）。
-    val downCornerLabel = swipeDownKeyLabel.takeUnless { reserveDragForGlide && !letterGlideOwnsDrag }
     // 「上下滑输入符号」关着时（用户 11-14：关了提示还能滑出符号，要能真关）：直接上屏的角标不接上下滑、也不接长按。
     // 用户给字母设的上下滑动作（撤销、复制这类）和功能键的滑动不是角标，照旧。
     val cornerSymbols = inputPreferences.cornerSymbolInput
     val upSymbol = symbolInputText?.takeIf { it.isNotBlank() }
     val downSymbol = symbolInputDownText?.takeIf { it.isNotBlank() }
+    // 滑不出来的角标也不画（用户 11-16：功能关了还显示上下角标）。用户给这个字母设了动作的那一角照画动作名。
+    // 只是不画，「上方/下方角标提示」存的值不动，功能打开后照原来的显示。
+    val boundCorners = if (cornerSymbols || letterGroup?.length != 1) null to null
+        else letterSwipeCornerLabels(letterGroup.lowercase())
+    val upCornerOff = !cornerSymbols && upSymbol != null && boundCorners.first == null
+    val downCornerOff = !cornerSymbols && downSymbol != null && boundCorners.second == null
+    val upCornerLabel = (swipeUpKeyLabel ?: swipeText).takeUnless { upCornerOff }
+    val downCornerLabel = swipeDownKeyLabel.takeUnless { reserveDragForGlide && !letterGlideOwnsDrag || downCornerOff }
     val keyOnSwipe = onSwipe.takeUnless { !cornerSymbols && upSymbol != null }
     val keyOnSwipeDown = onSwipeDown.takeUnless { !cornerSymbols && downSymbol != null }
     // 角标提示关着时键上不画角标，滑动时改用气泡显示要输入的符号（用户 11-14：长按有气泡，上下滑没有）。
     val upHint = swipeText?.takeIf { it.isNotEmpty() } ?: upSymbol?.takeIf { keyOnSwipe != null }
     val downHint = swipeDownText?.takeIf { it.isNotEmpty() } ?: downSymbol?.takeIf { keyOnSwipeDown != null }
-    val cornerShown = !(swipeUpKeyLabel ?: swipeText).isNullOrEmpty() || !downCornerLabel.isNullOrEmpty()
+    val cornerShown = !upCornerLabel.isNullOrEmpty() || !downCornerLabel.isNullOrEmpty()
     // 滑到哪个键按哪个键（用户 11-14，像三星键盘）：滑行和「上下滑输入符号」都关着、整个键盘滑动移光标也关着时才有。
     val slideTaps = !cornerSymbols && !reserveDragForGlide && !LocalLetterGlide.current && LocalT9GlideKeys.current == null &&
         inputPreferences.cursorGesture != CursorGestureMode.KEYBOARD && ctrlTargets != null
@@ -728,7 +735,7 @@ fun SwipeableKeyButton(
         // 快捷键键面画在里层 Box 里，那里拿不到 BoxWithConstraints 的 maxWidth，先取出来。
         val keyWidthDp = maxWidth.value
         // 和角标一起显示时键面实际写的上下角标（截短规则同下面单独画角标时）。
-        val dpUpCorner = (swipeUpKeyLabel ?: swipeText)?.takeIf { it.isNotEmpty() && it != badgeText }
+        val dpUpCorner = upCornerLabel?.takeIf { it.isNotEmpty() && it != badgeText }
             ?.let { punctuationKeyLabel(if (it.length <= 4) it else it.take(4)) }
         val dpDownCorner = downCornerLabel?.takeIf { it.isNotEmpty() }
             ?.let { punctuationKeyLabel(if (it.length <= 4) it else it.take(4)) }
@@ -777,7 +784,7 @@ fun SwipeableKeyButton(
                             .padding(start = 4.dp, top = 4.dp, end = 4.dp, bottom = 2.dp),
                         horizontalAlignment = Alignment.End
                     ) {
-                        val swipeUpHint = swipeUpKeyLabel ?: swipeText
+                        val swipeUpHint = upCornerLabel
                         if (hintsVisible && !dpHidesCorners && flickPreview?.fromTop != true && !swipeUpHint.isNullOrEmpty()) {
                             val displayText = if (swipeUpHint.length <= 2) swipeUpHint else swipeUpHint.take(2)
                             Text(
@@ -830,7 +837,7 @@ fun SwipeableKeyButton(
                         // 双拼键位提示的韵母在字母下面：字母上移半个提示高，两者一起居中。
                         modifier = Modifier.fillMaxWidth().offset(y = if (dpCornerLayout != null) dpCornerLayout.letterOffsetDp.dp
                             else if (dpHint != null) (-(dpFinals?.heightDp ?: 0f) / 2f).dp
-                            else if (hintsVisible && !(swipeUpKeyLabel ?: swipeText).isNullOrEmpty() && keyHeight >= 40.dp) 2.dp else 0.dp)
+                            else if (hintsVisible && !upCornerLabel.isNullOrEmpty() && keyHeight >= 40.dp) 2.dp else 0.dp)
                             // 和角标一起显示：字母框固定为 1.2 倍字号高、居中、超出裁掉，备用字体（全角分号等）不会伸进上下层。
                             .then(if (dpCornerLayout != null) Modifier
                                 .height((dpCornerLayout.letterSp * 1.2f * density.fontScale).dp)
@@ -847,8 +854,8 @@ fun SwipeableKeyButton(
 
                 // 上滑提示与角标文字相同（如九键/笔画上滑输入键面数字）时不再重复渲染提示，
                 // 角标已表达该信息；swipeText 状态保持非空，上滑触发与气泡不受影响。
-                if (hintsVisible && !dpHidesCorners && flickPreview?.fromTop != true && !(swipeUpKeyLabel ?: swipeText).isNullOrEmpty() && (swipeUpKeyLabel ?: swipeText) != badgeText) {
-                    val keyLabel = (swipeUpKeyLabel ?: swipeText)!!
+                if (hintsVisible && !dpHidesCorners && flickPreview?.fromTop != true && !upCornerLabel.isNullOrEmpty() && upCornerLabel != badgeText) {
+                    val keyLabel = upCornerLabel
                     val displayText = if (keyLabel.length <= 4) keyLabel else keyLabel.take(4)
                     Text(
                         text = punctuationKeyLabel(displayText),
