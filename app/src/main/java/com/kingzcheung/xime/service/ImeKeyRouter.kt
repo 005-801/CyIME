@@ -597,24 +597,24 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
      * 打单词时的撇号（Shift 键分词、逗号键分词、角标、长按都走这里）：光标前是正在打的词时，' 像字母一样上屏并接进这个词，
      * 补全接着按 what'、l'e 找（what's、l'eau）。没在打词、或不是用撇号的语言时返回 false，照旧当标点。
      */
-    internal suspend fun commitWordApostrophe(): Boolean {
+    internal suspend fun commitWordApostrophe(mark: String = WORD_APOSTROPHE): Boolean {
         val next = withEditor {
             val state = service.uiState.value
             if (!state.isAsciiMode && !state.inputProfile.typesLettersDirectly) return@withEditor null
             val language = if (state.isAsciiMode) com.kingzcheung.xime.settings.InputLanguage.ENGLISH else state.inputProfile.language
             val current = service.candidateState.value
-            if (!apostropheJoinsWord(language, current.pendingEnglishText)) return@withEditor null
+            if (!markJoinsWord(mark, language, current.pendingEnglishText)) return@withEditor null
             service.predictionManager.invalidatePendingPredictions()
             val cleared = current.copy(associationCandidates = emptyList())
             service.candidateState.value = cleared
-            val committed = commitEnglishLetter(cleared, WORD_APOSTROPHE, false, service::supportsEnglishCandidateReplace) {
+            val committed = commitEnglishLetter(cleared, mark, false, service::supportsEnglishCandidateReplace) {
                 service.commitTextAndPredict(it, isPaste = false, allowPrediction = false).accepted
             }
             if (committed != null) service.candidateState.value = committed
             // 编辑框没收下也算处理过了，不再当标点补打一次。
             committed ?: cleared
         } ?: return false
-        if (next.pendingEnglishText.endsWith(WORD_APOSTROPHE)) requestEnglishCompletions(next)
+        if (next.pendingEnglishText.endsWith(mark)) requestEnglishCompletions(next)
         return true
     }
 
@@ -1317,8 +1317,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
             val english = service.uiState.value.let {
                 it.isAsciiMode || it.inputProfile.typesLettersDirectly
             }
-            // 打单词时的撇号（what's、l'eau）接进这个词；没在打词时照旧走下面的标点。
-            if (english && key == WORD_APOSTROPHE && hardwareEvent == null && commitWordApostrophe()) return@command
+            // 打单词时的撇号（what's、l'eau）、马来语叠词的连字符（kanak-kanak）接进这个词；没在打词时照旧走下面的标点。
+            if (english && (key == WORD_APOSTROPHE || key == WORD_HYPHEN) && hardwareEvent == null && commitWordApostrophe(key)) return@command
             // 西班牙、德、法、俄语键盘上 ñ、ä、é、й 这些也是字母：同样逐字上屏、参与补全。
             val letterLanguage = service.uiState.value.let {
                 if (it.isAsciiMode) null else com.kingzcheung.xime.settings.LetterLanguage.of(it.inputProfile.language)
@@ -1343,6 +1343,21 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     val fullWidthLetter = service.textCommit.isJapaneseProfile() && service.textCommit.isFullWidthPunctuation()
                     // 西、德、法、意、俄语键盘和英文同一个「首字母大写」开关（以前只有英文会自动大写）；韩文没有大小写。
                     val autoCaps = hardwareEvent == null && !isShifted && capitalizeEnglishHere()
+                    // 越南语 Telex：这个字母给光标前的词加声调或变音（vieet → viêt），换掉光标前的词；只是追加字母时照常往下走。
+                    if (letterLanguage == com.kingzcheung.xime.settings.LetterLanguage.VIETNAMESE && !afterGlide && !fullWidthLetter) {
+                        val typed = if (isShifted || autoCaps) key.uppercase().takeIf { it.length == 1 } ?: key else key.lowercase()
+                        val word = current.pendingEnglishText
+                        val telex = vietnameseTelex.type(word, typed[0])
+                        if (telex != word + typed) {
+                            if (service.replaceBeforeCursor(word, telex)) {
+                                val replaced = current.copy(pendingEnglishText = telex, glidedWord = "")
+                                service.candidateState.value = replaced
+                                return@withEditor replaced
+                            }
+                            // 光标前已经不是这个词（点了别处、宿主改了文字）：从这个字母重新开始。
+                            vietnameseTelex.reset()
+                        }
+                    }
                     val next = commitEnglishLetter(current, key, isShifted || autoCaps,
                         service::supportsEnglishCandidateReplace, afterGlide = afterGlide) {
                         val letter = if (fullWidthLetter) fullWidthLetters(it) else it
@@ -2270,6 +2285,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
 
     /** 韩语两벌식组字；只在主线程（[withEditor]）里改，别处只看它在不在拼（省掉每次退格切到主线程）。 */
     private val hangul = HangulComposer()
+    /** 越南语 Telex 正在打的词按下的原样字母，见 [VietnameseTelex]。 */
+    private val vietnameseTelex = VietnameseTelex()
 
     /**
      * 韩语：字母交给 [HangulComposer]，输入框里光标前那个音节跟着换（替换光标前的字，不用组合区）。

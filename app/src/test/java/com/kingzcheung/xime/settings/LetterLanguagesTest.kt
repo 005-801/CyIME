@@ -44,6 +44,8 @@ class LetterLanguagesTest {
         assertFalse(InputLanguage.JAPANESE.typesLettersDirectly)
         assertEquals("26键", InputProfiles.resolveLayout("qwerty_german").displayName)
         assertEquals("26键", InputProfiles.resolveLayout("qwerty_italian").displayName)
+        assertEquals("26键", InputProfiles.resolveLayout("qwerty_vietnamese").displayName)
+        assertEquals("26键", InputProfiles.resolveLayout("qwerty_malay").displayName)
         assertEquals("ЙЦУКЕН", InputProfiles.resolveLayout("jcuken_russian").displayName)
     }
 
@@ -105,6 +107,7 @@ class LetterLanguagesTest {
             "qwerty_german" to mapOf("a" to "ä", "o" to "ö", "u" to "ü", "s" to "ß"),
             "qwerty_french" to mapOf("e" to "é", "a" to "à", "c" to "ç", "o" to "ô", "u" to "ù", "i" to "î"),
             "qwerty_italian" to mapOf("a" to "à", "e" to "è", "i" to "ì", "o" to "ò", "u" to "ù"),
+            "qwerty_vietnamese" to mapOf("a" to "ă", "e" to "ê", "o" to "ô", "u" to "ư", "d" to "đ"),
             "jcuken_russian" to mapOf("е" to "ё", "ь" to "ъ"),
             "dubeolsik_korean" to mapOf("ㄱ" to "ㄲ", "ㅂ" to "ㅃ", "ㅔ" to "ㅖ"),
         )
@@ -122,6 +125,15 @@ class LetterLanguagesTest {
         }
         assertTrue(requireNotNull(KeysConfigHelper.parseKeyboardYamlSection(yaml, "qwerty_spanish"))["'"]
             ?.longPress?.values.orEmpty().map { it.label }.containsAll(listOf("¿", "¡")))
+        // 越南语 o 长按还有 ơ、a 还有 â；马来语没有特殊字母，逗号键长按里有叠词用的 -。
+        val vietnamese = requireNotNull(KeysConfigHelper.parseKeyboardYamlSection(yaml, "qwerty_vietnamese"))
+        assertEquals(listOf("ô", "ơ"), vietnamese["o"]?.longPress?.values.orEmpty().map { it.label })
+        assertEquals(listOf("ă", "â"), vietnamese["a"]?.longPress?.values.orEmpty().map { it.label })
+        val malay = requireNotNull(KeysConfigHelper.parseKeyboardYamlSection(yaml, "qwerty_malay"))
+        assertEquals(listOf("qwertyuiop", "asdfghjkl", "zxcvbnm"),
+            requireNotNull(KeysConfigHelper.parseKeyboardLayoutYamlText(yaml, "qwerty_malay")).map { it.joinToString("") })
+        assertTrue("abcdefghijklmnopqrstuvwxyz".all { malay[it.toString()]?.longPress == null })
+        assertTrue("-" in malay["'"]?.longPress?.values.orEmpty().map { it.label })
     }
 
     private fun loadKeyboards() {
@@ -138,7 +150,8 @@ class LetterLanguagesTest {
 
     @Test fun `latin letters carry the english corner symbols and always offer accents`() {
         loadKeyboards()
-        for (letters in listOf(LetterLanguage.SPANISH, LetterLanguage.GERMAN, LetterLanguage.FRENCH, LetterLanguage.ITALIAN)) {
+        for (letters in listOf(LetterLanguage.SPANISH, LetterLanguage.GERMAN, LetterLanguage.FRENCH, LetterLanguage.ITALIAN,
+                LetterLanguage.VIETNAMESE, LetterLanguage.MALAY)) {
             KeysConfigHelper.setActiveKeyboardSchema(letters.schemaId)
             for (key in QwertySwipeSymbols.keys.map(Char::toString)) {
                 val gesture = KeysConfigHelper.getKeyGesture(key, false)

@@ -121,10 +121,11 @@ class QwertyRowOptionsTest {
         assertFalse(apostropheSplitActive(false, ascii = true, profile = pinyin))
         // 中文键盘的英文状态、英文、字母语言。
         assertTrue(apostropheSplitActive(true, ascii = true, profile = pinyin))
-        for (id in listOf(com.kingzcheung.xime.settings.InputModes.ENGLISH, "french", "italian", "german", "spanish"))
+        for (id in listOf(com.kingzcheung.xime.settings.InputModes.ENGLISH, "french", "italian", "german", "spanish", "malay"))
             assertTrue(id, apostropheSplitActive(true, ascii = false, profile = InputProfiles.describe(id)))
         // 反例：中文打拼音（那时是分词）、俄语韩语、日语罗马字、英文单词方案（字母先进组字区）。
-        for (id in listOf("rime_ice", "double_pinyin_flypy", "russian", "korean", "japanese",
+        // 越南语打词时字母会换成带声调的，Shift 也不当撇号。
+        for (id in listOf("rime_ice", "double_pinyin_flypy", "russian", "korean", "vietnamese", "japanese",
                 com.kingzcheung.xime.settings.InputModes.ENGLISH_WORDS))
             assertFalse(id, apostropheSplitActive(true, ascii = false, profile = InputProfiles.describe(id)))
         // Shift 只在打词时写 '：光标前是字母才算，刚打过 ' 或没在打词时照旧是 Shift。

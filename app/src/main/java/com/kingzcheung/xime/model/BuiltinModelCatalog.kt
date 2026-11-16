@@ -167,6 +167,14 @@ object BuiltinModelCatalog {
             versions = listOf(ModelVersion(version = "v1", size = "0.62 MB",
                 files = listOf(ModelFile("cyime-words-ru-v1.txt", RELEASE + "cyime-words-ru-v1.txt", "7a818abbe5e85670b76cdac369453848c664540122cf33112365eae749728177", 654612L,
                     mirrors = listOf(DownloadMirrors.CYIME_MODELSCOPE + "cyime-words-ru-v1.txt")))))),
+        ModelInfo("words-vi", "越南语补全词表", "越南语键盘的音节补全，约 6 千个常用音节。不打声调也能补全：nguoi → người、duoc → được。", ModelCategory.OTHER,
+            versions = listOf(ModelVersion(version = "v1", size = "0.03 MB",
+                files = listOf(ModelFile("cyime-words-vi-v1.txt", RELEASE + "cyime-words-vi-v1.txt", "ba0b904e941d1f60826b54a36b8b272aa866bfeec97cd1b2b836636a36b0aa22", 35000L,
+                    mirrors = listOf(DownloadMirrors.CYIME_MODELSCOPE + "cyime-words-vi-v1.txt")))))),
+        ModelInfo("words-ms", "马来语补全词表", "马来语键盘的单词补全，约 2 万个常用词。叠词打 kanak- 就补 kanak-kanak，马来语词不够时补英文词。", ModelCategory.OTHER,
+            versions = listOf(ModelVersion(version = "v1", size = "0.20 MB",
+                files = listOf(ModelFile("cyime-words-ms-v1.txt", RELEASE + "cyime-words-ms-v1.txt", "df3794541aa76d58bdd9bf5cd3e1534b355c6c9eb091bb63879ceb09ed510e64", 199430L,
+                    mirrors = listOf(DownloadMirrors.CYIME_MODELSCOPE + "cyime-words-ms-v1.txt")))))),
         // 日语转换引擎：tools/azookey/build-android.sh 编译的 libCyAzooKey.so（和 tasks-japanese.gradle.kts 登记的哈希相同），
         // 每个 ABI 一个 tar.bz2。Swift 不支持 32 位 x86，那里没有这一项（日语照旧只显示罗马字）。
         // 日语翻译器（jni/cyime_azookey）先找安装包里的，再找这里下载的 files/models/japanese-engine。

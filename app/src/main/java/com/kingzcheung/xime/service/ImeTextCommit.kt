@@ -235,8 +235,10 @@ internal class ImeTextCommit(private val service: XimeInputMethodService) {
             val output = if (emailDomain && literal in EmailSuffixes.DOTS) "." else paired
             // 角标、符号面板打的标点同样跟英文选词后自动补的空格换位置（默认关）。
             if (service.keyRouter.englishAutoSpace.isArmed && service.keyRouter.consumeEnglishAutoSpace(literal)) return@literal
-            // 角标、长按、标点键打的撇号：正在打英文（西、德、法、意）词时接进这个词（what's、l'eau），补全接着出。
-            if (!hardware && !emailDomain && literal == WORD_APOSTROPHE && service.keyRouter.commitWordApostrophe()) return@literal
+            // 角标、长按、标点键打的撇号：正在打英文（西、德、法、意、马来）词时接进这个词（what's、l'eau），补全接着出；
+            // 马来语的连字符同样接进词里（kanak-kanak）。
+            if (!hardware && !emailDomain && (literal == WORD_APOSTROPHE || literal == WORD_HYPHEN) &&
+                service.keyRouter.commitWordApostrophe(literal)) return@literal
             // 英文标点后自动加空格（默认关）：只管屏幕键盘，成对符号不在其中。
             if (!hardware && !emailDomain && paired == literal && service.keyRouter.commitEnglishPunctuationSpace(literal)) return@literal
             val engine = service.rimeEngine

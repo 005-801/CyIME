@@ -25,7 +25,11 @@ enum class LetterLanguage(
     RUSSIAN(InputLanguage.RUSSIAN, "russian", "RU", "jcuken_russian",
         "абвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ", "words-ru"),
     KOREAN(InputLanguage.KOREAN, "korean", "한", "dubeolsik_korean",
-        "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎㅏㅐㅑㅒㅓㅔㅕㅖㅗㅛㅜㅠㅡㅣ", null);
+        "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎㅏㅐㅑㅒㅓㅔㅕㅖㅗㅛㅜㅠㅡㅣ", null),
+    /** 越南语：声调和变音用 Telex 打（[com.kingzcheung.xime.service.VietnameseTelex]），长按出的是不带声调的变音字母。 */
+    VIETNAMESE(InputLanguage.VIETNAMESE, "vietnamese", "VI", "qwerty_vietnamese", "ăâêôơưđĂÂÊÔƠƯĐ", "words-vi"),
+    /** 马来语：没有 a–z 以外的字母；叠词（kanak-kanak）和补英文见 [com.kingzcheung.xime.association.MalayCompletion]。 */
+    MALAY(InputLanguage.MALAY, "malay", "MS", "qwerty_malay", "", "words-ms");
 
     /** 词表文件名带版本；换新版时改这里和商店目录。 */
     val wordsFile: String? get() = wordsModel?.let { "cyime-$it-v1.txt" }
