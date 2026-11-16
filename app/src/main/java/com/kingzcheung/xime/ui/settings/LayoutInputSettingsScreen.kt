@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.twotone.KeyboardReturn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import com.kingzcheung.xime.ui.i18n.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier

@@ -31,7 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import com.kingzcheung.xime.ui.i18n.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -225,7 +225,7 @@ private fun SlotCell(text: String?, active: Boolean, tag: String, modifier: Modi
         .clickable(onClick = onClick).padding(horizontal = 4.dp).testTag(tag),
         contentAlignment = Alignment.Center) {
         if (text == null) Icon(Icons.Default.Add, "加一格", tint = MaterialTheme.colorScheme.onSecondaryContainer)
-        else Text(text.ifBlank { "空" }, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        else androidx.compose.material3.Text(if (text.isBlank()) com.kingzcheung.xime.ui.i18n.tr("空") else text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             color = if (text.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSecondaryContainer)
     }
 }

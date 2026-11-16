@@ -42,7 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import com.kingzcheung.xime.ui.i18n.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -206,7 +206,7 @@ fun SchemaSettingsContent(
 
     LaunchedEffect(uiState.toastMessage) {
         uiState.toastMessage?.let { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            com.kingzcheung.xime.ui.i18n.UiToast.makeText(context, message, Toast.LENGTH_SHORT).show()
             viewModel.clearToast()
         }
     }
@@ -214,7 +214,7 @@ fun SchemaSettingsContent(
     LaunchedEffect(localUiState.toastMessage) {
         localUiState.toastMessage?.let { message ->
             if ('\n' in message) viewModel.reportImport(message)
-            else Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            else com.kingzcheung.xime.ui.i18n.UiToast.makeText(context, message, Toast.LENGTH_SHORT).show()
             localViewModel.clearToast()
         }
     }

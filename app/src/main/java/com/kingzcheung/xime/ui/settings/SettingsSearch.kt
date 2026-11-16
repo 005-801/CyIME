@@ -50,7 +50,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import com.kingzcheung.xime.ui.i18n.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -547,17 +547,36 @@ private fun termScore(term: String, title: String, keywords: String, path: Strin
     return if (coverage >= FUZZY_MIN_COVERAGE) (30 * coverage).toInt() else 0
 }
 
-/** 按空格分词，每个词都要匹配上；得分高的在前，同分保持索引顺序（整页在前，页内按页面顺序）。 */
-internal fun searchSettings(query: String, index: List<SettingsSearchEntry> = SettingsSearchIndex): List<SettingsSearchEntry> {
+/** 英文界面时按英文标题、路径的得分：只认整段包含，不做逐字模糊（英文两字母一段太容易乱配）。 */
+private fun englishTermScore(term: String, title: String, path: String): Int = when {
+    title == term -> 130
+    title.startsWith(term) -> 115
+    term in title -> 100
+    term in path -> 40
+    else -> 0
+}
+
+/**
+ * 按空格分词，每个词都要匹配上；得分高的在前，同分保持索引顺序（整页在前，页内按页面顺序）。
+ * [english] 不为 null（英文界面）时英文标题、路径也算，界面上看到的英文名能搜到；中文照样能搜。
+ */
+internal fun searchSettings(
+    query: String,
+    index: List<SettingsSearchEntry> = SettingsSearchIndex,
+    english: com.kingzcheung.xime.ui.i18n.UiTranslations? = null,
+): List<SettingsSearchEntry> {
     val terms = query.trim().split(Regex("\\s+")).map(::normalizeSearchText).filter { it.isNotEmpty() }
     if (terms.isEmpty()) return emptyList()
     return index.mapNotNull { entry ->
         val title = normalizeSearchText(entry.title)
         val keywords = normalizeSearchText(entry.keywords)
         val path = normalizeSearchText(entry.path)
+        val enTitle = english?.let { normalizeSearchText(it.translate(entry.title)) }
+        val enPath = english?.let { normalizeSearchText(it.translate(entry.path)) }
         var total = 0
         for (term in terms) {
-            val s = termScore(term, title, keywords, path)
+            var s = termScore(term, title, keywords, path)
+            if (enTitle != null && enPath != null) s = maxOf(s, englishTermScore(term, enTitle, enPath))
             if (s == 0) return@mapNotNull null
             total += s
         }
@@ -580,18 +599,23 @@ internal fun committedSearchText(text: String, composition: TextRange?): String 
  * 实际拿去搜的词：整段文字能搜到就用整段（别的输入法边拼英文单词边搜照旧），
  * 搜不到而且有没上屏的部分，就只用已上屏的字，不为拼音报「没有找到」。
  */
-internal fun searchTextFor(text: String, composition: TextRange?): String {
+internal fun searchTextFor(
+    text: String,
+    composition: TextRange?,
+    english: com.kingzcheung.xime.ui.i18n.UiTranslations? = null,
+): String {
     val committed = committedSearchText(text, composition)
-    if (committed == text || text.isBlank() || searchSettings(text).isNotEmpty()) return text
+    if (committed == text || text.isBlank() || searchSettings(text, english = english).isNotEmpty()) return text
     return committed
 }
 
 @Composable
 internal fun SettingsSearchField(query: String, onQueryChange: (String) -> Unit, modifier: Modifier = Modifier) {
     var field by remember { mutableStateOf(TextFieldValue(query, TextRange(query.length))) }
+    val english = com.kingzcheung.xime.ui.i18n.LocalUiTranslations.current
     // 外面改了搜索词（点清除、返回时恢复）才同步回输入框；拼音还在拼时 query 不变，不打断输入法。
     LaunchedEffect(query) {
-        if (searchTextFor(field.text, field.composition) != query) field = TextFieldValue(query, TextRange(query.length))
+        if (searchTextFor(field.text, field.composition, english) != query) field = TextFieldValue(query, TextRange(query.length))
     }
     Row(
         modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
@@ -604,7 +628,7 @@ internal fun SettingsSearchField(query: String, onQueryChange: (String) -> Unit,
         Box(Modifier.weight(1f).padding(vertical = 14.dp)) {
             BasicTextField(value = field, onValueChange = {
                     field = it
-                    val next = searchTextFor(it.text, it.composition)
+                    val next = searchTextFor(it.text, it.composition, english)
                     if (next != query) onQueryChange(next)
                 }, singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
@@ -621,7 +645,8 @@ internal fun SettingsSearchField(query: String, onQueryChange: (String) -> Unit,
 @Composable
 internal fun SettingsSearchResults(query: String, onOpen: (SettingsSearchEntry) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val results = withCaptionPluginState(searchSettings(query), com.kingzcheung.xime.ui.caption.CaptionPlugin.isActive(context))
+    val english = com.kingzcheung.xime.ui.i18n.LocalUiTranslations.current
+    val results = withCaptionPluginState(searchSettings(query, english = english), com.kingzcheung.xime.ui.caption.CaptionPlugin.isActive(context))
     if (results.isEmpty()) {
         Text("没有找到「$query」相关的设置", style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
