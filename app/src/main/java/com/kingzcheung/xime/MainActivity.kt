@@ -151,6 +151,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.kingzcheung.xime.ui.settings.SettingsRefreshRate.apply(this)
         
         // The Application owns engine preparation, including installation and deployment.
         prewarmKeyboardConfig()
