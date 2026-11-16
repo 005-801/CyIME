@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -120,6 +121,8 @@ internal fun HardwareKeyboardToolbar(
     statusText: String? = null,
     /** 实体键盘 Caps Lock 状态：开启时在语言键角上显示 ⇪。 */
     capsLock: Boolean = false,
+    /** 「锁定浮窗位置」：不能拖动，按钮照常能点。 */
+    positionLocked: Boolean = false,
 ) {
     val themeKey = com.kingzcheung.xime.ui.theme.LocalKeyboardPalette.current?.key ?: backgroundColor
     val shadowRadius = with(LocalDensity.current) { 1.dp.toPx() }
@@ -215,6 +218,7 @@ internal fun HardwareKeyboardToolbar(
             else geometry.constrain(animatedOffset.x, animatedOffset.y)
         val currentResting by rememberUpdatedState(displayedOffset)
         val currentDock by rememberUpdatedState(dockAtEdge)
+        val currentLocked by rememberUpdatedState(positionLocked)
         var gestureOrigin by remember { mutableStateOf<HardwareToolbarOffset?>(null) }
         // The receiver stays at the DOWN origin while its child follows the finger. It covers
         // the complete capsule, but never the transparent full-screen host.
@@ -225,7 +229,7 @@ internal fun HardwareKeyboardToolbar(
             .testTag("hardware-toolbar-drag")
             .semantics {
                 contentDescription = "移动输入工具条"
-                customActions = listOf(
+                if (!positionLocked) customActions = listOf(
                     CustomAccessibilityAction("靠左") { currentPositionCallback(currentPosition.copy(xFraction = 0f, yFraction = 0.5f)); true },
                     CustomAccessibilityAction("居中") { currentPositionCallback(currentPosition.copy(xFraction = 0.5f)); true },
                     CustomAccessibilityAction("靠右") { currentPositionCallback(currentPosition.copy(xFraction = 1f, yFraction = 0.5f)); true },
@@ -235,6 +239,7 @@ internal fun HardwareKeyboardToolbar(
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    if (currentLocked) return@awaitEachGesture // 锁定时不拖，按下交给按钮
                     val origin = currentResting
                     gestureOrigin = origin
                     var moved = false
@@ -290,7 +295,8 @@ internal fun HardwareKeyboardToolbar(
                 if (hasHandle) Box(
                     Modifier.width(if (vertical) buttonSize else 32.dp).height(if (vertical) 32.dp else buttonSize),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Default.DragIndicator, null, tint = protectedContentColor, modifier = Modifier.size(20.dp)) }
+                ) { Icon(if (positionLocked) Icons.Default.Lock else Icons.Default.DragIndicator, null,
+                    tint = protectedContentColor, modifier = Modifier.size(if (positionLocked) 16.dp else 20.dp)) }
                 HardwareToolbarAction(Icons.Default.Keyboard, "展开屏幕键盘", "hardware-toolbar-keyboard", protectedContentColor, buttonSize, onClick = onShowKeyboard)
                 if (mode == HardwareToolbarMode.FULL) auxiliaryActions()
                 HardwareToolbarLanguageKey(protectedContentColor, languageActions, languageLabel, onSwitchLanguage, buttonSize, capsLock, accentColor)

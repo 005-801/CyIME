@@ -2544,6 +2544,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                 editorBounds = state.editorBounds,
                                 avoidEditor = state.hardwareOptions.avoidEditor,
                                 dockAtEdge = state.hardwareOptions.dockAtEdge,
+                                positionLocked = state.hardwareOptions.lockPosition,
                                 // 吸附底边时的样式：默认为现在的长条，可选三星式贴底通栏。
                                 samsungBottomBar = state.hardwareOptions.bottomBar,
                                 onHideKeyboard = { requestHideSelf(0) },
