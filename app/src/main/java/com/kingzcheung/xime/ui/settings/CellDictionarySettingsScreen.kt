@@ -29,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kingzcheung.xime.settings.CellDictionaryCatalog
 import com.kingzcheung.xime.settings.CellDictionaryCost
 import com.kingzcheung.xime.settings.CellDictionaryOffer
+import com.kingzcheung.xime.settings.DictionaryExport
 import com.kingzcheung.xime.settings.InstalledCellDictionary
 import com.kingzcheung.xime.viewmodel.CellDictionaryUiState
 import com.kingzcheung.xime.viewmodel.CellDictionaryViewModel
@@ -42,6 +43,13 @@ fun CellDictionarySettingsContent(onBack: () -> Unit, embedded: Boolean = false)
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(model::import)
     }
+    // 选好导出什么、什么格式后先问存到哪；文件选择器回来再写。
+    var pendingExport by remember { mutableStateOf<Pair<String?, DictionaryExport.Format>?>(null) }
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        val job = pendingExport
+        pendingExport = null
+        if (uri != null && job != null) model.export(uri, job.first, job.second)
+    }
     CellDictionarySettingsPanel(state, onBack, model::download, model::select, model::apply,
         onImport = { importer.launch(arrayOf("*/*")) },
         onSource = { url ->
@@ -51,7 +59,11 @@ fun CellDictionarySettingsContent(onBack: () -> Unit, embedded: Boolean = false)
         // 本机或同型号实测过词库曲线就用实测（dict_cost_bench），否则用电脑上的最坏估计。
         curve = rememberPerformanceCostSource()?.takeIf { it.sameModel }
             ?.let { CellDictionaryCost.Curve.fromDevice(it.device) } ?: CellDictionaryCost.Curve.DESKTOP,
-        onCheckWordUpdates = model::checkWordUpdates, onAutoUpdate = model::setAutoUpdate)
+        onCheckWordUpdates = model::checkWordUpdates, onAutoUpdate = model::setAutoUpdate,
+        onExport = { source, name, format ->
+            pendingExport = source to format
+            exporter.launch(exportFileName(name, format))
+        })
     linkError?.let { message ->
         AlertDialog(onDismissRequest = { linkError = null }, text = { Text(message) },
             confirmButton = { TextButton(onClick = { linkError = null }) { Text("知道了") } })
@@ -75,8 +87,11 @@ fun CellDictionarySettingsPanel(
     onCheckWordUpdates: () -> Unit = {},
     onAutoUpdate: (Boolean) -> Unit = {},
     curve: CellDictionaryCost.Curve = CellDictionaryCost.Curve.DESKTOP,
+    /** 导出：source 为 null 是学到的词，否则是导入的词库 id；name 用来起文件名。 */
+    onExport: (source: String?, name: String, format: DictionaryExport.Format) -> Unit = { _, _, _ -> },
 ) {
     var confirmLarge by remember { mutableStateOf(false) }
+    var showExport by rememberSaveable { mutableStateOf(false) }
     var showGuide by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     val dictionaries = state.dictionaries
@@ -139,6 +154,10 @@ fun CellDictionarySettingsPanel(
                     TextButton(onClick = onImport, enabled = !state.busy, modifier = Modifier.padding(start = 8.dp)) {
                         Text("导入文件")
                     }
+                    TextButton(onClick = { showExport = true }, enabled = !state.busy,
+                        modifier = Modifier.testTag("cell-dictionary-export")) {
+                        Text("导出")
+                    }
                 }
             }
             state.message?.let { message -> item(key = "message") {
@@ -198,6 +217,10 @@ fun CellDictionarySettingsPanel(
         }
     }
     if (showGuide) CellDictionaryImportGuide(onDismiss = { showGuide = false }, onImport = onImport)
+    if (showExport) DictionaryExportDialog(dictionaries.installed, onDismiss = { showExport = false }) { source, name, format ->
+        showExport = false
+        onExport(source, name, format)
+    }
     if (confirmLarge) {
         AlertDialog(onDismissRequest = { confirmLarge = false },
             title = { Text("词库较多") },
@@ -269,4 +292,11 @@ private fun DictionaryRow(
             }
         } else Spacer(Modifier.width(48.dp))
     }
+}
+
+/** 「CyIME词库-名字-20261116.txt」；名字里不能进文件名的字符换成 _。 */
+internal fun exportFileName(name: String, format: DictionaryExport.Format, date: java.util.Date = java.util.Date()): String {
+    val day = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.ROOT).format(date)
+    val safe = name.replace(Regex("[\\\\/:*?\"<>|\\s]+"), "_").trim('_').take(40).ifBlank { "词库" }
+    return "CyIME词库-$safe-$day.${format.extension}"
 }
