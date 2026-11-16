@@ -208,6 +208,7 @@ object InputProfiles {
         // 英文单词方案用英文键盘的键帽和角标，和英文直接输入是同一个 26 键：布局栏里不出两个「26键」。
         "qwerty_en" -> InputLayout.QWERTY
         "jcuken_russian" -> InputLayout(section, "ЙЦУКЕН", LayoutKind.ALPHABETIC)
+        LetterLayouts.AZERTY_FRENCH -> InputLayout(section, "AZERTY", LayoutKind.ALPHABETIC)
         "dubeolsik_korean" -> InputLayout(section, "두벌식", LayoutKind.ALPHABETIC)
         // 仓颉只是键帽换成字根，仍是中文的 26 键：同一个布局，方案行里与拼音、双拼、五笔并列。
         "qwerty_cangjie" -> InputLayout.QWERTY
