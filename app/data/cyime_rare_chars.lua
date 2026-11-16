@@ -19,16 +19,80 @@ local OPTION = "cyime_rare_chars"
 -- 冇 在主词库里读 mao，这里补上粤语读音 mou。只在这个开关开着时出现，默认不变。
 local COMMON = { qu = "佢", ge = "嘅", zuo = "咗", mou = "冇" }
 local COMMON_QUALITY = 2.2005
+local rare_quality  -- defined below with the learned counts
 local function yield_common(syllable, seg, comment)
   local text = COMMON[syllable]
   if not text then return nil end
   local cand = Candidate("rare", seg.start, seg._end, text, comment)
-  cand.quality = COMMON_QUALITY
+  cand.quality = rare_quality(text, COMMON_QUALITY)
   yield(cand)
   return text
 end
 
 local KEYPAD = "22233344455566677778889999"
+
+-- 用过的生僻字往前排（11-16 用户反馈：名字里的生僻字打多少次都上不了首位）。主词库的动态词频管不到这些字
+-- （它们不进用户词库，见文件头），这里自己记：选过一次排到第一、二页，选过两次起排第一。
+-- 记在用户目录的 cyime_rare_learned.txt（一行「字\t次数」），只在开关开着时读写；无痕模式不记。
+local LEARNED_FILE = "/cyime_rare_learned.txt"
+local LEARNED_MAX = 2000
+local learned  -- 字 → 选过几次
+local function load_learned()
+  if learned then return learned end
+  learned = {}
+  local dir = rime_api.get_user_data_dir()
+  local f = dir and io.open(dir .. LEARNED_FILE, "r")
+  if not f then return learned end
+  for line in f:lines() do
+    local text, count = line:match("^([^\t]+)\t(%d+)$")
+    if text then learned[text] = tonumber(count) end
+  end
+  f:close()
+  return learned
+end
+
+local function save_learned()
+  local dir = rime_api.get_user_data_dir()
+  if not dir or not learned then return end
+  local rows = {}
+  for text, count in pairs(learned) do rows[#rows + 1] = { text, count } end
+  table.sort(rows, function(a, b) return a[2] > b[2] end)
+  local tmp = dir .. LEARNED_FILE .. ".tmp"
+  local f = io.open(tmp, "w")
+  if not f then return end
+  for i = 1, math.min(#rows, LEARNED_MAX) do f:write(rows[i][1], "\t", rows[i][2], "\n") end
+  f:close()
+  if not os.rename(tmp, dir .. LEARNED_FILE) then
+    os.remove(dir .. LEARNED_FILE)
+    os.rename(tmp, dir .. LEARNED_FILE)
+  end
+end
+
+local LEARNED_ONCE_QUALITY = COMMON_QUALITY
+local LEARNED_QUALITY = 1000
+
+function rare_quality(text, default)
+  local count = load_learned()[text]
+  if not count then return default end
+  return count >= 2 and LEARNED_QUALITY or math.max(default, LEARNED_ONCE_QUALITY)
+end
+
+-- 上屏时数一下这次选中的生僻字（整段里每一节各自选的候选，组词时先选常用字再选生僻字也算）。
+local function remember_commit(ctx)
+  if not ctx:get_option(OPTION) or ctx:get_option("_cyime_incognito") then return end
+  local segments = ctx.composition:toSegmentation():get_segments()
+  local changed = false
+  for _, seg in ipairs(segments) do
+    local cand = seg:get_selected_candidate()
+    local genuine = cand and (cand:get_genuine() or cand)
+    if genuine and genuine.type == "rare" then
+      local map = load_learned()
+      map[genuine.text] = (map[genuine.text] or 0) + 1
+      changed = true
+    end
+  end
+  if changed then save_learned() end
+end
 
 -- 分词符（' 和空格）不算读音：组词时先选了前面的字，剩下那一节从分词符开始（aaa'bbb 选完 aaa 剩 'bbb），
 -- 原来整段对不上读音，生僻字一个也不补（11-16 用户反馈）。
@@ -155,7 +219,7 @@ local function merged_translate(input, seg, env)
     for text in (chars[syllable] or ""):gmatch(utf8.charpattern) do
       if text == common then goto next_char end
       local cand = Candidate("rare", seg.start, seg._end, text, comment)
-      cand.quality = -1000
+      cand.quality = rare_quality(text, -1000)
       yield(cand)
       ::next_char::
     end
@@ -178,8 +242,9 @@ local function translator(input, seg, env)
     for text in (list or ""):gmatch(utf8.charpattern) do
       if text == common then goto next_char end
       local cand = Candidate("rare", seg.start, seg._end, text, "")
-      -- Rime orders whole-input candidates by quality: below every dictionary word of this reading.
-      cand.quality = -1000
+      -- Rime orders whole-input candidates by quality: below every dictionary word of this reading,
+      -- unless the user has picked this character before (rare_quality).
+      cand.quality = rare_quality(text, -1000)
       yield(cand)
       ::next_char::
     end
@@ -187,9 +252,17 @@ local function translator(input, seg, env)
   end
   for text, code in (digits[input] or ""):gmatch("([^\t]+)\t(%l+)\n") do
     local cand = Candidate("rare", seg.start, seg._end, text, code)
-    cand.quality = -1000
+    cand.quality = rare_quality(text, -1000)
     yield(cand)
   end
 end
 
-return translator
+local function init(env)
+  env.rare_commit = env.engine.context.commit_notifier:connect(remember_commit)
+end
+
+local function fini(env)
+  if env.rare_commit then env.rare_commit:disconnect() end
+end
+
+return { init = init, func = translator, fini = fini }
