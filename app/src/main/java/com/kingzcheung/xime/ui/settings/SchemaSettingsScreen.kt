@@ -308,6 +308,19 @@ fun SchemaSettingsContent(
                         }
                     }
                 }
+                // 启用着、这台设备上却没有方案文件的（从备份恢复了启用记录，导入方案的文件没跟过来）：
+                // 列表里没有它那一行，没生效的原因写在这里，可以直接停用。
+                uiState.schemaProblems.filterKeys { it in enabledIds && it !in installedIds && it != InputModes.ENGLISH }
+                    .forEach { (id, reason) ->
+                        item(key = "schema-missing-$id") {
+                            Row(Modifier.fillMaxWidth().padding(top = 8.dp).testTag("schema-missing-$id"),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Text("$id：$reason", Modifier.weight(1f), style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error)
+                                TextButton(onClick = { viewModel.toggleSchema(SchemaMeta(id, id)) }) { Text("停用") }
+                            }
+                        }
+                    }
                 item {
                     SettingsGroupTitle("已启用的输入组合", Modifier.padding(top = 8.dp))
                 }
