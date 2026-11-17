@@ -501,9 +501,15 @@ fun KeyboardLayout(
         val heldPreview = if (chineseGlide) callbacks.onGlidePreviewHold?.invoke() else callbacks.onEnglishGlidePreviewHold?.invoke()
         if (heldPreview == null) callbacks.onGlidePreviewEnd?.invoke()
         val keys = geometry.snapshot()
-        if (keys.size < 26) { heldPreview?.let { callbacks.onGlidePreviewFinish?.invoke(it, false) }; return@trace }
+        if (keys.size < 26) {
+            com.kingzcheung.xime.util.FileLogger.w("GlideDrop",
+                com.kingzcheung.xime.glide.glideDropNote("keys_lt_26", keys, xs, ys, heldPreview != null))
+            heldPreview?.let { callbacks.onGlidePreviewFinish?.invoke(it, false) }; return@trace
+        }
         // 输入框归属在抬手时确定；识别完成前切换输入框则作废。
         val inputContext = runCatching { callbacks.captureInputContext() }.getOrNull() ?: run {
+            com.kingzcheung.xime.util.FileLogger.w("GlideDrop",
+                com.kingzcheung.xime.glide.glideDropNote("no_input_context", keys, xs, ys, heldPreview != null))
             heldPreview?.let { callbacks.onGlidePreviewFinish?.invoke(it, false) }; return@trace
         }
         val shift = viewModel.shiftMode.value
@@ -525,7 +531,10 @@ fun KeyboardLayout(
             }
             if (candidates.isEmpty()) {
                 // 很短又认不出词：快打时手指一抖被当成了滑行，按点了起点那个键算，不吞这一下（用户 11-11）。
-                com.kingzcheung.xime.glide.shortGlideTapKey(keys, xs, ys)?.toString()?.let { key ->
+                val tapKey = com.kingzcheung.xime.glide.shortGlideTapKey(keys, xs, ys)?.toString()
+                if (tapKey == null) com.kingzcheung.xime.util.FileLogger.w("GlideDrop",
+                    com.kingzcheung.xime.glide.glideDropNote("no_candidates", keys, xs, ys, heldPreview != null))
+                tapKey?.let { key ->
                     val value = com.kingzcheung.xime.rime.MergedLetterInput.tapValue(key,
                         KeysConfigHelper.getKeyCommitValue(key, isAsciiMode), false, shift.isShifted)
                     kotlinx.coroutines.withContext(inputContext) { onKeyPress(value) }

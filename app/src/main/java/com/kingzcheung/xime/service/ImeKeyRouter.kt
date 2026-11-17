@@ -773,6 +773,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
     internal fun commitGlideWord(candidates: List<com.kingzcheung.xime.glide.GlideCandidate>, case: (String) -> String) {
         val previewToken = service.heldEnglishGlidePreview()
         if (candidates.isEmpty() || hasPendingCandidateCommit) {
+            if (hasPendingCandidateCommit) service.noteInputDropped("glide_word_pending_commit")
             previewToken?.let { service.finishGlidePreview(it, false) }
             return
         }
@@ -862,6 +863,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
      */
     internal fun typeGlideCode(code: String, alternatives: List<String>, previewToken: Long?) {
         if (code.isEmpty() || hasPendingCandidateCommit) {
+            // 上一次点候选宿主没收、等重试时，这一笔不打；记下来，导出日志能看出是这里丢的。
+            if (hasPendingCandidateCommit) service.noteInputDropped("glide_pending_commit")
             previewToken?.let { service.finishGlidePreview(it, false) }
             return
         }
@@ -918,7 +921,12 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                         )
                         service.finishGlidePreview(previewToken, true)
                         service.showInlinePinyinCaret(caretSnapshot, glideSession, glideSchema)
-                    } else service.finishGlidePreview(previewToken, false)
+                    } else {
+                        // 这一笔的键已经进了引擎，只是读到的结果过期了：按引擎现在的状态再刷一次，别让打进去的字看不见。
+                        FileLogger.w("GlideDrop", "glide finish stale result=${result != null}")
+                        service.finishGlidePreview(previewToken, false)
+                        service.updateUI()
+                    }
                 }
             } finally {
                 withContext(Dispatchers.Main) { service.finishGlidePreview(previewToken, false) }
