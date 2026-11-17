@@ -293,7 +293,11 @@ fun KeyboardLayout(
     // 按住符号键当 Ctrl 时同样拆开，每个字母各显示自己的快捷键（用户 10-24）；和键面一起等按满时限或拖出才拆，点一下开符号不闪（10-31）。
     // Shift 亮着（单次、锁定、按住）时也拆开：大写只能是一个确定的字母，点哪个出哪个，bn 不再只出 B（10-27）。
     // 按字母数定宽，拆开后每个字母的位置和宽度不变。
-    val renderRows = if (fourteenKey && (shiftSlideTargets.dragging || shiftSlideTargets.ctrlFaces || shiftMode.isShifted)) pairedRows.mapIndexed { index, row ->
+    // 自建布局的合并键（we、rt）按住 Ctrl 或 Shift 拖动时同样拆开，各显示自己的快捷键（用户 11-17）；大写不拆，点按照旧。
+    // 分体时左右两半按合并键的格数切，拆开会挪动切点，先不拆。
+    val customPairs = letterLayout != null && !honeycomb && !splitKeyboard && letterLayout.mergedGroups.isNotEmpty() &&
+        (shiftSlideTargets.dragging || shiftSlideTargets.ctrlFaces)
+    val renderRows = if (customPairs || fourteenKey && (shiftSlideTargets.dragging || shiftSlideTargets.ctrlFaces || shiftMode.isShifted)) pairedRows.mapIndexed { index, row ->
         if (index > 2) row else row.flatMap { key ->
             if (key.length == 2 && key.all { it.lowercaseChar() in 'a'..'z' }) listOf(key.take(1), key.drop(1)) else listOf(key)
         }
@@ -302,7 +306,9 @@ fun KeyboardLayout(
     val evenMergedKeys = (letterLayout != null || fourteenKey) && !splitKeyboard &&
         LocalKeyboardInputPreferences.current.evenMergedKeys
     // 14 键拆开时每个字母各占原合并键的一半，拆开前后不跳位；没拆或没打开时为 null，按键自己的份数。
-    val renderSpans: List<List<Float>>? = if (evenMergedKeys && fourteenKey && renderRows !== pairedRows)
+    val renderSpans: List<List<Float>>? = if (customPairs && letterLayout != null)
+        pairedRows.take(3).map { row -> splitPairSpans(row, evenMergedKeys, letterLayout.widths) }
+    else if (evenMergedKeys && fourteenKey && renderRows !== pairedRows)
         pairedRows.take(3).map { splitPairSpans(it, true) } else null
     val splitRow0 = renderRows.getOrElse(0) { listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p") }
     val splitRow1 = renderRows.getOrElse(1) { listOf("a", "s", "d", "f", "g", "h", "j", "k", "l") }

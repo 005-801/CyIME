@@ -418,11 +418,12 @@ fun SwipeableKeyButton(
     val ctrlTargets = LocalShiftSlideTargets.current
     // 14 键快捷键键面出来前双字母键还没拆开：按点在左半还是右半决定是哪个字母，和拆开后的位置一样（用户 10-31）。
     val ctrlTapFraction = remember { floatArrayOf(0.5f) }
-    val fourteenKeyLayout = LocalFourteenKeyLayout.current
+    // 自建布局里的合并键（we、rt）和 14 键一样：按住 Ctrl 时按字母拆开，各出各的快捷键（用户 11-17）。
+    val pairedLetterKeys = LocalFourteenKeyLayout.current || customLayout?.mergedGroups?.isNotEmpty() == true
     val tapOrCtrl: () -> Unit = {
         val letters = letterGroup ?: text
         val pick = ctrlShortcutLetter?.toString()
-            ?: if (fourteenKeyLayout && letters.length == 2 && ctrlTargets?.ctrl == true)
+            ?: if (pairedLetterKeys && letters.length == 2 && ctrlTargets?.ctrl == true)
             letters[if (ctrlTapFraction[0] < 0.5f) 0 else 1].toString() else letters
         if (ctrlTargets?.ctrlTap(pick) != true) onClick()
     }
@@ -597,7 +598,7 @@ fun SwipeableKeyButton(
     val dragSpace = LocalKeyDragSpace.current
     var dragBounds by remember { mutableStateOf(Rect.Zero) }
     val shiftToken = remember { Any() }
-    val maxShiftLetters = if (LocalFourteenKeyLayout.current) 2 else 1
+    val maxShiftLetters = if (pairedLetterKeys) 2 else 1
     // 俄、韩、西、德语键盘上的 й ㅂ ñ ä 也是字母键：Shift 拖过去打大写、按住 !@# 当 Ctrl（用户 11-17）。
     val shiftLetters = (letterGroup ?: text).takeIf { group ->
         group.length in 1..maxShiftLetters && group.all(com.kingzcheung.xime.settings.LetterLanguage::isKeyLetter)
