@@ -472,6 +472,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 uiState.value.hardwareOptions.dockAtEdge)) 10 else 0
     }
     private val hardwareToolbarBounds = mutableStateOf<android.graphics.Rect?>(null)
+    /** 语音悬浮条正在拖动或归位：这期间 App 的留空停在拖动前，停稳后再按新位置改一次。 */
+    private var voicePillMoving = false
+    private var voicePillReserveTop: Int? = null
     private var hardwareCandidateBounds: android.graphics.Rect? = null
     private var hardwarePreeditBounds: android.graphics.Rect? = null
     private val glassBlurWindows = mutableMapOf<String, ImeGlassBlurWindow>()
@@ -2598,7 +2601,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                           Box(Modifier.fillMaxSize().padding(bottom = activeBottomDp.dp)) {
                             androidx.compose.runtime.DisposableEffect(Unit) {
                                 voicePillOnScreen = true
-                                onDispose { voicePillOnScreen = false }
+                                onDispose { voicePillOnScreen = false; voicePillMoving = false; voicePillReserveTop = null }
                             }
                             val pillPrefs = com.kingzcheung.xime.ui.keyboard.rememberKeyboardInputPreferences(isDark)
                             val glass = pillPrefs.frostedGlass
@@ -2644,6 +2647,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                 position = hardwareToolbarPosition.value,
                                 onPositionChange = { hardwareToolbarPosition.value = it },
                                 dockAtEdge = state.hardwareOptions.dockAtEdge,
+                                onMovingChange = { moving ->
+                                    voicePillMoving = moving
+                                    if (!moving && ::keyboardContainer.isInitialized) keyboardContainer.requestLayout()
+                                },
                             )
                           }
                           }
@@ -4436,7 +4443,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         if (current == next) return
         if (toolbar) hardwareToolbarBounds.value = next else hardwareCandidateBounds = next
         updateGlassSurface(if (toolbar) "hardware-toolbar" else "hardware-candidates", next)
-        if (::keyboardContainer.isInitialized) keyboardContainer.requestLayout()
+        // 语音悬浮条拖动中不必每帧重算触摸区（这一下手势已经归它），停稳时 onMovingChange 再算一次。
+        if (::keyboardContainer.isInitialized && !(toolbar && voicePillMoving)) keyboardContainer.requestLayout()
     }
 
     private fun keyboardConfigName(value: Int): String = when (value) {
@@ -5500,10 +5508,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             val height = window.window?.decorView?.height ?: resources.displayMetrics.heightPixels
             // A toolbar resting on the bottom edge (Samsung bar or the Gboard pill) is reported as
             // occupied space, so apps lift their input field above it rather than under it.
-            val bottomReserve = hardwareToolbarBounds.value?.takeIf {
-                (state.voiceCollapsed && hardwareToolbarPosition.value.yFraction >= 1f) ||
-                    height - it.bottom <= (24 * resources.displayMetrics.density).roundToInt()
+            // 语音悬浮条靠边的竖条不占 App 底部；拖动和归位期间留空不变，免得 App 每帧跟着上下跳。
+            val liveReserve = hardwareToolbarBounds.value?.takeIf {
+                !(state.voiceCollapsed && it.height() > it.width()) &&
+                ((state.voiceCollapsed && hardwareToolbarPosition.value.yFraction >= 1f) ||
+                    height - it.bottom <= (24 * resources.displayMetrics.density).roundToInt())
             }?.top ?: height
+            val bottomReserve = if (state.voiceCollapsed && voicePillMoving) voicePillReserveTop ?: liveReserve
+                else liveReserve.also { voicePillReserveTop = if (state.voiceCollapsed) it else null }
             outInsets.contentTopInsets = bottomReserve.coerceIn(0, height)
             outInsets.visibleTopInsets = bottomReserve.coerceIn(0, height)
             outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_REGION
