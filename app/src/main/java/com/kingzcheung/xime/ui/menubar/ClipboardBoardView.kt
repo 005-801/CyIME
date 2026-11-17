@@ -82,9 +82,12 @@ internal fun ConnectedClipboardBoard(
     val context = LocalContext.current
     val store = remember(context) { ClipboardImages.getInstance(context) }
     val prefs = remember(context) { context.getSharedPreferences("clipboard_board", Context.MODE_PRIVATE) }
-    val images by store.images.collectAsState()
+    // Image items and their source mode must reach Compose atomically.
+    val imageBoard by store.boardSnapshot.collectAsState()
+    val images = imageBoard.images
+    val galleryPhotosEnabled = imageBoard.galleryPhotosEnabled
+    val photoAccess = imageBoard.screenshotsEnabled
     val failure by store.pasteFailure.collectAsState()
-    val photoAccess by store.photoAccess.collectAsState()
     val screenshotsNeedAccess by store.screenshotsNeedAccess.collectAsState()
     var storedPins by remember { mutableStateOf(prefs.getStringSet("pins", emptySet()).orEmpty().toSet()) }
     var pendingTextPins by remember { mutableStateOf(emptyMap<Long, Boolean>()) }
@@ -198,6 +201,8 @@ internal fun ConnectedClipboardBoard(
             prefs.edit().putBoolean(CLIPBOARD_CLOSE_AFTER_PASTE_KEY, value).apply()
         },
         groups = groups, initialTabKey = returnTab,
+        // Source changes must not reuse grid animation state from the text-only board.
+        galleryPhotosEnabled = galleryPhotosEnabled,
         onAssignGroup = groupStore::assign,
         onManageGroups = { record ->
             groupStore.setKeyboardEntry(record)
@@ -314,6 +319,8 @@ internal fun ClipboardBoardView(
     onFormOpen: (ClipboardTab, Boolean) -> Unit = { _, _ -> },
     /** Saves the order a group's records were dragged to while selecting (group id, record keys); null: no sorting. */
     onReorderGroup: ((String, List<String>) -> Unit)? = null,
+    /** Whether recent gallery photos are included in the screenshot feed. */
+    galleryPhotosEnabled: Boolean = false,
 ) {
     val colors = MaterialTheme.colorScheme
     val appContext = LocalContext.current.applicationContext
@@ -365,14 +372,18 @@ internal fun ClipboardBoardView(
     }
     val keyboard = LocalClipboardKeyboardNavigation.current
     var focusedKey by remember(keyboard?.active, tab.key) { mutableStateOf<String?>(null) }
-    val gridState = rememberLazyStaggeredGridState()
+    // Switching categories or photo feeds must discard outgoing lazy item animations.
+    // Keep the grid alive for ordinary history updates and in-category pin folding.
+    val gridState = key(tab.key, searchQuery, listLayout, photoAccess, galleryPhotosEnabled) {
+        rememberLazyStaggeredGridState()
+    }
     // Near the end of what is loaded, read the next page of older history (again after each page
     // arrives, so a sparse category keeps filling until the whole history is read).
-    val nearEnd by remember { derivedStateOf {
+    val nearEnd by remember(gridState) { derivedStateOf {
         val info = gridState.layoutInfo
         info.totalItemsCount > 0 && (info.visibleItemsInfo.lastOrNull()?.index ?: -1) >= info.totalItemsCount - 30
     } }
-    LaunchedEffect(nearEnd, textItems.size) { if (nearEnd) onLoadMore() }
+    LaunchedEffect(gridState, nearEnd, textItems.size) { if (nearEnd) onLoadMore() }
     val scope = rememberCoroutineScope()
     fun menuPosition(anchorInRoot: Rect, preferSide: Boolean): ClipboardMenuAnchor {
         val boardOrigin = boardCoordinates[0]?.boundsInRoot()?.topLeft ?: Offset.Zero
@@ -648,7 +659,10 @@ internal fun ClipboardBoardView(
                     onToggle = { key -> selected = if (key in selected) selected - key else selected + key },
                     onToggleAll = { selected = toggleClipboardSection(selected, cards.mapTo(mutableSetOf()) { it.key }) },
                     onSave = { onReorderGroup?.invoke(sortGroup, it) })
-                else LazyVerticalStaggeredGrid(StaggeredGridCells.Fixed(columns), Modifier.fillMaxSize().testTag("clipboard-records"),
+                // A different category or photo feed must own a different lazy composition.
+                // Merely clearing records does not immediately clear fade-out item layers.
+                else key(tab.key, searchQuery, listLayout, photoAccess, galleryPhotosEnabled) {
+                    LazyVerticalStaggeredGrid(StaggeredGridCells.Fixed(columns), Modifier.fillMaxSize().testTag("clipboard-records"),
                     state = gridState,
                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp), verticalItemSpacing = 6.dp) {
@@ -738,6 +752,7 @@ internal fun ClipboardBoardView(
                             }
                         }
                         records(strip.after, fixedRecords = false)
+                    }
                     }
                 }
             }
