@@ -152,6 +152,14 @@ internal fun LayoutInputSettingsContent(category: LayoutInputCategory, onBack: (
                                 settings = settings.copy(t9MergeZeroIntoEnter = it); settings.save(context)
                             })
                     })
+                    // 用户 11-17 转来：笔画键盘的 0 键用的也是九键那个键，给它一个同款开关。默认关，原来的排法不变。
+                    SettingsSection(title = "笔画按键", content = {
+                        SettingsToggleItem(Icons.AutoMirrored.TwoTone.KeyboardReturn, "笔画去掉 0 键，回车加高",
+                            strokeMergeZeroSubtitle(settings.cornerSymbolInput, settings.reverseSymbolSwipe),
+                            checked = settings.strokeMergeZeroIntoEnter, onCheckedChange = {
+                                settings = settings.copy(strokeMergeZeroIntoEnter = it); settings.save(context)
+                            })
+                    })
                     SettingsSection(title = "九键手势", content = {
                         val glideLock = com.kingzcheung.xime.ui.keyboard.InputGestureLocks.lockFor(settings,
                             com.kingzcheung.xime.ui.keyboard.InputGestureLock.Option.T9_FLICK_LETTERS, true)
@@ -542,6 +550,13 @@ private fun QwertyStaggerSettings(
  * 「去掉 0 键，回车加高」的说明：照实写开了以后少了什么、0 去哪打。
  * 回车上打 0 和 1～9 的数字角标同一个方向（跟「反转上下滑方向」），关了「上下滑输入符号」就不接。
  */
+/** 笔画键盘「去掉 0 键，回车加高」的说明：笔画的 0 键只打 0，没有「下一项」。 */
+internal fun strokeMergeZeroSubtitle(cornerSymbolInput: Boolean, reverseSymbolSwipe: Boolean): String {
+    val zero = if (cornerSymbolInput) "数字 0 在回车上${if (reverseSymbolSwipe) "上滑" else "下滑"}打(和 1～9 的数字一样)，数字键盘里也有。"
+        else "「上下滑输入符号」关着，回车上不能打 0，到数字键盘里打。"
+    return "笔画键盘右边一列只留删除、重输和占两格高的回车。$zero"
+}
+
 internal fun t9MergeZeroSubtitle(cornerSymbolInput: Boolean, reverseSymbolSwipe: Boolean): String {
     val zero = if (cornerSymbolInput) "数字 0 在回车上${if (reverseSymbolSwipe) "上滑" else "下滑"}打(和 1～9 的数字一样，打字选词时不接)，数字键盘里也有。"
         else "「上下滑输入符号」关着，回车上不能打 0，到数字键盘里打。"

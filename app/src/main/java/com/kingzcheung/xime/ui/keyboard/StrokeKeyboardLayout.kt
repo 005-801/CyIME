@@ -568,8 +568,10 @@ private fun StrokeKeyboardContent(
         }
 
         // ── 第3列：功能键区 ──
+        // 「笔画去掉 0 键，回车加高」（用户 11-17 转来，默认关）：和九键同款，0 键没了、回车占两格，0 在回车上往角标方向滑。
+        val mergeZero = LocalKeyboardInputPreferences.current.strokeMergeZeroIntoEnter
         Column(
-            modifier = Modifier.fillMaxHeight().weight(NineGridFrame.ACTION),
+            modifier = Modifier.fillMaxHeight().weight(NineGridFrame.ACTION).testTag("stroke-right-rail"),
         ) {
             SwipeableIconKeyButton(
                 icon = rememberVectorPainter(Icons.AutoMirrored.Filled.Backspace),
@@ -577,7 +579,7 @@ private fun StrokeKeyboardContent(
                 onLongClick = { onKeyPress("delete") },
                 backgroundColor = specialKeyBackgroundColor,
                 iconColor = specialKeyTextColor,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("stroke-delete-key"),
                 swipeText = if (compactMode) null else "清空",
                 onSwipe = { onKeyPress("clear_composition") },
                 onPress = { onKeyPressDown?.invoke("delete") },
@@ -606,22 +608,33 @@ private fun StrokeKeyboardContent(
                 compactMode = compactMode,
             )
             // 0 与九键同位（重输下面）；点按和 1-9 的上滑数字走同一条路。
-            NineKeyButton(
+            if (!mergeZero) NineKeyButton(
                 digit = "", letters = "0",
                 onClick = { onKeyPress("0") },
                 backgroundColor = keyBackgroundColor, textColor = keyTextColor,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("stroke-zero-key"),
                 onPress = { onKeyPressDown?.invoke("0") },
                 onSwipeStateChange = onSwipeStateChange,
                 shadowEnabled = shadowEnabled, shadowElevation = shadowElevation,
                 shadowShapeRadius = shadowShapeRadius,
             )
-            ActionKeyButton(
+            val cornerSymbolInput = LocalKeyboardInputPreferences.current.cornerSymbolInput
+            if (mergeZero) T9MergedEnterKey(
+                text = "确定", onClick = { onKeyPress("enter") },
+                // 往角标方向滑打 0，和 1～9 的上滑数字同一条路；关了「上下滑输入符号」就不接，键上也不画 0。
+                onZero = if (cornerSymbolInput) ({ onKeyPress("0") }) else null,
+                showZeroHint = hintsActive && swipeHints.up && cornerSymbolInput,
+                backgroundColor = specialKeyBackgroundColor, textColor = specialKeyTextColor,
+                modifier = Modifier.weight(2f).testTag("stroke-enter-key"),
+                onPress = { onKeyPressDown?.invoke("enter") },
+                onSwipeStateChange = onSwipeStateChange,
+                shadowEnabled = shadowEnabled, shadowElevation = shadowElevation, shadowShapeRadius = shadowShapeRadius,
+            ) else ActionKeyButton(
                 text = "确定",
                 onClick = { onKeyPress("enter") },
                 backgroundColor = specialKeyBackgroundColor,
                 textColor = specialKeyTextColor,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testTag("stroke-enter-key"),
                 onPress = { onKeyPressDown?.invoke("enter") },
                 shadowEnabled = shadowEnabled,
                 shadowElevation = shadowElevation,
