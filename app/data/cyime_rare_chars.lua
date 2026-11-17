@@ -31,6 +31,26 @@ end
 
 local KEYPAD = "22233344455566677778889999"
 
+-- 常用字少收的读音（不看开关，2026-11-17 B 站评论：打 mo 找不到「么」）：只在整段输入正好是这个读音时
+-- （26 键 mo，九键 66 或左栏选 mo）补进单字候选，排在主词库同音字之后。不进主词库：整句按字打分时
+-- 「么」作语气词分数很高，加了 mo 读音后九键回放里句尾冒出「么」（我昨天没 → 我昨天么，14 处）。
+-- 双拼、14 键不补（同一串字母在那里是别的读音）。
+local EXTRA = { mo = "么" }
+-- 26 键整段候选的质量在 2 上下（2.2005 排在 mo 的第 16 个左右）；九键的在 1.000x，取同样的位置（沫 之后）。
+local EXTRA_QUALITY = 2.2005
+local EXTRA_T9_QUALITY = 1.0005
+local function yield_extra(input, seg, nine_key)
+  local typed = input:lower()
+  for syllable, text in pairs(EXTRA) do
+    local keys = syllable:gsub("%l", function(c) local i = c:byte() - 96; return KEYPAD:sub(i, i) end)
+    if typed == syllable or input == keys then
+      local cand = Candidate("rare", seg.start, seg._end, text, input == keys and syllable or "")
+      cand.quality = nine_key and EXTRA_T9_QUALITY or EXTRA_QUALITY
+      yield(cand)
+    end
+  end
+end
+
 -- 用过的生僻字往前排（11-16 用户反馈：名字里的生僻字打多少次都上不了首位）。主词库的动态词频管不到这些字
 -- （它们不进用户词库，见文件头），这里自己记：选过一次排到第一、二页，选过两次起排第一。
 -- 记在用户目录的 cyime_rare_learned.txt（一行「字\t次数」），只在开关开着时读写；无痕模式不记。
@@ -227,14 +247,21 @@ local function merged_translate(input, seg, env)
 end
 
 local function translator(input, seg, env)
-  if not env.engine.context:get_option(OPTION) then return end
   input = reading(input)
   if input == "" then return end
   if env.rare_merged_keys == nil then
     local config = env.engine.schema.config
     env.rare_merged_keys = config:get_bool("cyime_rare_merged_keys") == true or
       config:get_bool("cyime_rare_double_pinyin") == true
+    -- 九键方案带 t9_processor（rime_ice 也有 t9: 配置段，不能按它判断）。
+    env.rare_nine_key = false
+    local processors = config:get_list("engine/processors")
+    for i = 0, (processors and processors.size or 0) - 1 do
+      if processors:get_value_at(i).value == "t9_processor" then env.rare_nine_key = true end
+    end
   end
+  if not env.rare_merged_keys then yield_extra(input, seg, env.rare_nine_key) end
+  if not env.engine.context:get_option(OPTION) then return end
   if env.rare_merged_keys then return merged_translate(input, seg, env) end
   local list = load_chars()[input:lower()]
   local common = yield_common(input:lower(), seg, "")
