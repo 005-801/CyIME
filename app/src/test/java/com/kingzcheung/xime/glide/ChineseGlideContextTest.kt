@@ -52,4 +52,17 @@ class ChineseGlideContextTest {
         val ranked = ChineseGlideContext.rerank(listOf(GlideCandidate("yukuai", 1f), GlideCandidate("yikuai", 2f)), "我们", words::get, big)
         assertEquals(2f - ChineseGlideContext.WEIGHT * ChineseGlideContext.MAX_LIFT.toFloat(), ranked.first { it.word == "yikuai" }.cost, 1e-5f)
     }
+
+    @Test fun releaseUsesThePreviewLeftOfTheSameGesture() {
+        var reads = 0
+        val read = { reads++; "明天kai hui" }
+        // 这一笔开过预览：光标前已有预览写进去的组合文字，用预览开头取的那份，不再现读。
+        assertEquals("明天", ChineseGlideContext.leftAtRelease(7, 7, "明天", read))
+        assertEquals(null, ChineseGlideContext.leftAtRelease(7, 7, null, read))
+        assertEquals(0, reads)
+        // 没开预览、或预览是上一笔的：抬手时现读。
+        assertEquals("明天kai hui", ChineseGlideContext.leftAtRelease(7, -1, null, read))
+        assertEquals("明天kai hui", ChineseGlideContext.leftAtRelease(8, 7, "明天", read))
+        assertEquals(2, reads)
+    }
 }

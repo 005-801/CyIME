@@ -49,6 +49,13 @@ internal object ChineseGlideContext {
         return (lm.bigram(history, id) - lm.unigram(id)).coerceIn(0.0, MAX_LIFT)
     }
 
+    /**
+     * 抬手时用哪份前文。开着实时预览时，预览写进输入框的组合文字（拼音或词）也在光标前，抬手时再读会把它当前文，
+     * 预览和抬手后就按两份前文选编码；这一笔开过预览（[previewGesture] 是这一笔）就用预览开头取的 [previewLeft]，没开过才现读。
+     */
+    fun leftAtRelease(gesture: Int, previewGesture: Int, previewLeft: String?, read: () -> String?): String? =
+        if (gesture >= 0 && previewGesture == gesture) previewLeft else read()
+
     @Volatile private var cached: Pair<String, WordNgram>? = null
 
     /** rime/t9_ngram.lm（完整或精简版）；没装或读不了时为空。按路径、大小、修改时间缓存，换了档就重新打开。 */

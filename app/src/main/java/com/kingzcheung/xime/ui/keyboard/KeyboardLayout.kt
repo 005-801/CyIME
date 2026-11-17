@@ -512,7 +512,9 @@ fun KeyboardLayout(
             com.kingzcheung.xime.settings.DoublePinyinSchemes.find(uiState.currentSchemaId) else null
         val chinese = chineseGlide
         // 中文按前文选编码（组合为空时光标前已上屏的字，和九键组句同一个来源）；在主线程读，识别在后台。
-        val left = if (chinese) runCatching { callbacks.t9LeftContext() }.getOrNull() else null
+        // 这一笔开过实时预览就用预览开头那份：这时光标前已经有预览写进去的组合文字。
+        val left = if (!chinese) null else com.kingzcheung.xime.glide.ChineseGlideContext.leftAtRelease(
+            glideTrail.gesture, glidePreview.gesture, glidePreview.left) { runCatching { callbacks.t9LeftContext() }.getOrNull() }
         glideScope.launch {
             var handedOff = false
             try {
