@@ -4186,7 +4186,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         if (!current.isComposing && current.inputText.isEmpty() &&
             (predictionManager.hasPendingPrediction || current.associationCandidates.isNotEmpty())) {
             val before = runCatching { currentInputConnection?.getTextBeforeCursor(maxOf(25, current.pendingEnglishText.length), 0)?.toString() }.getOrNull()
-            val contextChanged = before != null && if (current.pendingEnglishText.isNotEmpty())
+            // 光标前明明有字却读回空串：宿主读不了光标前文字，不当作文字变了（否则刚出的联想马上被清掉）。
+            val unreadable = before != null && before.isEmpty() && newSelStart > 0
+            val contextChanged = before != null && !unreadable && if (current.pendingEnglishText.isNotEmpty())
                 !before.endsWith(current.pendingEnglishText) else !predictionManager.matchesCommittedContext(before)
             if (newSelStart != newSelEnd || contextChanged) {
                 predictionManager.invalidatePendingPredictions()
@@ -5816,7 +5818,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
         if (isChineseMode) {
             val before = runCatching { connection.getTextBeforeCursor(25, 0)?.toString() }.getOrNull()
-            if (before != null) predictionManager.replaceCommittedText(before)
+            // 有的宿主（抖音直播间评论框等）上屏后马上问，回的是空串或上屏前的旧文字：拿它当联想上下文就没有联想。
+            // 读到的末尾不是刚上屏的字时不信它，接着记住的上下文往后接。
+            if (before != null && before.endsWith(delivered)) predictionManager.replaceCommittedText(before)
             else predictionManager.appendCommittedText(delivered)
             if (!isPaste) predictionManager.recordInput(delivered)
         }
