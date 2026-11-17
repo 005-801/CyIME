@@ -84,6 +84,9 @@ color_schemes:\n  {0}:\n    name: "自定义背景 {1}"\n    keyboard_background
 按图片比例	Image aspect ratio
 长图高、宽图矮，最高到面板的六成	Tall images taller, wide images shorter, up to 60% of the panel
 只露一段，一屏看到的记录多	Shows only part, so more records fit on screen
+图片占用上限	Image storage limit
+复制的图片最多占这么多空间，超出后先删最早的，固定的不删	Copied images use at most this much space; the oldest go first, pinned ones stay
+剪贴板图片占用上限	Clipboard image storage limit
 全部	All
 文本	Text
 链接	Links

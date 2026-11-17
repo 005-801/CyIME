@@ -384,6 +384,8 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         SettingsSearchEntry("也显示相册照片", clipboard, SettingsRoutes.ClipboardPanel, "剪贴板 相册 照片 最近 图片 不只截图"),
         SettingsSearchEntry("剪贴板数量上限", clipboard, SettingsRoutes.ClipboardPanel,
             "剪贴板 条数 数量 最多 上限 保存 历史记录 不限 存文档", anchor = "数量上限", section = "历史记录"),
+        SettingsSearchEntry("剪贴板图片占用上限", clipboard, SettingsRoutes.ClipboardPanel,
+            "剪贴板 图片 截图 空间 大小 占用 缓存 MB 上限", anchor = "图片占用上限", section = "历史记录"),
         SettingsSearchEntry("剪贴板保留时间", clipboard, SettingsRoutes.ClipboardPanel,
             "剪贴板 定期清理 自动清理 自动删除 过期 天数 保留 历史记录", anchor = "保留时间", section = "历史记录"),
         SettingsSearchEntry("导出剪贴板", clipboard, SettingsRoutes.ClipboardPanel, "导出 剪贴板 记录 固定内容 备份"),

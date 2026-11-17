@@ -281,16 +281,7 @@ class ClipboardImages private constructor(private val context: Context) {
                 val retained = history.mapNotNull { Uri.parse(it.uri).lastPathSegment }.toSet()
                 directory.listFiles()?.filter { it.name !in retained && it.lastModified() < System.currentTimeMillis() - 24 * 60 * 60_000L }
                     ?.forEach { it.delete() }
-                // Keep the whole cache within its budget: the oldest unfixed copies go first.
-                val pinnedNames = pinnedKeys().mapNotNull { key ->
-                    key.removePrefix("image:").takeIf { it != key }?.let { Uri.parse(it).lastPathSegment } }.toSet()
-                val evicted = clipboardImageEvictions(directory.listFiles().orEmpty().filter { it.isFile }
-                    .map { CachedImageFile(it.name, it.length(), it.lastModified()) }, pinnedNames + file.name).toSet()
-                if (evicted.isNotEmpty()) {
-                    evicted.forEach { File(directory, it).delete() }
-                    history = history.filterNot { Uri.parse(it.uri).lastPathSegment in evicted }
-                    cachedSources.entries.removeAll { Uri.parse(it.value.uri).lastPathSegment in evicted }
-                }
+                evictOverBudget(keep = setOf(file.name))
                 save()
                 publish()
                 cached
@@ -320,6 +311,31 @@ class ClipboardImages private constructor(private val context: Context) {
     }
     private fun rememberDismissedCopy() {
         prefs.edit().putString("last_dismissed_preview_copy_v2", previewState.lastCopyKey).apply()
+    }
+
+    /** 「图片占用上限」（MB），见 [CLIPBOARD_IMAGE_CACHE_MB_OPTIONS]。 */
+    fun cacheLimitMb(): Int = clipboardImageCacheMb(boardPrefs.getInt(CLIPBOARD_IMAGE_CACHE_MB_KEY, DEFAULT_CLIPBOARD_IMAGE_CACHE_MB))
+
+    /** 改「图片占用上限」：存下来，马上按新上限删最旧的没固定的图片。 */
+    fun setCacheLimitMb(mb: Int) {
+        boardPrefs.edit().putInt(CLIPBOARD_IMAGE_CACHE_MB_KEY, clipboardImageCacheMb(mb)).apply()
+        scope.launch { mutex.withLock {
+            if (evictOverBudget(keep = emptySet())) { save(); publish() }
+        } }
+    }
+
+    /** Keep the whole cache within 「图片占用上限」: the oldest unfixed copies go first. Call under [mutex]. */
+    private fun evictOverBudget(keep: Set<String>): Boolean {
+        val pinnedNames = pinnedKeys().mapNotNull { key ->
+            key.removePrefix("image:").takeIf { it != key }?.let { Uri.parse(it).lastPathSegment } }.toSet()
+        val evicted = clipboardImageEvictions(directory.listFiles().orEmpty().filter { it.isFile }
+            .map { CachedImageFile(it.name, it.length(), it.lastModified()) }, pinnedNames + keep,
+            clipboardImageCacheMb(boardPrefs.getInt(CLIPBOARD_IMAGE_CACHE_MB_KEY, DEFAULT_CLIPBOARD_IMAGE_CACHE_MB)) * 1024L * 1024).toSet()
+        if (evicted.isEmpty()) return false
+        evicted.forEach { File(directory, it).delete() }
+        history = history.filterNot { Uri.parse(it.uri).lastPathSegment in evicted }
+        cachedSources.entries.removeAll { Uri.parse(it.value.uri).lastPathSegment in evicted }
+        return true
     }
 
     fun clearHistory() {
