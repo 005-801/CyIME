@@ -85,6 +85,11 @@ T9Processor::T9Processor(const Ticket& ticket) : Processor(ticket) {
             bool double_pinyin = false;
             config->GetBool("t9/double_pinyin", &double_pinyin);
             full_pinyin_ = has_script_translator && !double_pinyin;
+            double_pinyin_ = has_script_translator && double_pinyin;
+            if (double_pinyin_) {
+                auto algebra = std::make_shared<Projection>();
+                if (algebra->Load(config->GetList("speller/algebra"))) double_pinyin_algebra_ = algebra;
+            }
         }
     }
 
@@ -888,6 +893,7 @@ bool T9Processor::MatchesLetterConstraints(size_t rime_start, const std::string&
         else if (rime_input[i] != '\'' && rime_input[i] != ' ' && in_unassigned) return true;  // 不覆盖数字段，放行
     }
     if (rime_start < rime_input.size() && !(rime_input[rime_start] >= '0' && rime_input[rime_start] <= '9')) return true;
+    if (double_pinyin_) return MatchesDoublePinyinConstraints(unassigned_offset + digits_before, comment);
     int j = 0;
     for (char c : comment) {
         if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
@@ -897,6 +903,56 @@ bool T9Processor::MatchesLetterConstraints(size_t rime_start, const std::string&
         ++j;
     }
     return true;
+}
+
+// 读音 → 本方案的双拼键（只要全是字母的两键拼写；数字和半字母半数字的派生是给按键用的）。
+const std::vector<std::string>& T9Processor::DoublePinyinCodes(const std::string& syllable) const {
+    auto cached = double_pinyin_codes_.find(syllable);
+    if (cached != double_pinyin_codes_.end()) return cached->second;
+    std::vector<std::string> codes;
+    if (double_pinyin_algebra_) {
+        Script script;
+        script.AddSyllable(syllable);
+        double_pinyin_algebra_->Apply(&script);
+        for (const auto& entry : script) {
+            const std::string& code = entry.first;
+            if (code.size() != 2) continue;
+            bool letters = true;
+            for (char c : code) letters = letters && ((c >= 'a' && c <= 'z') || c == ';');
+            if (letters) codes.push_back(code);
+        }
+    }
+    return double_pinyin_codes_.emplace(syllable, std::move(codes)).first->second;
+}
+
+// 双拼九键：读音第 k 个字占 first_pos + 2k、+2k+1 两个键位，拂动固定的字母要对上这个字的某个双拼键。
+// 推不出双拼键（不是方案里的读音）的字不拦。
+bool T9Processor::MatchesDoublePinyinConstraints(int first_pos, const std::string& comment) const {
+    std::string syllable;
+    int index = 0;
+    auto check = [&]() -> bool {
+        if (syllable.empty()) return true;
+        const int pos = first_pos + 2 * index++;
+        const auto first = letter_constraints_.find(pos);
+        const auto second = letter_constraints_.find(pos + 1);
+        const bool has_first = first != letter_constraints_.end();
+        const bool has_second = second != letter_constraints_.end();
+        std::string reading;
+        reading.swap(syllable);
+        if (!has_first && !has_second) return true;
+        const auto& codes = DoublePinyinCodes(reading);
+        if (codes.empty()) return true;
+        for (const auto& code : codes) {
+            if ((!has_first || code[0] == first->second) && (!has_second || code[1] == second->second)) return true;
+        }
+        return false;
+    };
+    for (char c : comment) {
+        if (c >= 'A' && c <= 'Z') c = static_cast<char>(c - 'A' + 'a');
+        if (c >= 'a' && c <= 'z') { syllable += c; continue; }
+        if (!check()) return false;
+    }
+    return check();
 }
 
 bool T9Processor::MemorizeEntry(const std::string& text,
