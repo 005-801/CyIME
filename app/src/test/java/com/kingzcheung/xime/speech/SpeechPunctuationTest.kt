@@ -26,6 +26,13 @@ class SpeechPunctuationTest {
         assertEquals("这个 bug 太严重了！", cleanSpeechText("这个 bug 太严重了!", keepMarks = true))
     }
 
+    @Test fun `apostrophes inside English words stay (#325)`() {
+        assertEquals("you'd I'll can't", cleanSpeechText("you'd, I'll, can't."))
+        assertEquals("I'll go, you'd stay.", cleanSpeechText("I'll go, you'd stay.", keepMarks = true))
+        assertEquals("don’t", cleanSpeechText("don’t"))
+        assertEquals("he said yes", cleanSpeechText("he said 'yes'")) // quotes around a word are not kept
+    }
+
     @Test fun `a run of marks collapses to the strongest one`() {
         assertEquals("真的吗？", cleanSpeechText("真的吗，？", keepMarks = true))
         assertEquals("好的。", cleanSpeechText("。好的。。", keepMarks = true))

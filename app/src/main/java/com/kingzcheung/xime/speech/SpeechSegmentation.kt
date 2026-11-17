@@ -260,6 +260,8 @@ private fun cleanSpeechTextOnly(text: String): String {
                 '%', '％' -> left?.isDigit() == true
                 '(', '（' -> startsNumber(i + 1)
                 ')', '）' -> left?.isDigit() == true || left == '%' || left == '％' || left == ')' || left == '）'
+                // 英文缩写里的撇号是词的一部分（you'd、can't、I'll，#325），只在两边都是字母时留着。
+                '\'', '’' -> before?.isLetter() == true && after?.isLetter() == true
                 else -> false
             }
             append(if (numeric) c else ' ')
