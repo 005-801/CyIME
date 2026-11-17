@@ -1010,7 +1010,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         if (auxCodeTrigger(text)) return text
         if (text.length != 1 || state.isAsciiMode ||
             state.inputProfile.scheme != com.kingzcheung.xime.settings.InputScheme.EXTERNAL) return null
-        val c = when (text[0]) { '，' -> ','; '。' -> '.'; else -> text[0] }
+        val c = schemeCodeChar(text[0])
         if (c.code !in 0x21..0x7E || c.isLetter()) return null
         if (c.isDigit() && (!service.candidateState.value.isComposing || state.inputProfile.layout.kind !in
                 setOf(com.kingzcheung.xime.settings.LayoutKind.ALPHABETIC, com.kingzcheung.xime.settings.LayoutKind.MERGED))) return null
@@ -3484,6 +3484,16 @@ internal fun takesOverShiftedCandidateKey(
     keyCode: Int, shiftPressed: Boolean, chinese: Boolean, glossLoaded: Boolean, composingWithCandidates: Boolean,
 ): Boolean = shiftPressed && chinese && composingWithCandidates &&
     (keyCode == KeyEvent.KEYCODE_SPACE || glossLoaded && hardwareCandidateDigitIndex(keyCode, shifted = false) != null)
+
+/**
+ * 送进第三方方案前换成半角：中文状态下角标、长按打出的是全角（｀ ； ／ 等，U+FF01–FF5E），
+ * 方案的字母表和 recognizer 规则写的是半角（万象的 `` ^` `` 部件组字，#118）；句号 。 按 . 算。
+ */
+internal fun schemeCodeChar(ch: Char): Char = when (ch) {
+    '。' -> '.'
+    in '！'..'～' -> (ch.code - 0xFEE0).toChar()
+    else -> ch
+}
 
 /** 按住 Shift 选中的候选要上屏的英文；null 表示照常上屏中文。两种情况都只上屏这个词本身，不附加空格。 */
 internal fun shiftSelectionEnglish(candidate: String, englishFor: (String) -> String?): String? = englishFor(candidate)
