@@ -598,8 +598,9 @@ fun SwipeableKeyButton(
     var dragBounds by remember { mutableStateOf(Rect.Zero) }
     val shiftToken = remember { Any() }
     val maxShiftLetters = if (LocalFourteenKeyLayout.current) 2 else 1
+    // 俄、韩、西、德语键盘上的 й ㅂ ñ ä 也是字母键：Shift 拖过去打大写、按住 !@# 当 Ctrl（用户 11-17）。
     val shiftLetters = (letterGroup ?: text).takeIf { group ->
-        group.length in 1..maxShiftLetters && group.all { it.lowercaseChar() in 'a'..'z' }
+        group.length in 1..maxShiftLetters && group.all(com.kingzcheung.xime.settings.LetterLanguage::isKeyLetter)
     }
     val currentLetterSelection by rememberUpdatedState(onLetterSelection)
     androidx.compose.runtime.DisposableEffect(shiftTargets, shiftToken) {
@@ -635,7 +636,9 @@ fun SwipeableKeyButton(
     }
     // 按住符号键当 Ctrl：单字母键换成快捷键键面（用户 10-24）；按满时限才换，渐变出来，松手立刻换回（用户 10-31）。
     // 九键数字键换成它代表的字母的用途，左上角写数字（用户 11-03）。
-    val ctrlLetter = (ctrlShortcutLetter ?: shiftLetters?.singleOrNull())?.takeIf { shiftTargets?.ctrlFaces == true }
+    // 俄、韩语键盘按位置换成 26 键的字母（ЙЦУКЕН 的 с 是 Ctrl+C）；ñ、х 这类没有对应字母的键不换键面。
+    val ctrlLetter = (ctrlShortcutLetter ?: shiftLetters?.singleOrNull()?.let { shiftTargets?.ctrlLetter(it) })
+        ?.takeIf { shiftTargets?.ctrlFaces == true }
     // 从 0 起渐变：14 键这时才拆成单字母键，新键也要渐变出来，不能一出现就是快捷键键面。
     val ctrlFade = remember { androidx.compose.animation.core.Animatable(0f) }
     androidx.compose.runtime.LaunchedEffect(ctrlLetter != null) {

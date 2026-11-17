@@ -1933,6 +1933,9 @@ object KeysConfigHelper {
         return null
     }
 
+    /** 按住 !@# 当 Ctrl 时这个字母键发 Ctrl+几（俄、韩语键盘按位置），见 [LetterLanguage.ctrlLetter]。 */
+    fun ctrlLetter(key: Char): Char? = LetterLanguage.ctrlLetter(key, _zhRows)
+
     /** 获取某个按键的手势配置。 */
     fun getKeyGesture(key: String): KeyGestureConfig? = getKeyGesture(key, false)
 

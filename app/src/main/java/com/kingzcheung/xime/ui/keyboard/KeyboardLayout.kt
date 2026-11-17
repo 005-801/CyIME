@@ -283,7 +283,10 @@ fun KeyboardLayout(
         SplitKeyboardGeometry.splitStraddlingPairs(keyRows[1], splitRow1InsetDp.value / splitCellDp.coerceAtLeast(1f)),
         SplitKeyboardGeometry.splitStraddlingPairs(keyRows[2], letterSideKeyWeight),
     ) + keyRows.drop(3) else keyRows
-    val shiftSlideTargets = remember(uiState.currentSchemaId, isAsciiMode) { ShiftSlideTargets() }
+    // 按住 !@# 当 Ctrl：俄、韩语键盘的字母键按位置发 26 键同一格的 Ctrl+字母（用户 11-17）。
+    val shiftSlideTargets = remember(uiState.currentSchemaId, isAsciiMode) {
+        ShiftSlideTargets(ctrlLetterOf = KeysConfigHelper::ctrlLetter)
+    }
     val dragSpace = LocalKeyDragSpace.current
     val shiftMode by viewModel.shiftMode.collectAsStateWithLifecycle()
     // 14 键按住 Shift 拖动时，双字母键拆回单字母键，键帽显示手指实际停的那个字母；松开 Shift 恢复（用户 10-21）。
