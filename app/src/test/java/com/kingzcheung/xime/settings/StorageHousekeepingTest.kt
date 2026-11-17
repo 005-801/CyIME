@@ -76,7 +76,7 @@ class StorageHousekeepingTest {
 
     @Test fun `过期缓存：发出去一天的图片副本和三天没动的临时文件，自己管大小的不碰`() {
         val cache = tmp.newFolder("cache")
-        val now = 10L * 24 * 60 * 60 * 1000
+        val now = 30L * 24 * 60 * 60 * 1000
         fun File.age(hours: Long) = apply { setLastModified(now - hours * 60 * 60 * 1000) }
         val oldCopy = File(cache, "emoji_cache/a.png").apply { parentFile!!.mkdirs(); writeText("png") }.age(25)
         val freshCopy = File(cache, "emoji_cache/b.png").apply { writeText("png") }.age(2)
