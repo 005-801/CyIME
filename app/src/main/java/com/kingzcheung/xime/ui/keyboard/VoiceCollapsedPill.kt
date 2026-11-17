@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -107,12 +109,17 @@ internal fun VoiceCollapsedPill(
             sideDockSize = DpSize(VoicePillButton + 8.dp, VoicePillButton * 4 + 8.dp), dockPreviewColor = accentColor,
             onMovingChange = onMovingChange) { vertical ->
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr, LocalFrostedTextSurface provides textSurface) {
+            // 底板加一圈浅阴影和细边：玻璃开着、主题底色和页面同色时（黑白浅色），底板本身和页面分不出来，
+            // 横条只因压在页面按钮上才像有底，竖条靠在空白处就只剩四个按钮浮着（平板 11-18 截图）。
+            val pillShape = RoundedCornerShape(HardwareCandidateCornerRadius)
             val pillSurface = Modifier
                 .onGloballyPositioned { coordinates ->
                     val bounds = coordinates.boundsInWindow()
                     currentBoundsCallback(Rect(floor(bounds.left).toInt(), floor(bounds.top).toInt(), ceil(bounds.right).toInt(), ceil(bounds.bottom).toInt()))
                 }
-                .clip(RoundedCornerShape(HardwareCandidateCornerRadius)).then(surface())
+                .shadow(3.dp, pillShape)
+                .clip(pillShape).then(surface())
+                .border(1.dp, color.copy(alpha = 0.12f), pillShape)
                 .testTag("voice-collapsed-pill").padding(4.dp)
                 .glassTextHalo(textSurface?.halo)
             if (vertical) Column(Modifier.fillMaxWidth().then(pillSurface),
