@@ -4593,6 +4593,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         clipboardSyncBridge?.setKeyboardVisible(false)
         cancelKeyboardResize()
         if (!keepVoice) clearInputState()
+        // 手动切到的数字面板只算这一次输入：收起键盘就回到主键盘，下次弹出（同一个框或别的框）不再停在数字面板（#334）。
+        // 数字框（自动数字面板）、剪贴板表情这些覆盖页、留着的语音条都不动。
+        if (!keepVoice && lastStartWantedNumberPanel != true && keyboardViewModel.page.value.let {
+                it is com.kingzcheung.xime.keyboard.KeyboardPage.Panel && it.type == com.kingzcheung.xime.keyboard.PanelType.NUMBER })
+            keyboardViewModel.resetKeyboard(uiState.value.isAsciiMode,
+                uiState.value.currentSchemaId.ifBlank { SettingsPreferences.getCurrentSchema(this) })
         recentClipboardItemsState.value = emptyList()
         // 键盘隐藏时重置快捷发送表单临时态：表单开启状态下直接隐藏键盘（未走 onClose）
         // 会把 showQuickSendForm 残留到下次弹窗，候选栏上方渲染出残留表单背景造成遮挡；
