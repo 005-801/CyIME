@@ -53,6 +53,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -252,11 +253,20 @@ onKeyPressDown: ((String) -> Unit)?,
 
 // ─── 笔画键盘三列主体 ──────────────────────────────────────────────
 
+/**
+ * 笔画主键区的一个位置。
+ * - [id] 固定，就是默认的键面字：xime.yaml 的 keyboard.stroke.keys 按它配手势。键面字改了 id 也不变，原来的上下滑配置照旧对得上。
+ * - [swipeDigit] 跟着位置走：右上角的数字和默认上滑打的数字都不随键面字换（用户 11-17 转来：对调后 6、7 叠在一起）。
+ * - [commit] 是默认点按送出的值；keys.<id>.tap 配了就换成配的，见 [strokeTapFor]。
+ */
 internal data class StrokeKeyDef(
-    val mainLabel: String,
+    val id: String,
     val swipeDigit: String,
     val commit: String,
-)
+) {
+    /** 默认键面字。 */
+    val mainLabel: String get() = id
+}
 
 /** 笔画键的滑动配置：回调 + 提示文本（keyboard.stroke.keys 配置，无配置时回退内置默认）。 */
 private data class StrokeKeySwipes(
@@ -272,13 +282,47 @@ private data class StrokeKeySwipes(
     val swipeDownKeyLabel: String? = null,
 )
 
-internal val strokeKeys = listOf(
+/**
+ * 主键区九个位置，从左到右、从上到下。默认排法同各家笔画键盘：第二行末尾是 *，第三行开头是分词
+ * （11-16 合进来的对调撤回：贡献者 11-17 说默认不该为少数人改，想对调的自己用 keys.<id>.tap 配）。
+ */
+internal val strokeMainKeys = listOf(
     StrokeKeyDef("一", "1", "h"),
     StrokeKeyDef("丨", "2", "s"),
     StrokeKeyDef("丿", "3", "p"),
     StrokeKeyDef("丶", "4", "n"),
     StrokeKeyDef("乛", "5", "z"),
+    StrokeKeyDef("*", "6", "*"),
+    StrokeKeyDef("分词", "7", "word_separator"),
+    StrokeKeyDef("，", "8", "，"),
+    StrokeKeyDef("。", "9", "。"),
 )
+
+/** 五个笔画键（一 丨 丿 丶 乛）。 */
+internal val strokeKeys = strokeMainKeys.take(5)
+
+/** 一个位置点按时显示什么、做什么：[label] 是键面字，[action]、[value] 是点下去的功能。 */
+internal data class StrokeTap(val label: String, val action: GestureAction?, val value: String)
+
+/**
+ * keys.<id>.tap：键面字和送出值成对配。
+ * - 没配 tap 时用默认（键面字 = id，送出 [StrokeKeyDef.commit]）。
+ * - 只写了 value 没写 label 时，value 是某个位置的默认送出值（h、word_separator、* 等）就显示那个位置的字，
+ *   免得对调以后键面还是原来的字、和功能对不上；别的 value 原样显示。
+ * - 只写了 label 时送出 label。
+ * 送出值和内置的一样走 onKeyPress（h/s/p/n/z 是笔画，word_separator 是分词），action 不是 commit 时走手势动作。
+ */
+internal fun strokeTapFor(def: StrokeKeyDef, tap: GestureDef?): StrokeTap {
+    if (tap == null || (tap.label.isEmpty() && tap.value.isEmpty() && tap.action == GestureAction.COMMIT))
+        return StrokeTap(def.id, GestureAction.COMMIT, def.commit)
+    val value = tap.value.ifEmpty { tap.label }
+    val label = tap.label.ifEmpty { strokeMainKeys.firstOrNull { it.commit == value }?.id ?: value }.ifEmpty { def.id }
+    return StrokeTap(label, tap.action, value)
+}
+
+/** 主键区这一刻的键面字（设置页画键盘草图用）。 */
+internal fun strokeMainLabels(): List<String> =
+    strokeMainKeys.map { strokeTapFor(it, KeysConfigHelper.getStrokeKeyGesture(it.id)?.tap).label }
 
 @Composable
 private fun StrokeKeyboardContent(
@@ -445,109 +489,52 @@ private fun StrokeKeyboardContent(
         Column(
             modifier = Modifier.fillMaxHeight().weight(NineGridFrame.MAIN),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-            ) {
-                strokeKeys.take(3).forEach { key ->
-                    StrokeKeyItem(
-                        mainLabel = key.mainLabel,
-                        swipeDigit = key.swipeDigit,
-                        onClick = { onKeyPress(key.commit) },
-                        onPress = { onKeyPressDown?.invoke(key.commit) },
-                        backgroundColor = keyBackgroundColor,
-                        textColor = keyTextColor,
-                        modifier = Modifier.weight(1f),
-                        shadowEnabled = shadowEnabled,
-                        shadowElevation = shadowElevation,
-                        shadowShapeRadius = shadowShapeRadius,
-                        strokeFontSize = strokeFontSize,
-                        compactMode = compactMode,
-                        onSwipeStateChange = onSwipeStateChange,
-                        swipes = swipesFor(key.mainLabel, key.swipeDigit),
-                    )
+            // 九个位置三排：前五个是笔画键，后四个是 * 分词 ， 。；点按和键面字按 keys.<id>.tap，角标数字、上下滑按位置。
+            strokeMainKeys.chunked(3).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                ) {
+                    row.forEach { key ->
+                        val tap = strokeTapFor(key, KeysConfigHelper.getStrokeKeyGesture(key.id)?.tap)
+                        val onClick: () -> Unit = {
+                            when (val action = tap.action) {
+                                GestureAction.COMMIT -> onKeyPress(tap.value)
+                                null, GestureAction.NONE -> Unit
+                                else -> onGestureAction?.invoke(action, tap.value)
+                            }
+                        }
+                        val onPress: () -> Unit = { onKeyPressDown?.invoke(tap.value) }
+                        if (key in strokeKeys) StrokeKeyItem(
+                            mainLabel = tap.label,
+                            swipeDigit = key.swipeDigit,
+                            onClick = onClick,
+                            onPress = onPress,
+                            backgroundColor = keyBackgroundColor,
+                            textColor = keyTextColor,
+                            modifier = Modifier.weight(1f).testTag("stroke-key:${key.id}"),
+                            shadowEnabled = shadowEnabled,
+                            shadowElevation = shadowElevation,
+                            shadowShapeRadius = shadowShapeRadius,
+                            strokeFontSize = strokeFontSize,
+                            compactMode = compactMode,
+                            onSwipeStateChange = onSwipeStateChange,
+                            swipes = swipesFor(key.id, key.swipeDigit),
+                        ) else StrokeDigitKey(
+                            digit = tap.label, swipeDigit = key.swipeDigit,
+                            onClick = onClick,
+                            onPress = onPress,
+                            backgroundColor = keyBackgroundColor,
+                            textColor = keyTextColor,
+                            modifier = Modifier.weight(1f).testTag("stroke-key:${key.id}"),
+                            shadowEnabled = shadowEnabled,
+                            shadowElevation = shadowElevation,
+                            shadowShapeRadius = shadowShapeRadius,
+                            fontSize = strokeFontSize,
+                            onSwipeStateChange = onSwipeStateChange,
+                            swipes = swipesFor(key.id, key.swipeDigit),
+                        )
+                    }
                 }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-            ) {
-                strokeKeys.drop(3).forEach { key ->
-                    StrokeKeyItem(
-                        mainLabel = key.mainLabel,
-                        swipeDigit = key.swipeDigit,
-                        onClick = { onKeyPress(key.commit) },
-                        onPress = { onKeyPressDown?.invoke(key.commit) },
-                        backgroundColor = keyBackgroundColor,
-                        textColor = keyTextColor,
-                        modifier = Modifier.weight(1f),
-                        shadowEnabled = shadowEnabled,
-                        shadowElevation = shadowElevation,
-                        shadowShapeRadius = shadowShapeRadius,
-                        strokeFontSize = strokeFontSize,
-                        compactMode = compactMode,
-                        onSwipeStateChange = onSwipeStateChange,
-                        swipes = swipesFor(key.mainLabel, key.swipeDigit),
-                    )
-                }
-                StrokeDigitKey(
-                    digit = "分词", swipeDigit = "6",
-                    onClick = { onKeyPress("word_separator") },
-                    onPress = { onKeyPressDown?.invoke("word_separator") },
-                    backgroundColor = keyBackgroundColor,
-                    textColor = keyTextColor,
-                    modifier = Modifier.weight(1f),
-                    shadowEnabled = shadowEnabled,
-                    shadowElevation = shadowElevation,
-                    shadowShapeRadius = shadowShapeRadius,
-                    fontSize = strokeFontSize,
-                    onSwipeStateChange = onSwipeStateChange,
-                    swipes = swipesFor("分词", "6"),
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-            ) {
-                StrokeDigitKey(
-                    digit = "*", swipeDigit = "7",
-                    onClick = { onKeyPress("*") },
-                    onPress = { onKeyPressDown?.invoke("*") },
-                    backgroundColor = keyBackgroundColor,
-                    textColor = keyTextColor,
-                    modifier = Modifier.weight(1f),
-                    shadowEnabled = shadowEnabled,
-                    shadowElevation = shadowElevation,
-                    shadowShapeRadius = shadowShapeRadius,
-                    fontSize = strokeFontSize,
-                    onSwipeStateChange = onSwipeStateChange,
-                    swipes = swipesFor("*", "7"),
-                )
-                StrokeDigitKey(
-                    digit = "，", swipeDigit = "8",
-                    onClick = { onKeyPress("，") },
-                    onPress = { onKeyPressDown?.invoke("，") },
-                    backgroundColor = keyBackgroundColor,
-                    textColor = keyTextColor,
-                    modifier = Modifier.weight(1f),
-                    shadowEnabled = shadowEnabled,
-                    shadowElevation = shadowElevation,
-                    shadowShapeRadius = shadowShapeRadius,
-                    fontSize = strokeFontSize,
-                    onSwipeStateChange = onSwipeStateChange,
-                    swipes = swipesFor("，", "8"),
-                )
-                StrokeDigitKey(
-                    digit = "。", swipeDigit = "9",
-                    onClick = { onKeyPress("。") },
-                    onPress = { onKeyPressDown?.invoke("。") },
-                    backgroundColor = keyBackgroundColor,
-                    textColor = keyTextColor,
-                    modifier = Modifier.weight(1f),
-                    shadowEnabled = shadowEnabled,
-                    shadowElevation = shadowElevation,
-                    shadowShapeRadius = shadowShapeRadius,
-                    fontSize = strokeFontSize,
-                    onSwipeStateChange = onSwipeStateChange,
-                    swipes = swipesFor("。", "9"),
-                )
             }
             Row(
                 modifier = Modifier.fillMaxWidth().weight(1f),

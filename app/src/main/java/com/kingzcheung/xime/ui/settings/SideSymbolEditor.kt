@@ -62,7 +62,7 @@ import com.kingzcheung.xime.ui.keyboard.QwertyBottomRowWeights
 import com.kingzcheung.xime.ui.keyboard.SideSymbolTarget
 import com.kingzcheung.xime.ui.keyboard.handwritingKeyLabel
 import com.kingzcheung.xime.ui.keyboard.rememberKeyboardInputPreferences
-import com.kingzcheung.xime.ui.keyboard.strokeKeys
+import com.kingzcheung.xime.ui.keyboard.strokeMainLabels
 import com.kingzcheung.xime.ui.keyboard.symbolGridGeometry
 
 /** 「按键符号」里一页编辑哪几条栏：手写侧栏和全屏手写那一排同属手写键盘，合成一页「手写」（用户 11-16）。 */
@@ -273,8 +273,7 @@ private fun SlotRail(count: Int, canGrow: Boolean, fillWhenFew: Boolean, modifie
 @Composable
 private fun NineGridSketch(target: SideSymbolTarget, count: Int, canGrow: Boolean, cell: @Composable (Int, Modifier) -> Unit) {
     val stroke = target == SideSymbolTarget.STROKE
-    val mainRows = if (stroke) listOf(strokeKeys.take(3).map { it.mainLabel },
-        strokeKeys.drop(3).map { it.mainLabel } + "分词", listOf("*", "，", "。"))
+    val mainRows = if (stroke) strokeMainLabels().chunked(3)
         else listOf(listOf("分词", "ABC", "DEF"), listOf("GHI", "JKL", "MNO"), listOf("PQRS", "TUV", "WXYZ"))
     Row(Modifier.fillMaxWidth().height(SketchRow * 4).testTag("side-symbol-sketch:${target.key}")) {
         Column(Modifier.weight(NineGridFrame.SIDE).fillMaxHeight()) {
