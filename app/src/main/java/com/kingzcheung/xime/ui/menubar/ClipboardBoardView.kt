@@ -110,6 +110,7 @@ internal fun ConnectedClipboardBoard(
     DisposableEffect(manager) { onDispose { manager.resetHistoryWindow() } }
     val cardMaxLines = remember(prefs) { clipboardCardMaxLines(prefs.getInt(CLIPBOARD_CARD_MAX_LINES_KEY, 4)) }
     val imageHeight = remember(prefs) { clipboardImageHeight(prefs.getString(CLIPBOARD_IMAGE_HEIGHT_KEY, null)) }
+    val recentImageCount = remember(prefs) { clipboardRecentImageCount(prefs.getInt(CLIPBOARD_RECENT_IMAGE_COUNT_KEY, 4)) }
     // 平铺 / 列表，顶栏按钮切换，记住上次选的（用户 11-14）。
     var listLayout by remember(prefs) { mutableStateOf(prefs.getBoolean(CLIPBOARD_LIST_LAYOUT_KEY, false)) }
     var closeAfterPaste by remember(prefs) { mutableStateOf(clipboardClosesAfterPaste(prefs)) }
@@ -183,7 +184,8 @@ internal fun ConnectedClipboardBoard(
             // Clearing means all unfixed history in the database, not only the pages read so far.
             manager.clearAll()
             store.removeImages(images.filterIsInstance<ClipboardCard.Image>().map { it.item.uri }.toSet())
-        }, cardMaxLines = cardMaxLines, imageHeight = imageHeight, listLayout = listLayout,
+        }, cardMaxLines = cardMaxLines, imageHeight = imageHeight, recentImageCount = recentImageCount,
+        listLayout = listLayout,
         onListLayoutChange = { value ->
             listLayout = value
             prefs.edit().putBoolean(CLIPBOARD_LIST_LAYOUT_KEY, value).apply()
@@ -278,6 +280,8 @@ internal fun ClipboardBoardView(
     onClearUnpinned: ((List<ClipboardCard>) -> Unit)? = null,
     cardMaxLines: Int = 4,
     imageHeight: ClipboardImageHeight = ClipboardImageHeight.STANDARD,
+    /** 「全部」shows only this many of the newest unfixed pictures; 0 shows them all. */
+    recentImageCount: Int = 0,
     /** 列表: one record per row, recent pictures in one sideways row; false is the 瀑布流平铺 of several columns. */
     listLayout: Boolean = false,
     /** Switches between 平铺 and 列表 from the button in the top row; null hides the button. */
@@ -364,10 +368,14 @@ internal fun ClipboardBoardView(
         if (removing.isNotEmpty()) removing = removing.intersect(
             clipboardCards(textItems, images, ClipboardFilter.ALL, pins).mapTo(mutableSetOf()) { it.key })
     }
-    val cards = remember(all, tab, groups) {
+    val cards = remember(all, tab, groups, pins, recentImageCount) {
         all.filter { clipboardMatches(it, tab, groups) }.let { shown ->
             // A group's tab shows its records in the order they were dragged to (user 11-14).
             (tab as? ClipboardTab.Group)?.let { groups.inRecordOrder(it.group.id, shown) } ?: shown
+        }.let { shown ->
+            // 「全部」只留最新几张没固定的图片（用户 11-17）；「图片」页照旧全部显示。
+            if ((tab as? ClipboardTab.Category)?.filter == ClipboardFilter.ALL) withRecentImageCount(shown, pins, recentImageCount)
+            else shown
         }
     }
     val keyboard = LocalClipboardKeyboardNavigation.current
@@ -962,9 +970,9 @@ private fun ClipboardRecordCard(
                 val density = LocalDensity.current
                 val widthPx = constraints.maxWidth.coerceAtLeast(1)
                 val uri = card.item.uri
-                // Only 「按图片比例」 reads the picture's size; a known one is used at once, so reopening never jumps.
+                // Only 「完整」「按图片比例」 read the picture's size; a known one is used at once, so reopening never jumps.
                 val aspect by produceState(ClipboardImageAspect.cached(uri), uri, imageHeight) {
-                    if (imageHeight == ClipboardImageHeight.RATIO && value == null)
+                    if (imageHeight.followsPicture && value == null)
                         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                             ClipboardImageAspect.read(context, uri)
                         }
@@ -976,7 +984,9 @@ private fun ClipboardRecordCard(
                     ImageRequest.Builder(context).data(card.item.uri)
                         .size(widthPx, heightPx.coerceAtLeast(1)).build()
                 }
-                AsyncImage(thumbnail, card.item.label, contentScale = ContentScale.Crop,
+                // 「完整」never crops: a picture taller than the board is shown smaller, whole.
+                val whole = previewHeight == null && imageHeight == ClipboardImageHeight.FULL
+                AsyncImage(thumbnail, card.item.label, contentScale = if (whole) ContentScale.Fit else ContentScale.Crop,
                     modifier = if (previewHeight == null) Modifier.fillMaxWidth().height(cardHeight)
                     else Modifier.fillMaxSize())
                 Canvas(Modifier.matchParentSize().testTag("clipboard-image-hatch:${card.key}")) {

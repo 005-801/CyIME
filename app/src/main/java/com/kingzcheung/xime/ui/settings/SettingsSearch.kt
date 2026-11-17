@@ -380,6 +380,8 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
             "剪贴板 卡片 行数 几行 显示 记录 折叠 最多显示 剪贴板卡片最多显示 卡片最多显示"),
         SettingsSearchEntry("图片高度", clipboard, SettingsRoutes.ClipboardPanel,
             "剪贴板 图片 高度 太矮 比例 长图 截图 卡片"),
+        SettingsSearchEntry("显示几张图片", clipboard, SettingsRoutes.ClipboardPanel,
+            "剪贴板 图片 张数 几张 太多 全是图片 占地方 最近 照片 截图"),
         SettingsSearchEntry("最近截图", clipboard, SettingsRoutes.ClipboardPanel, "剪贴板 截图 截屏 相册 图片 照片"),
         SettingsSearchEntry("也显示相册照片", clipboard, SettingsRoutes.ClipboardPanel, "剪贴板 相册 照片 最近 图片 不只截图"),
         SettingsSearchEntry("剪贴板数量上限", clipboard, SettingsRoutes.ClipboardPanel,
