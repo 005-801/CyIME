@@ -147,6 +147,8 @@ object ModelAutoUpdater {
 
     private suspend fun scan(app: Context) {
         ModelManager.initialize()
+        // 网上模型目录里有更新的版本（不用升级 App 就能换新模型）。
+        ModelManager.loadFromRemote(app)
         for (model in ModelManager.getAllModels()) {
             if (!isEnabled(app) || !onUnmeteredNetwork(app)) return
             if (!allowedForBuild(model)) continue

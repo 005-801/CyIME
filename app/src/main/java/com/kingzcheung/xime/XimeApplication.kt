@@ -70,6 +70,8 @@ class XimeApplication : Application(), ImageLoaderFactory {
         // 先于任何下载、导入和词库准备列出上次中断的残留，后台删除。
         com.kingzcheung.xime.settings.StorageHousekeeping.sweepAtStartup(this, applicationScope)
         com.kingzcheung.xime.model.DeviceDefaults.initialize(this)
+        // 网上模型目录存在本机的那份（没联网读过时没有，不花时间）：先于词库准备、自动更新认出已换上的新版模型。
+        runCatching { com.kingzcheung.xime.model.ModelManager.loadCachedRemote(this) }
         com.kingzcheung.xime.settings.LanguagePreferences.initialize(this)
         com.kingzcheung.xime.update.AppUpdater.init(this)
         com.kingzcheung.xime.ui.theme.VisualStyles.current = SettingsPreferences.getVisualStyle(this)
