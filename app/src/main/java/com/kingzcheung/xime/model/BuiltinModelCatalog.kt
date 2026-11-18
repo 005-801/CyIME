@@ -98,12 +98,12 @@ object BuiltinModelCatalog {
         // 手写生僻字模板、日语手写模板：app/src/main/assets/handwriting 里的原文件（scripts/packs/make_packs.py 打包，
         // 换了文件重跑它并改这里，HandwritingPackCatalogTest 对得上才过）。轻量版不带，完整版、离线包仍在安装包里。
         ModelInfo(HANDWRITING_RARE, "手写生僻字", "手写时认字表外的生僻字用的笔顺模板。轻量版下载手写模型时一起下载，完整版已内置。", ModelCategory.OTHER,
-            versions = listOf(ModelVersion(version = "77627413", size = "3.5 MB",
-                archiveUrl = RELEASE + "handwriting-rare-77627413.tar.bz2", sha256 = "7762741373965da23894969c22c26c71fd43cda46ca80a5496b13a983a0eb8d9",
-                archiveMirrors = listOf(DownloadMirrors.CYIME_MODELSCOPE + "handwriting-rare-77627413.tar.bz2"),
+            versions = listOf(ModelVersion(version = "c2f28f4e", size = "3.8 MB",
+                archiveUrl = RELEASE + "handwriting-rare-c2f28f4e.tar.bz2", sha256 = "c2f28f4eefede9b70f844d2db84083b26ddbd76e9ec3f85525d559e98826438d",
+                archiveMirrors = listOf(DownloadMirrors.CYIME_MODELSCOPE + "handwriting-rare-c2f28f4e.tar.bz2"),
                 files = listOf(
-                    ModelFile("hanzi_rare_och.bin", "", "5f676c3f8ae2f240df8adeaa7772078d9d60e555ccdd29b544123b60aaa1d0d2", 4390792L),
-                    ModelFile("hanzi_rare_och.json", "", "514d3c0cc3d3493abd9e2eaf958ea2bab9e9e8547e7dcbc23d605edc5864c1a1", 48816L),
+                    ModelFile("hanzi_rare_och.bin", "", "b901f5d89eedcd6614adb606a08926af2c035281e384964376e79595ac6dc26c", 4797590L),
+                    ModelFile("hanzi_rare_och.json", "", "f31e0a2396092aea18d0440f5911d8cce2e64cdbbb13f44c94dd74e221f2356b", 60370L),
                 )))),
         ModelInfo(JAPANESE_HANDWRITING, "日语手写", "日语手写认假名和日本汉字用的模板。轻量版装「日语」插件时下载，完整版已内置。", ModelCategory.OTHER,
             versions = listOf(ModelVersion(version = "ae50e784", size = "3.0 MB",
