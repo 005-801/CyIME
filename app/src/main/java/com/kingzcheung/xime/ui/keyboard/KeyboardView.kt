@@ -1473,6 +1473,7 @@ fun KeyboardView(
                 }
             }
             androidx.compose.runtime.CompositionLocalProvider(
+                LocalLearnedCandidates provides cs.learnedCandidates,
                 LocalCorrectedCandidates provides correctionMarks,
                 LocalSentenceSelection provides sentenceDragOwner,
                 LocalSentenceCandidateHighlight provides sentenceEdit?.let { owner ->
