@@ -167,6 +167,14 @@ fun SchemaSettingsContent(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    // 11-18 实测（公开短信 2000 句）：自带拼音装上词组模型后，26 键和双拼首选与万象（带它的语法模型）打平，
+                    // 九键、生僻词明显更准；雾凇原版、白霜、朙月都不如自带。别让人为了准确率去导入。
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "自带拼音装上词组模型后，首选和万象一样准，九键和生僻词更准；雾凇、白霜都不如自带。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
