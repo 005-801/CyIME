@@ -984,9 +984,12 @@ private fun ClipboardRecordCard(
                     ImageRequest.Builder(context).data(card.item.uri)
                         .size(widthPx, heightPx.coerceAtLeast(1)).build()
                 }
-                // 「完整」never crops: a picture taller than the board is shown smaller, whole.
-                val whole = previewHeight == null && imageHeight == ClipboardImageHeight.FULL
-                AsyncImage(thumbnail, card.item.label, contentScale = if (whole) ContentScale.Fit else ContentScale.Crop,
+                // 「完整」fills the card's width like the others (user 11-18: a tall screenshot shown whole left wide
+                // empty strips on both sides). The card already follows the picture's shape, so only a picture taller
+                // than the board is cut, and it keeps its top (a screenshot's top is what tells it apart).
+                val keepTop = previewHeight == null && imageHeight == ClipboardImageHeight.FULL
+                AsyncImage(thumbnail, card.item.label, contentScale = ContentScale.Crop,
+                    alignment = if (keepTop) Alignment.TopCenter else Alignment.Center,
                     modifier = if (previewHeight == null) Modifier.fillMaxWidth().height(cardHeight)
                     else Modifier.fillMaxSize())
                 Canvas(Modifier.matchParentSize().testTag("clipboard-image-hatch:${card.key}")) {
