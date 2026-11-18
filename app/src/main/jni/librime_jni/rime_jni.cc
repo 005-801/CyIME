@@ -27,6 +27,10 @@
 #include "t9_sentence_scorer.h"
 #include "t9_ngram_model.h"
 #include <jni.h>
+namespace rime {
+// cyime_rime/t9_cylm_sentence.h (in rime-static; that header needs cylm.h, not on this target's include path).
+int T9CylmForget(const std::string& text, int wait_ms);
+}
 #include <android/log.h>
 #include <algorithm>
 #include <map>
@@ -1196,6 +1200,9 @@ public:
         rime::the<rime::Dictionary> dictionary(dictionaries ? dictionaries->Create(ticket) : nullptr);
         rime::the<rime::UserDictionary> userDictionary(userDictionaries ? userDictionaries->Create(ticket) : nullptr);
         const std::string text = candidate->text();
+        // CyLM (九键长句) learns every commit too: without this the forgotten sentence came back first from CyLM's
+        // learned layer even after the user dictionary forgot it, since its components then had no commits.
+        const bool cylmForgot = rime::T9CylmForget(text, 300) > 0;
         bool forgotten = false;
         if (dictionary && userDictionary && dictionary->Load() && userDictionary->Load() &&
             !userDictionary->readonly()) {
@@ -1215,6 +1222,10 @@ public:
         if (forgotten) {
             context->RefreshNonConfirmedComposition();
         } else {
+            if (!learned && cylmForgot) {
+                context->RefreshNonConfirmedComposition();
+                return stillOffered(context, text) ? 1 : 3;
+            }
             if (!learned) return 2;
             // Not in that dictionary (another translator's word): Rime's own deletion by the owning translator.
             if (sentence && sentence->components().size() > 1) return 0;
