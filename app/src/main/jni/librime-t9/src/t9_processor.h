@@ -83,8 +83,8 @@ public:
     std::optional<bool> SelectLetterCandidate(const std::string& candidate_pinyin,
                                               const std::string& candidate_text);
     bool HasLetterConstraints() const { return !letter_constraints_.empty(); }
-    // candidate 从 RIME input 的 rime_start 开始、拼音注释为 comment 时，是否满足全部字母约束。
-    bool MatchesLetterConstraints(size_t rime_start, const std::string& comment) const;
+    // candidate 占 RIME input 的 [rime_start, rime_end)、拼音注释为 comment 时，是否满足全部字母约束。
+    bool MatchesLetterConstraints(size_t rime_start, size_t rime_end, const std::string& comment) const;
 
     // ── Phrase 码缓存（t9_filter 预存，右选调频捕获兜底）──
     // t9_filter 位于 filters 最前，此时候选尚为带调 Phrase；后续 lua filter 链
@@ -247,7 +247,7 @@ private:
     std::shared_ptr<Projection> double_pinyin_algebra_;
     mutable std::unordered_map<std::string, std::vector<std::string>> double_pinyin_codes_;
     const std::vector<std::string>& DoublePinyinCodes(const std::string& syllable) const;
-    bool MatchesDoublePinyinConstraints(int first_pos, const std::string& comment) const;
+    bool MatchesDoublePinyinConstraints(int first_pos, int covered, const std::string& comment) const;
     bool KeepsLetterConstraint(int pos, char letter) const;
     std::string original_digit_sequence_;
     std::string last_commit_digit_sequence_;
