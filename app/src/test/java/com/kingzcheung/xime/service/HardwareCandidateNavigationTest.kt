@@ -385,7 +385,27 @@ class HardwareCandidateNavigationTest {
     private val twentyCandidates = CandidateState(inputText = "shi", isComposing = true,
         candidates = (1..20).map { "候选$it" }, hasNextPage = true, engineRevision = 7L)
 
-    // 有意与 Windows 不同：空格不跟随工具栏高亮，上屏后的联想永远不被空格选中（见 physicalCandidateDecision）。
+    // 11-18 用户反馈：Tab 移到第三个，空格上屏的还是第一个。组词时空格上屏高亮的那个；联想照旧不被空格选中。
+    @Test fun physicalSpaceCommitsTheCandidateTabHighlighted() {
+        val navigation = HardwareCandidateNavigation()
+        val source = HardwareCandidateSnapshot(1, pinyin26, composition, false)
+        assertEquals(HardwareCandidateDecision.Highlight(1),
+            navigation.decide(HardwareCandidateKey.RIGHT, source, true, pageAtBoundary = true))
+        assertEquals(HardwareCandidateDecision.Highlight(2),
+            navigation.decide(HardwareCandidateKey.RIGHT, source, true, pageAtBoundary = true))
+        assertEquals(HardwareCandidateDecision.Confirm(2, false), physicalCandidateDecision(HardwareCandidateKey.SPACE,
+            source, true, highlighted = navigation.selectedIndex(source)))
+        // 一个新的组字（下一个字母）不带着旧高亮。
+        val next = HardwareCandidateSnapshot(1, pinyin26, composition.copy(engineRevision = composition.engineRevision + 1), false)
+        assertEquals(null, navigation.selectedIndex(next))
+        assertEquals(HardwareCandidateDecision.Confirm(0, false), physicalCandidateDecision(HardwareCandidateKey.SPACE,
+            next, true, highlighted = navigation.selectedIndex(next)))
+        // 高亮超出这一组（数据变了）时退回默认候选。
+        assertEquals(HardwareCandidateDecision.Confirm(0, false), physicalCandidateDecision(HardwareCandidateKey.SPACE,
+            source, true, highlighted = 99))
+    }
+
+    // 有意与 Windows 不同：上屏后的联想永远不被空格选中（见 physicalCandidateDecision）。
     @Test fun physicalSpaceKeepsTheDefaultCandidateAndNeverPicksSuggestions() {
         val source = HardwareCandidateSnapshot(1, pinyin26, composition, false)
         assertEquals(HardwareCandidateDecision.Confirm(0, false),

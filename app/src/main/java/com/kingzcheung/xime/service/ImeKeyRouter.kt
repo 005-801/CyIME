@@ -2208,8 +2208,10 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         }
         val decision = if (pageAtBoundary || composingArrow) hardwareNavigation.decide(key, snapshot, engineHasInput,
             pageAtBoundary = true, digitIndex = digitIndex)
-        // 空格不读工具栏高亮，原因见 physicalCandidateDecision 的说明。
-        else physicalCandidateDecision(key, snapshot, engineHasInput, digitIndex)
+        // 空格上屏 Tab/方向键移到的高亮（只在组词时；联想不读高亮），见 physicalCandidateDecision 的说明。
+        else physicalCandidateDecision(key, snapshot, engineHasInput, digitIndex,
+            highlighted = if (key == HardwareCandidateKey.SPACE && !snapshot.presentation.association)
+                hardwareNavigation.selectedIndex(snapshot) else null)
         if (com.kingzcheung.xime.BuildConfig.DEBUG) {
             Log.d("HardwareNavigation", "key=$key decision=$decision engineInput=$engineHasInput " +
                 "words=${snapshot.words.size} compact=${service.uiState.value.isCompact} " +
