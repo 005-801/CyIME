@@ -419,6 +419,18 @@ object SettingsPreferences {
     }
 
     /**
+     * 「锁定词序」（专业打字手，默认关）：引擎不从上屏学习，候选顺序不再随使用变；置顶、忘记、我的短语照常。
+     * 和无痕不同：剪贴板、联想照常记，升级也不重置。
+     */
+    const val KEY_LOCK_WORD_ORDER = "lock_word_order"
+
+    fun isLockWordOrder(context: Context): Boolean = getPrefs(context).getBoolean(KEY_LOCK_WORD_ORDER, false)
+
+    fun setLockWordOrder(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_LOCK_WORD_ORDER, enabled).apply()
+    }
+
+    /**
      * 「记录密码等敏感内容」(#95)，默认关：密码管理器复制的、在密码框里复制的内容记进剪贴板历史，
      * 显示成圆点、1 小时后删除、不同步不导出。无痕开着时照样不记。
      */

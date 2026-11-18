@@ -1005,6 +1005,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private fun registerSharedPrefsListener() {
         val prefs = SettingsPreferences.getPrefsPublic(this)
         privacy.loadManual(SettingsPreferences.isIncognito(this))
+        privacy.loadLockWordOrder(SettingsPreferences.isLockWordOrder(this))
         rimeEngine.doublePinyinKeysPreedit = com.kingzcheung.xime.settings.SpellingPatches.doublePinyinRawPreedit(this)
         rimeEngine.strokeGlyphPreedit = com.kingzcheung.xime.settings.SpellingPatches.strokeGlyphPreedit(this)
         sharedPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -1053,6 +1054,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 }
                 SettingsPreferences.KEY_INCOGNITO -> {
                     privacy.setManual(SettingsPreferences.isIncognito(this))
+                }
+                SettingsPreferences.KEY_LOCK_WORD_ORDER -> {
+                    privacy.setLockWordOrder(SettingsPreferences.isLockWordOrder(this))
                 }
                 // 候选开关（繁体输出、表情、时间日期、符号名、希腊字母、生僻字、中英混输）：工具栏、菜单按钮或设置页一改就写进引擎，
                 // 正在打的拼音当场按新设置出候选，不用等下一个字母键（以前关了繁体直接点候选或空格，上屏的还是繁体）。

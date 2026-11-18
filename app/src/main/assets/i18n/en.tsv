@@ -3099,6 +3099,8 @@ CommentDisplayCard - 显示注释	=
 连续联想	Continuous prediction
 单次联想	Single prediction
 删掉刚打的词不学习	Don't learn words deleted right after typing
+锁定词序	Lock candidate order
+不再按使用次数调整词权，候选顺序固定，新词也不自动记；置顶、忘记和我的短语照常	Stops reordering candidates by how often you use them and doesn't learn new words; pinning, forgetting and my phrases still work
 无痕	Incognito
 用户学习数据	User learning data
 本地识别	On-device recognition
