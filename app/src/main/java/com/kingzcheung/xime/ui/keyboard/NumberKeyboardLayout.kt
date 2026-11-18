@@ -205,7 +205,8 @@ private fun NumberRows(
     enterKeyText: String = "确定",
 ) {
     val modeWeight = NineGridFrame.BOTTOM_MODE
-    val symFontSize = if (compactMode) 14.sp else 18.sp
+    // 左栏符号和数字键同一个字号（用户 11-18：符号和按键字号不一样）。
+    val symFontSize = if (compactMode) 16.sp else KeyboardKeyMetrics.LabelSize
     val keyFontSize = if (compactMode) 16.sp else androidx.compose.ui.unit.TextUnit.Unspecified
     val ctrlFontSize = if (compactMode) 12.sp else androidx.compose.ui.unit.TextUnit.Unspecified
     // 左栏符号可在「按键符号 → 数字侧栏」改（用户 11-09）；没改过仍是 + - * /。四格一屏，多出的上下滑，末尾一格「编辑」。
@@ -357,7 +358,7 @@ private fun NumberSymbolKey(
     textColor: Color,
     modifier: Modifier = Modifier,
     onPress: (() -> Unit)? = null,
-    fontSize: androidx.compose.ui.unit.TextUnit = 18.sp,
+    fontSize: androidx.compose.ui.unit.TextUnit = KeyboardKeyMetrics.LabelSize,
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val currentOnClick by rememberUpdatedState(onClick)
@@ -377,7 +378,8 @@ private fun NumberSymbolKey(
                 }, onTap = { currentOnClick() })
             }, contentAlignment = Alignment.Center
     ) {
-        val fittedSize = keyLabelSizeSp(text, fontSize.value, maxWidth.value, maxHeight.value - 4f, density.fontScale)
+        val fittedSize = keyLabelSizeSp(text, fontSize.value, maxWidth.value, maxHeight.value - 4f, density.fontScale,
+            LocalKeyboardInputPreferences.current.keyTextScale)
         Text(
             text = punctuationKeyLabel(text),
             color = textColor,
