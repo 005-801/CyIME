@@ -185,7 +185,8 @@ class HardwareCandidateNavigationTest {
         val navigation = HardwareCandidateNavigation()
         val source = snapshot(composition.copy(candidates = (0..15).map { "词$it" }, hasNextPage = true, hasPrevPage = true))
         repeat(20) { navigation.decide(HardwareCandidateKey.RIGHT, source, true) }
-        assertEquals(9, navigation.selectedIndex(source))
+        // 16 个候选按放得下的个数平均分组（b9617b55）：8、8 两组，高亮最多走到第 8 个。
+        assertEquals(7, navigation.selectedIndex(source))
         assertEquals(HardwareCandidateDecision.Page(1, wholeWindow = true),
             navigation.decide(HardwareCandidateKey.RIGHT, source, true, pageAtBoundary = true))
         assertEquals(HardwareCandidateDecision.Page(-1), navigation.decide(HardwareCandidateKey.LEFT, source, true, pageAtBoundary = true))
