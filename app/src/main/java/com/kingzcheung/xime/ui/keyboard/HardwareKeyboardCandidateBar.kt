@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
@@ -157,12 +158,27 @@ fun HardwareKeyboardCandidateBar(
             marginPx, with(density) { 8.dp.roundToPx() },
             avoidBounds = toolbarExclusion,
         )
+        val shownCount = candidates.size.coerceAtMost(MAX_VISIBLE_CANDIDATES)
+        val commentStyle = TextStyle(fontSize = (fontSize.value * 11f / 19f).sp, fontFamily = AppFonts.commentFontFamily)
         val textWidth = candidates.take(MAX_VISIBLE_CANDIDATES).mapIndexed { index, text ->
+            val comment = comments.getOrNull(index).orEmpty()
             measurer.measure(AnnotatedString(candidateNumberedText(text, index, true)),
-                candidatePrimaryTextStyle(fontSize, AppFonts.candidateFontFamily, index == highlightIndex), softWrap = false).size.width
+                candidatePrimaryTextStyle(fontSize, AppFonts.candidateFontFamily, index == highlightIndex), softWrap = false).size.width +
+                if (comment.isEmpty()) 0 else measurer.measure(AnnotatedString(comment), commentStyle, softWrap = false).size.width +
+                    with(density) { 3.dp.roundToPx() }
         }.sum()
-        val contentWidth = (with(density) { textWidth.toDp() } + (12 * candidates.size + 104).dp)
+        // 卡片按候选自身的宽度定，要把行里真正画出来的都算上：每个候选左右留白 4dp×2 加间距 8dp、注释，
+        // 以及展开、上一个、下一个三个 40dp 按钮里这一页实际出现的那几个。以前固定只留两个按钮的 104dp：
+        // 翻到第二页多出「上一个」按钮，最后一个候选被挤掉，行报「只放得下 n-1 个」，下一组就只给 n-1 个、
+        // 卡片按更少的字再变窄……一路缩到只剩一个（用户 11-18：悬浮状态翻到第二页只有一个候选，特别窄）。
+        val buttons = (if (candidates.size > 1) 1 else 0) +
+            (if (onPrevious != null && (hasPrevPage || highlightIndex > 0)) 1 else 0) +
+            (if (onNext != null && (hasNextPage || highlightIndex < candidates.lastIndex)) 1 else 0)
+        val contentWidth = (with(density) { textWidth.toDp() } + (16 * shownCount + 40 * buttons + 12 + 8).dp)
             .coerceIn(minOf(160.dp, maxCardWidth), maxCardWidth)
+        // 卡片没顶到最宽时宽度是按这组候选算出来的，放不下只能是上面算少了：这时不报「放得下几个」，
+        // 免得翻页步长跟着卡片一起缩（同上）。顶到最宽才是真放不下，照常报，按它分组。
+        val reportFit = onShown.takeIf { contentWidth >= maxCardWidth }
         val dockBounds = if (bottomDocked) hostPositionInWindow?.let { originInWindow ->
             avoidBoundsInWindow?.let { IntOffset(it.left - originInWindow.x, it.top - originInWindow.y) }
         } else null
@@ -212,7 +228,7 @@ fun HardwareKeyboardCandidateBar(
                         Box(Modifier.weight(1f)) {
                             HardwareCandidateRow(candidates, comments, highlightIndex, hasPrevPage, hasNextPage,
                                 visuals, onCandidateSelect, onPrevious, onNext, showNumberLabels, commentsAreGlosses,
-                                onShown = onShown)
+                                onShown = reportFit)
                         }
                         if (candidates.size > 1) KeyboardToolbarButton({ expanded = true }, Color.Transparent,
                             modifier = Modifier.testTag("hardware-candidate-expand")) {
