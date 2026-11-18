@@ -239,6 +239,15 @@ android {
     // speech/SherpaLibrary.kt；sherpa 类里的加载调用在 tasks-speech.gradle.kts 改写），带模型的安装包照旧内置。
     if (providers.gradleProperty("bundleModels").orNull != "true")
         packaging.jniLibs.excludes.add("**/libsherpa-onnx-jni.so")
+    // 手写大模板（1.16）：生僻字模板（约 4.4 MB）跟汉字手写模型一起下载（模型目录 handwriting-rare），
+    // 日语假名、日文汉字模板（约 5.6 MB）装「日语」插件时下载（japanese-handwriting），见 handwriting/HandwritingAssets.kt。
+    // japanese_kanji.json（贡献页的常用度表）和 latin_default_strokes.json 留在包里。带模型的安装包照旧内置。
+    if (providers.gradleProperty("bundleModels").orNull != "true")
+        listOf(
+            "hanzi_rare_och.bin", "hanzi_rare_och.json",
+            "kana_default_strokes.json", "kana_default_och.bin", "kana_default_och.json",
+            "japanese_kanji_strokes.json", "japanese_kanji_och.bin", "japanese_kanji_och.json",
+        ).forEach { androidResources.ignoreAssetsPatterns.add(it) }
     // 日语词库（assets/azookey，约 18 MB）和转换引擎 libCyAzooKey.so（约 6 MB）：轻量版不带，装「日语」插件时下载
     // （settings/JapanesePack.kt）；带模型的安装包（完整版、朋友包、离线包）照旧内置。日语方案 rime_japanese 很小，留在包里。
     if (providers.gradleProperty("bundleModels").orNull != "true") {

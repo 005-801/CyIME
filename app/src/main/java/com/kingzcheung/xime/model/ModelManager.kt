@@ -272,6 +272,8 @@ object ModelManager {
                         com.kingzcheung.xime.settings.JapanesePack.afterInstall(context, model.id)
                         // 轻量版下好语音、声纹模型时，语音引擎还没有就一起下。
                         com.kingzcheung.xime.speech.SpeechEnginePack.afterInstall(context, model)
+                        // 轻量版下好汉字手写模型时，生僻字模板一起下。
+                        com.kingzcheung.xime.handwriting.HandwritingRarePack.afterInstall(context, model)
                         notifyInstalledModelsChanged()
                     }
                     onProgress(state)

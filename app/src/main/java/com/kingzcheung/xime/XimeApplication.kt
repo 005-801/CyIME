@@ -131,6 +131,9 @@ class XimeApplication : Application(), ImageLoaderFactory {
         applicationScope.launch {
             runCatching { com.kingzcheung.xime.speech.SpeechEnginePack.migrateOnce(this@XimeApplication) }
                 .onFailure { FileLogger.e(TAG, "语音引擎补下载失败", it) }
+            // 生僻字手写模板同理（1.16）：下过手写模型的老用户升级后马上补下。
+            runCatching { com.kingzcheung.xime.handwriting.HandwritingRarePack.migrateOnce(this@XimeApplication) }
+                .onFailure { FileLogger.e(TAG, "生僻字手写模板补下载失败", it) }
         }
         
         ExtensionManager.initialize(this)

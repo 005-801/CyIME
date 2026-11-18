@@ -21,6 +21,7 @@ object NativeAbi {
 
 /**
  * 带模型的安装包（完整版、离线包、朋友包）里本来就有的按需下载包：模型管理里不列出来，免得再下一份。
+ * HandwritingAssets 是 internal，同一模块里可以用。
  * 轻量版里一个都没有，照常列出、能下载能删除。
  */
 internal fun packagedPacks(context: Context): Set<String> = buildSet {
@@ -29,4 +30,6 @@ internal fun packagedPacks(context: Context): Set<String> = buildSet {
     if (libraries != null && File(libraries, "libCyAzooKey.so").isFile) add(BuiltinModelCatalog.JAPANESE_ENGINE)
     if (libraries != null && File(libraries, com.kingzcheung.xime.speech.SherpaLibrary.LIBRARY).isFile) add(BuiltinModelCatalog.SPEECH_ENGINE)
     if (com.kingzcheung.xime.settings.JapanesePack.dictionaryBundled(context)) add(BuiltinModelCatalog.JAPANESE_DICTIONARY)
+    if (com.kingzcheung.xime.handwriting.HandwritingAssets.bundled(context, "kana_default_och.bin")) add(BuiltinModelCatalog.JAPANESE_HANDWRITING)
+    if (com.kingzcheung.xime.handwriting.HandwritingAssets.bundled(context, "hanzi_rare_och.bin")) add(BuiltinModelCatalog.HANDWRITING_RARE)
 }

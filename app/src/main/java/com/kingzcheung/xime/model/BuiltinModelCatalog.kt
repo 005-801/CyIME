@@ -12,6 +12,9 @@ object BuiltinModelCatalog {
     const val OCR_ENGINE = "ocr-engine"
     /** 语音引擎（sherpa-onnx 原生库）。轻量版不带，和语音模型一起下载（speech/SherpaLibrary.kt、SpeechEnginePack.kt）。 */
     const val SPEECH_ENGINE = "speech-engine"
+    /** 手写生僻字模板、日语手写模板（assets/handwriting 里的几份大文件）。轻量版不带，和手写模型、「日语」插件一起下载（handwriting/HandwritingAssets.kt）。 */
+    const val HANDWRITING_RARE = "handwriting-rare"
+    const val JAPANESE_HANDWRITING = "japanese-handwriting"
     /** 日语词库（azooKey 词典 zip）和日语转换引擎（libCyAzooKey.so）。轻量版不带，装「日语」插件时下载（settings/JapanesePack.kt）。 */
     const val JAPANESE_DICTIONARY = "japanese-dictionary"
     const val JAPANESE_ENGINE = "japanese-engine"
@@ -92,6 +95,28 @@ object BuiltinModelCatalog {
                     archiveMirrors = listOf(DownloadMirrors.CYIME_MODELSCOPE + "speech-engine-sherpa-onnx-1.13.8-arm64-v8a.tar.bz2"),
                     files = listOf(ModelFile("libsherpa-onnx-jni.so", "", "b4a53d915c19cb6d09b1cdc9a8084be54419b647aab9097ffdfb46f30c3c4dd8", 24169352L)))
             })),
+        // 手写生僻字模板、日语手写模板：app/src/main/assets/handwriting 里的原文件（scripts/packs/make_packs.py 打包，
+        // 换了文件重跑它并改这里，HandwritingPackCatalogTest 对得上才过）。轻量版不带，完整版、离线包仍在安装包里。
+        ModelInfo(HANDWRITING_RARE, "手写生僻字", "手写时认字表外的生僻字用的笔顺模板。轻量版下载手写模型时一起下载，完整版已内置。", ModelCategory.OTHER,
+            versions = listOf(ModelVersion(version = "77627413", size = "3.5 MB",
+                archiveUrl = RELEASE + "handwriting-rare-77627413.tar.bz2", sha256 = "7762741373965da23894969c22c26c71fd43cda46ca80a5496b13a983a0eb8d9",
+                archiveMirrors = listOf(DownloadMirrors.CYIME_MODELSCOPE + "handwriting-rare-77627413.tar.bz2"),
+                files = listOf(
+                    ModelFile("hanzi_rare_och.bin", "", "5f676c3f8ae2f240df8adeaa7772078d9d60e555ccdd29b544123b60aaa1d0d2", 4390792L),
+                    ModelFile("hanzi_rare_och.json", "", "514d3c0cc3d3493abd9e2eaf958ea2bab9e9e8547e7dcbc23d605edc5864c1a1", 48816L),
+                )))),
+        ModelInfo(JAPANESE_HANDWRITING, "日语手写", "日语手写认假名和日本汉字用的模板。轻量版装「日语」插件时下载，完整版已内置。", ModelCategory.OTHER,
+            versions = listOf(ModelVersion(version = "ae50e784", size = "3.0 MB",
+                archiveUrl = RELEASE + "japanese-handwriting-ae50e784.tar.bz2", sha256 = "ae50e7840fead3b94733f5fd9f50fedf682d9a342799dda510de979cc4b76150",
+                archiveMirrors = listOf(DownloadMirrors.CYIME_MODELSCOPE + "japanese-handwriting-ae50e784.tar.bz2"),
+                files = listOf(
+                    ModelFile("kana_default_strokes.json", "", "2b82e9b4ee2c463909e385904f604709af411a02463bda0e46cfd66c801870ab", 1087267L),
+                    ModelFile("kana_default_och.bin", "", "d906eab4c82fed3450496a155b1e007429946dcc4e850f0493b97db32485fa4c", 2027520L),
+                    ModelFile("kana_default_och.json", "", "24396db84969ea66e4d3338e9872dd99ed2badb5f52dcc35d01d89fe5057bb8b", 9606L),
+                    ModelFile("japanese_kanji_strokes.json", "", "d3fd183315af5e4e9f5b6c171acbc3e0d31f3689c94870c092fe934ecc71529b", 1450736L),
+                    ModelFile("japanese_kanji_och.bin", "", "5cd4ec8bb303905c767d819f0afefb725e135e7c38f88f5dbadc27847dedc6a9", 1013760L),
+                    ModelFile("japanese_kanji_och.json", "", "0bac23cf96a695c4b5af96a19ad0058c55c55f3933348c21cf3d1b5a7744e390", 4863L),
+                )))),
         // 日语词库：tasks-japanese.gradle.kts 生成的 azooKey 词典 zip（上游固定提交 + Mozc 名词，内容哈希 7776faa0…，
         // 和以前打进安装包的 assets/azookey/dictionary.zip 逐字节相同），原样传到 Release `models` 和魔搭。
         // 轻量版装「日语」插件时下载，解到 rime/azookey/dictionary；完整版、离线包仍在安装包里。
