@@ -222,8 +222,12 @@ internal class ImeTextCommit(private val service: XimeInputMethodService) {
         service.voiceRecognitionHandler.abandonPendingOnManualInput()
         val owner = service.uiState.value.inputSessionId
         // 「标点上屏首选」（默认关）只管屏幕键盘上的断句标点；实体键盘的逗号句号另有翻页规则，不变。
-        val candidateFirst = !hardware && isSentencePunctuation(literal) &&
-            com.kingzcheung.xime.settings.SettingsPreferences.isPunctuationCommitsCandidateEnabled(service)
+        // 笔画键盘打着笔画时点符号（主键区的 ，。、左栏）一律先上屏高亮的候选（平常是首选，「下一项」换过就是标亮的那个）：
+        // 编码是 h s p n z，原样上屏没有用（11-18 贡献者）。
+        val strokeKeyboard = !hardware && service.uiState.value.let {
+            !it.isAsciiMode && it.inputProfile.scheme == com.kingzcheung.xime.settings.InputScheme.STROKE }
+        val candidateFirst = !hardware && (strokeKeyboard || isSentencePunctuation(literal) &&
+            com.kingzcheung.xime.settings.SettingsPreferences.isPunctuationCommitsCandidateEnabled(service))
         val submit: suspend () -> Unit = literal@ {
             if (owner != service.uiState.value.inputSessionId) return@literal
             if (service.keyRouter.usesDirectFieldInput) {

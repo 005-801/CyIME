@@ -320,6 +320,10 @@ internal fun strokeTapFor(def: StrokeKeyDef, tap: GestureDef?): StrokeTap {
     return StrokeTap(label, tap.action, value)
 }
 
+/** 点按送进引擎的值：五个笔画、通配 *、分词、数字和字母；别的（，。等符号）按符号上屏，见 [StrokeKeyboardContent]。 */
+internal fun strokeTapIsLiteral(value: String): Boolean =
+    value != "word_separator" && value != "*" && value.isNotEmpty() && value.none { it.isLetterOrDigit() || it == '_' }
+
 /** 主键区这一刻的键面字（设置页画键盘草图用）。 */
 internal fun strokeMainLabels(): List<String> =
     strokeMainKeys.map { strokeTapFor(it, KeysConfigHelper.getStrokeKeyGesture(it.id)?.tap).label }
@@ -498,7 +502,10 @@ private fun StrokeKeyboardContent(
                         val tap = strokeTapFor(key, KeysConfigHelper.getStrokeKeyGesture(key.id)?.tap)
                         val onClick: () -> Unit = {
                             when (val action = tap.action) {
-                                GestureAction.COMMIT -> onKeyPress(tap.value)
+                                // ，。这类符号走和左栏一样的上屏路：打着笔画时先上屏高亮的候选再接符号（11-18 贡献者），
+                                // 不再越过还没选的笔画先把符号打出去。笔画、* 、分词、数字照旧送进引擎。
+                                GestureAction.COMMIT -> if (strokeTapIsLiteral(tap.value))
+                                    (inputActions.onCommitText ?: onKeyPress)(tap.value) else onKeyPress(tap.value)
                                 null, GestureAction.NONE -> Unit
                                 else -> onGestureAction?.invoke(action, tap.value)
                             }
