@@ -350,6 +350,7 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         SettingsSearchEntry("整句定稿", speech, SettingsRoutes.SpeechToText, "整句 定稿 校正 二次校正 不校正 说完后 断句 分段 准确 SenseVoice X-ASR 说完", section = "中文语音"),
         SettingsSearchEntry("语音模型", speech, SettingsRoutes.SpeechToText, "语音模型 说话时 主模型 边说边出字 Paraformer SenseVoice Zipformer 日语 英文 二次校正 SenseVoice 校正 换模型", anchor = null, section = "中文语音"),
         SettingsSearchEntry("自动加标点", speech, SettingsRoutes.SpeechToText, "标点 逗号 句号 问号 感叹号 顿号 分号 自动标点 去掉标点 不加标点 部分标点 只要逗号 不要句号 末尾标点 句末标点 最后不带标点 空格 在线接口 语音", section = "语音标点"),
+        SettingsSearchEntry("停顿处加空格", speech, SettingsRoutes.SpeechToText, "空格 不加空格 去掉空格 没有空格 不要空格 停顿 断句 中文空格 语音", section = "语音标点"),
         SettingsSearchEntry("数字转阿拉伯数字", speech, SettingsRoutes.SpeechToText, "数字 阿拉伯数字 中文数字 大写数字 小写数字 ITN 金额 年份 电话 百分比 小数 时间 语音", section = "数字"),
         SettingsSearchEntry("语音纠错", speech, SettingsRoutes.SpeechToText, "纠错 错词 正词 替换 同音字 识别错 认错 改词 映射 纠错词库 语音", section = "纠错"),
         // 字幕是插件（11-05）：设置在字幕插件那一页；没装时搜索结果换成去插件市场（[withCaptionPluginState]）。

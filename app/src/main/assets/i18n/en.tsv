@@ -2742,14 +2742,17 @@ SenseVoice 校正	SenseVoice correction
 重试下载 {0}	Retry downloading {0}
 下载 {0} ({1})	Download {0} ({1})
 自动加标点	Auto punctuation
-保留在线接口或中文本地整句定稿返回的标点。关闭后停顿留空格，口述的标点照常输入。	Keeps punctuation returned by online APIs or local Chinese sentence finalizing. When off, pauses leave spaces; spoken punctuation is still typed.
+留下在线接口和中文整句定稿按意思加的标点，不是每停一下就加。本地中文要在「说完后」选整句定稿。口述的标点照常输入。	Keeps the punctuation that online APIs and Chinese sentence finalizing add by meaning, not at every pause. For local Chinese, choose “Sentence finalizing” under “After speaking”. Spoken punctuation is still typed.
 逗号、顿号、分号	Commas, enumeration commas, semicolons
 问号、感叹号	Question and exclamation marks
 末尾的标点	Final punctuation
 整段话最后保留句号、问号等标点。	Keeps the period, question mark and so on at the end of the passage.
 整段话最后不带标点，中间的照留；口述照样出。	No punctuation at the very end; punctuation in the middle stays, and spoken punctuation still works.
 保留模型打的{0}。	Keeps the model's {0}.
-不带{0}，停顿处留空格；口述照样出。	Without {0}; pauses leave spaces, and spoken punctuation still works.
+不带{0}；口述照样出。	Without {0}; spoken punctuation still works.
+停顿处加空格	Space at pauses
+说话停顿、没加标点的地方空一格。	Leaves a space where you pause and no punctuation is added.
+中文里不加空格；英文单词之间照常空一格。	No spaces in Chinese text; English words are still separated by a space.
 数字转阿拉伯数字	Convert numbers to digits
 中文说的数字写成 325、3.5、50%；一个、第一、一心一意这类不变。	Numbers spoken in Chinese are written as 325, 3.5, 50%; words like 一个, 第一, 一心一意 stay as they are.
 {0}语音	{0} voice

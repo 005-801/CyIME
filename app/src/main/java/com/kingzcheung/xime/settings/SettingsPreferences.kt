@@ -137,6 +137,7 @@ object SettingsPreferences {
     const val KEY_STT_PUNCTUATION_PERIOD = "stt_punctuation_period"
     const val KEY_STT_PUNCTUATION_QUESTION = "stt_punctuation_question"
     const val KEY_STT_PUNCTUATION_TRAILING = "stt_punctuation_trailing"
+    const val KEY_STT_PAUSE_SPACE = "stt_pause_space"
     const val KEY_STT_ARABIC_NUMBERS = "stt_arabic_numbers"
     const val KEY_STT_CORRECTIONS = "stt_corrections"
     const val KEY_STT_CORRECTIONS_TEXT = "stt_corrections_text"
@@ -1068,6 +1069,14 @@ object SettingsPreferences {
     fun isSttPunctuationTrailing(context: Context) = getPrefs(context).getBoolean(KEY_STT_PUNCTUATION_TRAILING, true)
     fun setSttPunctuationTrailing(context: Context, enabled: Boolean) =
         getPrefs(context).edit().putBoolean(KEY_STT_PUNCTUATION_TRAILING, enabled).apply()
+
+    /**
+     * 停顿处加空格：说话停顿、或去掉的标点处留一个空格。默认开，和以前一样；关掉后中文里不加空格，英文单词之间照常空格
+     * （2026-11-18 用户：不想要任何空格，现在没法设置）。
+     */
+    fun isSttPauseSpace(context: Context) = getPrefs(context).getBoolean(KEY_STT_PAUSE_SPACE, true)
+    fun setSttPauseSpace(context: Context, enabled: Boolean) =
+        getPrefs(context).edit().putBoolean(KEY_STT_PAUSE_SPACE, enabled).apply()
 
     /**
      * 数字转阿拉伯数字：中文语音结果里读出来的数字写成 325、3.5、50%(VoiceNumbers)。

@@ -90,8 +90,11 @@ internal class LocalSpeechSession(
     // the same end-of-input re-read; its segments stay at the engine's 6 s so text still appears while speaking.
     private val wholeSentenceActive = wholeSentence &&
         (engine.hasRefinement && engine.isStreaming || !engine.isStreaming && !engine.hasRollingPreview)
-    /** 整句定稿时保留模型标点（整句的句末不再是切点硬塞的句号）。 */
-    private val transcript = SpeechTranscript(keepMarks = wholeSentenceActive)
+    /**
+     * 整句定稿时保留模型标点，但不保留停顿处的：第二遍只听到这一段，段尾总会补一个标点，说话停一下就是一个逗号、句号。
+     * 说话中只显示段内的标点，结束时整段重识别按整句的意思重新加。
+     */
+    private val transcript = SpeechTranscript(keepMarks = wholeSentenceActive, pauseMarks = false)
     /** 流式预览的定稿前文字，整段重识别时作为把关的第一遍。 */
     private val previews = SpeechTranscript()
     private val decodeTimeoutMs = if (wholeSentenceActive) maxOf(engine.decodeTimeoutMs, WHOLE_SENTENCE_DECODE_TIMEOUT_MS)
