@@ -158,7 +158,11 @@ data class CandidateBarVisuals(
     val glassControlBackground: Color? = null,
 )
 
-internal val LocalSentenceSelection = androidx.compose.runtime.staticCompositionLocalOf<com.kingzcheung.xime.service.SentenceEditSession?> { null }
+private val NoSentenceSelection: androidx.compose.runtime.State<com.kingzcheung.xime.service.SentenceEditSession?> =
+    androidx.compose.runtime.mutableStateOf(null)
+/** 交的是 State：只有读 `.value` 的拼音条随拖选重绘。 */
+internal val LocalSentenceSelection =
+    androidx.compose.runtime.staticCompositionLocalOf<androidx.compose.runtime.State<com.kingzcheung.xime.service.SentenceEditSession?>> { NoSentenceSelection }
 
 /** Highlight the replacement in the first sentence while its local editor is open. */
 internal data class SentenceCandidateHighlight(val sentence: String, val start: Int, val end: Int)
@@ -554,7 +558,7 @@ fun CandidateBar(
                 Box(Modifier.widthIn(max = minOf(108.dp, toolbarRowWidth * 0.32f)).height(44.dp)
                     .then(if (onEditPreedit == null) Modifier else Modifier.clickable(onClickLabel = "编辑拼音", onClick = onEditPreedit))
                     .padding(horizontal = 4.dp).testTag("inline-preedit"), contentAlignment = Alignment.CenterStart) {
-                    Text(sentenceSelectionText(preeditText, LocalSentenceSelection.current, protectedVisuals.accentColor),
+                    Text(sentenceSelectionText(preeditText, LocalSentenceSelection.current.value, protectedVisuals.accentColor),
                         color = protectedVisuals.textColor, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -1657,7 +1661,7 @@ internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals, onEdit: ((
         val caretAlpha = if (caretOn) 1f else 0f
         // 折行时在隔音符后面垫零宽空格：tou'ming'du 整串没有空格，不垫就只能从音节中间断开。
         val displayText = if (maxLines > 1) shownText.replace("'", "'\u200B") else shownText
-        val annotated = sentenceSelectionText(displayText, LocalSentenceSelection.current, visuals.accentColor,
+        val annotated = sentenceSelectionText(displayText, LocalSentenceSelection.current.value, visuals.accentColor,
             preeditWithCaret(displayText, visuals.accentColor, textColor, visuals.selectedTextColor, caretAlpha))
         val textStyle = LocalTextStyle.current.copy(shadow = visuals.textShadow)
         if (maxLines <= 1) {

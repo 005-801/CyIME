@@ -86,9 +86,14 @@ internal class ImeSentenceEditor(private val service: XimeInputMethodService) {
             dragConnection = ic
         }
         val text = dragText ?: return
-        if (ic !== dragConnection || service.inlinePinyinText() != text || service.inlinePinyinCaret() != dragCaret ||
-            runCatching { !ic.getSelectedText(0).isNullOrEmpty() }.getOrDefault(true)) return
+        if (ic !== dragConnection || service.inlinePinyinText() != text || service.inlinePinyinCaret() != dragCaret) return
         val range = owner.displaySelection(text) ?: return
+        val shown = dragOwner?.let { it.displaySelection(text) }
+        if (shown == range) { dragOwner = owner; return }
+        // 只在第一次写之前问一次应用里有没有选中文字。这是同步跨进程调用，应用刚收到上一次改写、正在排版时要等它
+        // （忙的应用上百毫秒），拖动每换一个字都问一次，放大镜和高亮就一顿一顿（1.15.100 用户反馈）。
+        // 拖动中手指在键盘上，应用里的选区不会变。
+        if (dragOwner == null && runCatching { !ic.getSelectedText(0).isNullOrEmpty() }.getOrDefault(true)) return
         val styled = android.text.SpannableString(text).apply {
             setSpan(android.text.style.BackgroundColorSpan(0x663399ff), range.first, range.last + 1,
                 android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)

@@ -649,7 +649,9 @@ fun KeyboardView(
         var sentenceEdit by remember(state.inputSessionId, state.currentSchemaId, state.isAsciiMode) {
             mutableStateOf<com.kingzcheung.xime.service.SentenceEditSession?>(null)
         }
-        var sentenceDragOwner by remember { mutableStateOf<com.kingzcheung.xime.service.SentenceEditSession?>(null) }
+        // 拖选范围只给拼音条读：把 State 本身交下去，拖动每换一个字只重绘拼音条，不重绘整块键盘（1.15.100 放大镜卡）。
+        val sentenceDragOwnerState = remember { mutableStateOf<com.kingzcheung.xime.service.SentenceEditSession?>(null) }
+        var sentenceDragOwner by sentenceDragOwnerState
         var sentenceDragRange by remember { mutableStateOf<Pair<Int, Int>?>(null) }
         var sentenceDragRequest by remember { mutableIntStateOf(0) }
         var sentenceDragLoading by remember { mutableStateOf(false) }
@@ -1475,7 +1477,7 @@ fun KeyboardView(
             androidx.compose.runtime.CompositionLocalProvider(
                 LocalLearnedCandidates provides cs.learnedCandidates,
                 LocalCorrectedCandidates provides correctionMarks,
-                LocalSentenceSelection provides sentenceDragOwner,
+                LocalSentenceSelection provides sentenceDragOwnerState,
                 LocalSentenceCandidateHighlight provides sentenceEdit?.let { owner ->
                     val replacement = sentenceReplacement(owner)
                     SentenceCandidateHighlight(owner.sentence(replacement), owner.start, owner.start + replacement.length)
