@@ -11,7 +11,7 @@
 schema:
   schema_id: stroke
   name: "笔画"
-  version: "0.6-cyime3"
+  version: "0.6-cyime4"
   dependencies:
     - stroke_phrase
   author:
@@ -59,6 +59,9 @@ engine:
 speller:
   alphabet: "abcdefghijklmnopqrstuvwxyz*"
   delimiter: " '"
+  # 分词号也能连着打、打在最后：n 个分词号就是 n+1 个字，没打笔画的段代表任意一个字（11-18）。
+  # 不列进 initials 时，紧跟在分词号后面的分词号不收，Rime 把首选顶上屏。
+  initials: "abcdefghijklmnopqrstuvwxyz*'"
 
 translator:
   enable_sentence: false
