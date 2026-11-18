@@ -552,11 +552,11 @@ private fun QwertyStaggerSettings(
  * 「去掉 0 键，回车加高」的说明：照实写开了以后少了什么、0 去哪打。
  * 回车上打 0 和 1～9 的数字角标同一个方向（跟「反转上下滑方向」），关了「上下滑输入符号」就不接。
  */
-/** 笔画键盘「去掉 0 键，回车加高」的说明：笔画的 0 键只打 0，没有「下一项」。 */
+/** 笔画键盘「去掉 0 键，回车加高」的说明：笔画的 0 键打字时也是「下一项」（11-18），去掉后和九键一样没有。 */
 internal fun strokeMergeZeroSubtitle(cornerSymbolInput: Boolean, reverseSymbolSwipe: Boolean): String {
-    val zero = if (cornerSymbolInput) "数字 0 在回车上${if (reverseSymbolSwipe) "上滑" else "下滑"}打(和 1～9 的数字一样)，数字键盘里也有。"
+    val zero = if (cornerSymbolInput) "数字 0 在回车上${if (reverseSymbolSwipe) "上滑" else "下滑"}打(和 1～9 的数字一样，打字选词时不接)，数字键盘里也有。"
         else "「上下滑输入符号」关着，回车上不能打 0，到数字键盘里打。"
-    return "笔画键盘右边一列只留删除、重输和占两格高的回车。$zero"
+    return "笔画键盘右边一列只留删除、重输和占两格高的回车。没有「下一项」键：不能点它切下一项、左滑上一项，选词直接点候选。$zero"
 }
 
 internal fun t9MergeZeroSubtitle(cornerSymbolInput: Boolean, reverseSymbolSwipe: Boolean): String {

@@ -21,11 +21,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +63,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kingzcheung.xime.util.SubcharHelper
+import com.kingzcheung.xime.service.CandidateState
+import com.kingzcheung.xime.service.usesT9CandidateNavigation
+import com.kingzcheung.xime.settings.InputProfile
 
 /**
  * 笔画键盘布局 — 与 [T9KeyboardLayout] 同一套排布（用户 11-05：第 2 层数字要有 9 和 0，空格旁不要「.」）。
@@ -72,7 +77,7 @@ import com.kingzcheung.xime.util.SubcharHelper
  *   第2行：丶(n)4 | 乛(z)5 | *6
  *   第3行：分词7 | ，8 | 。9
  *   第4行：123 | 空格 | 语言键（同九键）
- * - 右侧功能键区：退格 | 重输 | 0 | 确定（同九键）
+ * - 右侧功能键区：退格 | 重输 | 0（打字时是「下一项」）| 确定（同九键）
  */
 @Composable
 fun StrokeKeyboardLayout(
@@ -93,6 +98,10 @@ fun StrokeKeyboardLayout(
     isFloatingMode: Boolean = false,
     specialKeyTextColor: Color = Color.White,
     onGestureAction: ((GestureAction, String) -> Unit)? = null,
+    /** 打着笔画或给着联想时 0 键是「下一项」（同九键，11-18）；不传时 0 键只打 0。 */
+    candidateState: State<CandidateState>? = null,
+    callbacks: KeyboardCallbacks? = null,
+    inputProfile: InputProfile? = null,
 ) {
     KeyboardKeySpacingScope(modifier, columns = 5f * 3f / 3.4f,
         policy = KeyVisualPolicy.T9, allowShrink = isFloatingMode, applyGutter = true,
@@ -115,6 +124,9 @@ fun StrokeKeyboardLayout(
         keySpacingX = keySpacingX,
         keySpacingY = keySpacingY,
         onGestureAction = onGestureAction,
+        candidateState = candidateState,
+        callbacks = callbacks,
+        inputProfile = inputProfile,
     )
     }
 }
@@ -140,6 +152,9 @@ onKeyPressDown: ((String) -> Unit)?,
     keySpacingX: Dp? = null,
     keySpacingY: Dp? = null,
     onGestureAction: ((GestureAction, String) -> Unit)? = null,
+    candidateState: State<CandidateState>? = null,
+    callbacks: KeyboardCallbacks? = null,
+    inputProfile: InputProfile? = null,
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = !isFloatingMode && configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -214,6 +229,9 @@ onKeyPressDown: ((String) -> Unit)?,
                         specialKeyTextColor = specialKeyTextColor,
                         compactMode = true,
                         onGestureAction = onGestureAction,
+                        candidateState = candidateState,
+                        callbacks = callbacks,
+                        inputProfile = inputProfile,
                     )
                 }
             }
@@ -243,6 +261,9 @@ onKeyPressDown: ((String) -> Unit)?,
                         specialKeyTextColor = specialKeyTextColor,
                         compactMode = false,
                         onGestureAction = onGestureAction,
+                        candidateState = candidateState,
+                        callbacks = callbacks,
+                        inputProfile = inputProfile,
                     )
                 }
             }
@@ -342,6 +363,9 @@ private fun StrokeKeyboardContent(
     specialKeyTextColor: Color,
     compactMode: Boolean = false,
     onGestureAction: ((GestureAction, String) -> Unit)? = null,
+    candidateState: State<CandidateState>? = null,
+    callbacks: KeyboardCallbacks? = null,
+    inputProfile: InputProfile? = null,
 ) {
     val strokeFontSize = if (compactMode) 13.sp else 16.sp
     val symbolFontSize = if (compactMode) 11.sp else 13.sp
@@ -605,10 +629,38 @@ private fun StrokeKeyboardContent(
                 shadowShapeRadius = shadowShapeRadius,
                 compactMode = compactMode,
             )
-            // 0 与九键同位（重输下面）；点按和 1-9 的上滑数字走同一条路。
+            // 0 与九键同位（重输下面）。打着笔画、或刚上屏给着联想时是「下一项」（11-18 贡献者：做成和九键一样）：
+            // 点一下、右滑标亮下一个候选，左滑回上一个，空格和标点上屏标亮的那个；其余时候点按打 0，和 1-9 的上滑数字走同一条路。
+            // 只在「是不是下一项」变化时重组这一键，每打一笔只重组候选栏。
+            val nextCandidate by remember(candidateState, inputProfile) {
+                androidx.compose.runtime.derivedStateOf {
+                    val state = candidateState?.value
+                    state != null && inputProfile != null && callbacks != null && state.usesT9CandidateNavigation(inputProfile)
+                }
+            }
             if (!mergeZero) NineKeyButton(
-                digit = "", letters = "0",
-                onClick = { onKeyPress("0") },
+                digit = "", letters = if (nextCandidate) "下一项" else "0",
+                icon = if (nextCandidate) rememberVectorPainter(Icons.AutoMirrored.Filled.KeyboardArrowRight) else null,
+                iconSizeDp = T9NextCandidateIconDp,
+                onClick = {
+                    val state = candidateState?.value
+                    if (nextCandidate && state != null && callbacks != null) {
+                        callbacks.onDismissPreeditEditor?.invoke()
+                        callbacks.onNextCandidate(state)
+                    } else onKeyPress("0")
+                },
+                onSwipeLeft = if (nextCandidate) ({
+                    candidateState?.value?.let { state ->
+                        callbacks?.onDismissPreeditEditor?.invoke()
+                        callbacks?.onPreviousCandidate?.invoke(state)
+                    }
+                }) else null,
+                onSwipeRight = if (nextCandidate) ({
+                    candidateState?.value?.let { state ->
+                        callbacks?.onDismissPreeditEditor?.invoke()
+                        callbacks?.onNextCandidate?.invoke(state)
+                    }
+                }) else null,
                 backgroundColor = keyBackgroundColor, textColor = keyTextColor,
                 modifier = Modifier.weight(1f).testTag("stroke-zero-key"),
                 onPress = { onKeyPressDown?.invoke("0") },
@@ -620,7 +672,8 @@ private fun StrokeKeyboardContent(
             if (mergeZero) T9MergedEnterKey(
                 text = "确定", onClick = { onKeyPress("enter") },
                 // 往角标方向滑打 0，和 1～9 的上滑数字同一条路；关了「上下滑输入符号」就不接，键上也不画 0。
-                onZero = if (cornerSymbolInput) ({ onKeyPress("0") }) else null,
+                // 和九键一样，打着笔画时不接（那时原来的 0 键是「下一项」）。
+                onZero = if (cornerSymbolInput && !nextCandidate) ({ onKeyPress("0") }) else null,
                 showZeroHint = hintsActive && swipeHints.up && cornerSymbolInput,
                 backgroundColor = specialKeyBackgroundColor, textColor = specialKeyTextColor,
                 modifier = Modifier.weight(2f).testTag("stroke-enter-key"),
