@@ -3437,6 +3437,24 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
     }
 
+    /**
+     * 实体键盘打注音（大千）时交给按键队列的键（见 ImeKeyRouter.routeZhuyinHardwareKey）：数字行和 , . / ; -，以及空格。
+     * 声调键（3 4 6 7）和空格只在打字中接，没在打字时照旧是数字、空格。
+     */
+    private fun zhuyinHardwareKey(keyCode: Int, e: KeyEvent): Boolean {
+        if (e.isShiftPressed || e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || e.repeatCount > 0) return false
+        val state = uiState.value
+        if (state.isAsciiMode || state.inputProfile.scheme != com.kingzcheung.xime.settings.InputScheme.ZHUYIN) return false
+        val code = when (keyCode) {
+            KeyEvent.KEYCODE_SPACE -> ' '
+            in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9, KeyEvent.KEYCODE_COMMA, KeyEvent.KEYCODE_PERIOD,
+            KeyEvent.KEYCODE_SLASH, KeyEvent.KEYCODE_SEMICOLON, KeyEvent.KEYCODE_MINUS ->
+                keyCodeToKey(keyCode, false)?.singleOrNull() ?: return false
+            else -> return false
+        }
+        return !ZhuyinKeys.isTone(code) || keyRouter.hardwareComposing()
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         syncPhysicalShift(keyCode, event, down = true)
         if (settingsPreviewEditor) {
@@ -3544,6 +3562,14 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             if (!isInputViewShown && currentInputConnection != null &&
                 (keyCodeToKey(keyCode, e.isShiftPressed) != null || keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER)) {
                 requestShowSelf(0)
+            }
+            // 实体键盘打注音（大千）：数字行、, . / ; - 是注音键，空格跟在音节后面是第一声（jp4wu = ㄨㄣˋㄊㄧ 問題，用户 11-18）。
+            // 不在这里当选候选、翻页或标点：交给按键队列按当时的编码判断，收不下的照原来的路走（ImeKeyRouter.routeZhuyinHardwareKey）。
+            if (zhuyinHardwareKey(keyCode, e)) {
+                keyCodeToKey(keyCode, false)?.let { key ->
+                    keyRouter.handleKeyPress(key, false, hardwareEvent = KeyEvent(e))
+                    return true
+                }
             }
             // Resolve cursor/candidate actions after earlier letters in the same FIFO.
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT ||

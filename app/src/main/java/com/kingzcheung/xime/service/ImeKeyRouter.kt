@@ -1267,6 +1267,9 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 return@command
             }
             if (englishAutoSpace.isArmed && consumeEnglishAutoSpace(key)) return@command
+            if (hardwareEvent != null && !service.uiState.value.isAsciiMode &&
+                service.uiState.value.inputProfile.scheme == com.kingzcheung.xime.settings.InputScheme.ZHUYIN &&
+                routeZhuyinHardwareKey(key)) return@command
             if (hardwareEvent != null) {
                 // Idle Tab belongs to the editor: single-line fields move focus (Shift+Tab backwards),
                 // multi-line ones insert a tab. Only an unfinished composition keeps Tab in the IME.
@@ -2365,6 +2368,22 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         } else if (input.isEmpty()) {
             withEditor { service.commitText(key) }
         }
+        return true
+    }
+
+    /**
+     * 实体键盘打注音（大千）：数字行和 , . / ; - 本身就是大千键码，空格跟在音节后面是第一声，直接交给 Rime
+     * （用户 11-18：jp4wu 打不出「問題」，4 被当成选第 4 个候选）。声调只跟在音节后面：没在打字、刚打过声调时按声调键，
+     * 或 Rime 不收这个键，返回 false 照原来的路走（选候选、上屏数字、标点、空格选首选）。
+     */
+    private suspend fun routeZhuyinHardwareKey(key: String): Boolean {
+        val code = if (key == "space") ' ' else key.takeIf(ZhuyinKeys::isHardwareSymbolCode)?.single() ?: return false
+        val input = service.rimeEngine.readQueuedComposition()?.input.orEmpty()
+        if (ZhuyinKeys.isTone(code) && !ZhuyinKeys.takesTone(input)) return false
+        val result = service.rimeEngine.processQueuedKeyAndGetResult(code.code, 0)
+        if (!result.processed) return false
+        if (result.committedText.isNotEmpty()) withEditor { service.commitText(result.committedText) }
+        sendTransformedResult(result)
         return true
     }
 
