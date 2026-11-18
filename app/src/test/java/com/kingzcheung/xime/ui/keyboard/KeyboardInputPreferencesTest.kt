@@ -165,14 +165,20 @@ class KeyboardInputPreferencesTest {
         assertEquals(true, KeyboardInputPreferences.read(context).datetimeCandidates)
     }
 
-    @Test fun `symbol name candidates are off by default and persist`() {
-        // 别人请求的功能默认关，不改原有习惯；在 语言与方案 › 中文输出 打开。
-        assertEquals(false, KeyboardInputPreferences().symbolNames)
-        assertEquals(false, KeyboardInputPreferences.read(context).symbolNames)
-        KeyboardInputPreferences.read(context).copy(symbolNames = true).save(context)
-        assertEquals(true, values[KeyboardInputPreferences.SYMBOL_NAMES_KEY])
+    @Test fun `symbol name candidates are on by default and persist`() {
+        // 11-18 起默认开（B 站反馈以为 ℃ ° ² 打不出来）；只改读不到时的默认，存过的值照旧。
+        assertEquals(true, KeyboardInputPreferences().symbolNames)
         assertEquals(true, KeyboardInputPreferences.read(context).symbolNames)
         KeyboardInputPreferences.read(context).copy(symbolNames = false).save(context)
+        assertEquals(false, values[KeyboardInputPreferences.SYMBOL_NAMES_KEY])
+        assertEquals(false, KeyboardInputPreferences.read(context).symbolNames)
+        KeyboardInputPreferences.read(context).copy(symbolNames = true).save(context)
+        assertEquals(true, KeyboardInputPreferences.read(context).symbolNames)
+    }
+
+    @Test fun `an existing stored off for symbol names is not flipped on by the new default`() {
+        // 升级：旧版存下的 false（自己关的或 save() 顺手写的旧默认）都保持关。
+        values[KeyboardInputPreferences.SYMBOL_NAMES_KEY] = false
         assertEquals(false, KeyboardInputPreferences.read(context).symbolNames)
     }
 

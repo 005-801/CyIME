@@ -177,8 +177,9 @@ data class KeyboardInputPreferences(
     val addressFieldsEnglish: Boolean = true,
     /** 中文候选在词后面多出对应表情（开心 😄），默认关；Rime 选项 emoji，表情表 opencc/emoji.json（雾凇）。 */
     val candidateEmoji: Boolean = false,
-    /** 打符号名出符号（加号 +、问号 ？ ?），别人请求，默认关；Rime 选项 cyime_symbol_names，符号表 assets/rime_chinese/opencc/cyime_symbols.txt。 */
-    val symbolNames: Boolean = false,
+    /** 打符号名出符号（加号 +、摄氏度 ℃、度 °、平方 ²、西塔 θ），默认开（B 站 11-18：用户以为这些打不出来）；
+     *  Rime 选项 cyime_symbol_names，符号表 assets/rime_chinese/opencc/cyime_symbols.txt。只在候选整词等于符号名时追加，不挪原词。 */
+    val symbolNames: Boolean = true,
     /** 打希腊字母名出希腊字母（xita θ、pi π、alpha α），别人请求，默认关；Rime 选项 cyime_greek_letters，见 app/data/cyime_greek_letters.lua。 */
     val greekLetters: Boolean = false,
     val cylmLongAlternative: Boolean = false,
@@ -333,7 +334,8 @@ data class KeyboardInputPreferences(
         const val ADDRESS_FIELDS_ENGLISH_KEY = "address_fields_english"
         /** 候选里显示表情开关；同繁体输出，输入法按键前读它（ImeKeyRouter）。 */
         const val CANDIDATE_EMOJI_KEY = "candidate_emoji"
-        /** 打符号名出符号开关；同表情，输入法按键前读它（ImeKeyRouter），写 Rime 选项 cyime_symbol_names。新键，读不到就是关。 */
+        /** 打符号名出符号开关；同表情，输入法按键前读它（ImeKeyRouter），写 Rime 选项 cyime_symbol_names。
+         *  默认由关改开（11-18）只改读不到时的默认：存过的值（包括 save() 顺手写下的旧默认 false）一律照旧，不把关掉的翻回开。 */
         const val SYMBOL_NAMES_KEY = "symbol_name_candidates"
         /** 打希腊字母名出希腊字母开关；同符号名，写 Rime 选项 cyime_greek_letters。新键，读不到就是关。 */
         const val GREEK_LETTERS_KEY = "greek_letter_candidates"
@@ -456,7 +458,7 @@ data class KeyboardInputPreferences(
                 emailSuffixes = prefs.getBoolean(EMAIL_SUFFIXES_KEY, true),
                 addressFieldsEnglish = prefs.getBoolean(ADDRESS_FIELDS_ENGLISH_KEY, true),
                 candidateEmoji = prefs.getBoolean(CANDIDATE_EMOJI_KEY, false),
-                symbolNames = prefs.getBoolean(SYMBOL_NAMES_KEY, false),
+                symbolNames = prefs.getBoolean(SYMBOL_NAMES_KEY, true),
                 greekLetters = prefs.getBoolean(GREEK_LETTERS_KEY, false),
                 cylmLongAlternative = prefs.getBoolean(CYLM_LONG_ALTERNATIVE_KEY, false),
                 fourteenLetterSwipe = prefs.getBoolean("fourteen_letter_swipe", true),

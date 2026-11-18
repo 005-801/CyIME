@@ -99,13 +99,13 @@ private fun ChineseOutputSection() {
         CandidateExtraLegend("candidate-emoji-legend", "kaixin", listOf("开心"), "😄", input.candidateEmoji)
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.Functions, "打符号名出符号",
-            "打「加号」「问号」「括号」这类符号名时，在词后面多出对应的符号(+、？、（）)，词本身的位置不变。",
+            "打符号的名字时，在词后面多出对应的符号，词本身的位置不变：加号 +、摄氏度 ℃、度 °、平方 ²、上标 ¹²³、下标 ₁₂₃、二分之一 ½、约等于 ≈、求和 ∑、西塔 θ、圆圈数字 ①。",
             checked = input.symbolNames, onCheckedChange = { input.copy(symbolNames = it).save(context) },
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.SYMBOL_NAMES)
-        CandidateExtraLegend("symbol-names-legend", "jiahao", listOf("加号"), "+", input.symbolNames)
+        CandidateExtraLegend("symbol-names-legend", "sheshidu", listOf("摄氏度"), "℃", input.symbolNames)
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.Functions, "希腊字母",
-            "打 xita、pi、alpha 这类字母名时，第 3 个候选给出希腊字母(θ、π、α)，前两个词不变。",
+            "打 xita、pi、alpha 这类字母名时，第 3 个候选给出希腊字母(θ、π、α)，前两个词不变。pi、mu、xi 这类常用音节也会出，所以默认关；不开时打中文名(西塔、阿尔法)也能出。",
             checked = input.greekLetters, onCheckedChange = { input.copy(greekLetters = it).save(context) },
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.GREEK_LETTERS)
         CandidateExtraLegend("greek-letters-legend", "pi", listOf("批", "皮"), "π", input.greekLetters)

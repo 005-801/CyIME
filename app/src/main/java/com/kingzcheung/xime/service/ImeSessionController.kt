@@ -622,7 +622,7 @@ internal class ImeSessionController(private val service: XimeInputMethodService)
             }
             add("_cyime_datetime_off" to !prefs.getBoolean(KeyboardInputPreferences.DATETIME_CANDIDATES_KEY, false))
             add("emoji" to prefs.getBoolean(KeyboardInputPreferences.CANDIDATE_EMOJI_KEY, false))
-            add("cyime_symbol_names" to prefs.getBoolean(KeyboardInputPreferences.SYMBOL_NAMES_KEY, false))
+            add("cyime_symbol_names" to prefs.getBoolean(KeyboardInputPreferences.SYMBOL_NAMES_KEY, true))
             add("cyime_greek_letters" to prefs.getBoolean(KeyboardInputPreferences.GREEK_LETTERS_KEY, false))
             val cylmAlternative = prefs.getBoolean(KeyboardInputPreferences.CYLM_LONG_ALTERNATIVE_KEY, false)
             if (persist || cylmAlternative) add("cyime_cylm_alternative" to cylmAlternative)
