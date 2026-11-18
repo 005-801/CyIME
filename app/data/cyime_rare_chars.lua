@@ -15,10 +15,11 @@
 --]]
 local OPTION = "cyime_rare_chars"
 
--- 粤语常用字（GitHub #72）：开着生僻字时排到第一、二页（主词库同音字之后，约第 10–14 个），不沉到整表最后。
--- 冇 在主词库里读 mao，这里补上粤语读音 mou。只在这个开关开着时出现，默认不变。
+-- 粤语常用字（GitHub #72）：开着生僻字时排在主词库所有同音字之后、其他生僻字之前，不沉到整表最后。
+-- 原来给了固定分 2.2005（本想排第 10 个左右），但同音字的分数随学习变化，有人小鹤双拼打 qu 时「佢」到了第 2
+-- （2026-11-18），所以改成垫底。冇 在主词库里读 mao，这里补上粤语读音 mou。只在这个开关开着时出现，默认不变。
 local COMMON = { qu = "佢", ge = "嘅", zuo = "咗", mou = "冇" }
-local COMMON_QUALITY = 2.2005
+local COMMON_QUALITY = -999
 local rare_quality  -- defined below with the learned counts
 local function yield_common(syllable, seg, comment)
   local text = COMMON[syllable]
@@ -88,7 +89,8 @@ local function save_learned()
   end
 end
 
-local LEARNED_ONCE_QUALITY = COMMON_QUALITY
+-- 选过一次进前两页（主词库同音字之后约第 10–16 个）。
+local LEARNED_ONCE_QUALITY = 2.2005
 local LEARNED_QUALITY = 1000
 
 function rare_quality(text, default)
