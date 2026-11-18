@@ -301,6 +301,7 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         // 九键的「下一项」键：搜「下一项」时排在上面「候选注释内容」后面（同分按先后）
         SettingsSearchEntry("去掉 0 键，回车加高", ninePath, nine, "九键 0键 零键 数字0 去掉0 大回车 回车加高 合并 下一项 上一项 回车键 确定键"),
         SettingsSearchEntry("笔画去掉 0 键，回车加高", ninePath, nine, "笔画 0键 零键 数字0 去掉0 大回车 回车加高 合并 回车键 确定键"),
+        SettingsSearchEntry("笔画编码显示成 一丨丿丶乛", ninePath, nine, "笔画 编码 输入串 hspnz 字母 横竖撇点折 一丨丿丶乛 笔画显示 部首 乛 乙"),
         SettingsSearchEntry("显示纠错标记", candidates, candidatePage, "纠错 拼音 标注 红字 隐藏", section = "拼音显示"),
         SettingsSearchEntry("编码显示", candidates, candidatePage, "预编辑 输入框 候选栏 编码位置 拼音显示 拼音框 拼音浮框 拼音气泡"),
         SettingsSearchEntry("双拼编码显示全拼", candidates, candidatePage, "编码 显示 双拼键 原始按键 按键 字母 全拼 拼音 ul pb 小鹤 九键", section = "拼音显示"),

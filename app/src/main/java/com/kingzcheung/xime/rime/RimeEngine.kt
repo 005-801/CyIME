@@ -565,6 +565,8 @@ class RimeEngine {
         val spelling = top?.comment.orEmpty()
         val schema = nativeGetCurrentSchema().orEmpty()
         val profile = com.kingzcheung.xime.settings.InputProfiles.describe(schema)
+        if (profile.scheme == com.kingzcheung.xime.settings.InputScheme.STROKE)
+            return if (strokeGlyphPreedit && !nativeIsAsciiMode()) strokeGlyphs(preedit) else preedit
         if (profile.layout.kind == com.kingzcheung.xime.settings.LayoutKind.T9 &&
             profile.scheme == com.kingzcheung.xime.settings.InputScheme.PINYIN &&
             top != null && input.isNotEmpty() && preedit == input && spelling == input && input.all { it in '2'..'9' }) {
@@ -598,6 +600,12 @@ class RimeEngine {
      * 双拼九键在这里把显示的读音换成双拼键（[t9DoublePinyinKeys]）；26 键由方案补丁清空编码显示规则，不经过这里。
      */
     @Volatile var doublePinyinKeysPreedit = false
+
+    /**
+     * 「笔画编码显示成 一丨丿丶乛」打开时由输入法服务写入。对上候选的那段由方案补丁换成笔画，
+     * 没对上候选的那段 Rime 照原样给字母，这里一起换，整串不会一半字母一半笔画（11-18）。
+     */
+    @Volatile var strokeGlyphPreedit = false
 
     /** 已选定的中文原样留着，后面的数字按首选读音换成双拼键；换不了时照原来显示。 */
     private fun t9DoublePinyinPreedit(input: String, preedit: String, spelling: String, schema: String): String {

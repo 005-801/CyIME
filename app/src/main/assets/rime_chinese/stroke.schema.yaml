@@ -66,13 +66,11 @@ speller:
 translator:
   enable_sentence: false
   dictionary: stroke
-  preedit_format:
-#   - xlit/hspnz/㇐㇑㇒㇏㇠/   # 中日韓筆畫（橫豎撇捺折）
-    - xlit/hspnz/⼀⼁⼃⼂乛/   # 康熙部首（橫豎撇點），折用键面上的乛（#412）
+  # 编码和候选后面的剩余笔画默认显示字母 h s p n z（11-18 贡献者：全用字母，不要一半字母一半笔画）。
+  # 设置「笔画编码显示成 一丨丿丶乛」打开时，方案补丁（SpellingPatches）在这里加
+  # xlit/hspnz/⼀⼁⼃⼂乛/（康熙部首，折用键面上的乛，#412），lua 造的候选也跟着换。
   comment_format:
     - xform/~//
-#   - xlit/hspnz/㇐㇑㇒㇏㇠/   # 中日韓筆畫（橫豎撇捺折）
-    - xlit/hspnz/⼀⼁⼃⼂乛/   # 康熙部首（橫豎撇點），折用键面上的乛（#412）
 
 # 通配符跨两个字时沿用笔画方案的组词，查询器只读，不重复学习上屏文字。
 stroke_word_lookup:

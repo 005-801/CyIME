@@ -159,6 +159,8 @@ internal fun LayoutInputSettingsContent(category: LayoutInputCategory, onBack: (
                             checked = settings.strokeMergeZeroIntoEnter, onCheckedChange = {
                                 settings = settings.copy(strokeMergeZeroIntoEnter = it); settings.save(context)
                             })
+                        HorizontalDivider()
+                        StrokeGlyphPreeditToggle()
                     })
                     SettingsSection(title = "九键手势", content = {
                         val glideLock = com.kingzcheung.xime.ui.keyboard.InputGestureLocks.lockFor(settings,
@@ -562,4 +564,30 @@ internal fun t9MergeZeroSubtitle(cornerSymbolInput: Boolean, reverseSymbolSwipe:
         else "「上下滑输入符号」关着，回车上不能打 0，到数字键盘里打。"
     return "右边一列只留删除、重输和占两格高的回车。没有「下一项」键：不能点它切下一项、左滑上一项，" +
         "长按换英文、拖到候选上屏英文也用不了，选词直接点候选。$zero"
+}
+
+/**
+ * 笔画编码显示成 一丨丿丶乛（默认关，显示 h s p n z；11-18 贡献者偏向全用字母）。
+ * 存在 [SpellingPatches.STROKE_GLYPH_PREEDIT_KEY]，改完写方案补丁重新部署；另一处改动或备份恢复时跟着变。
+ */
+@Composable
+internal fun StrokeGlyphPreeditToggle() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var enabled by remember(context) { mutableStateOf(SpellingPatches.strokeGlyphPreedit(context)) }
+    DisposableEffect(context) {
+        val prefs = SettingsPreferences.getPrefsPublic(context)
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == SpellingPatches.STROKE_GLYPH_PREEDIT_KEY) enabled = SpellingPatches.strokeGlyphPreedit(context)
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+    SettingsToggleItem(Icons.TwoTone.Abc, "笔画编码显示成 一丨丿丶乛",
+        "关着时输入串和候选后面的剩余笔画显示 h s p n z(横竖撇点折)，打开后都显示成 一丨丿丶乛。改完要几秒重新部署",
+        checked = enabled, onCheckedChange = { on ->
+            SpellingPatches.setStrokeGlyphPreedit(context, on)
+            enabled = on
+            scope.launch(Dispatchers.IO) { runCatching { SpellingPatches.apply(context) } }
+        })
 }

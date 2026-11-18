@@ -1006,6 +1006,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val prefs = SettingsPreferences.getPrefsPublic(this)
         privacy.loadManual(SettingsPreferences.isIncognito(this))
         rimeEngine.doublePinyinKeysPreedit = com.kingzcheung.xime.settings.SpellingPatches.doublePinyinRawPreedit(this)
+        rimeEngine.strokeGlyphPreedit = com.kingzcheung.xime.settings.SpellingPatches.strokeGlyphPreedit(this)
         sharedPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key?.startsWith(com.kingzcheung.xime.settings.HardwareKeyboardPreferences.PREFIX) == true) {
                 uiState.value = uiState.value.copy(hardwareOptions = com.kingzcheung.xime.settings.HardwareKeyboardPreferences.read(this))
@@ -1038,6 +1039,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 // 九键双拼的显示在引擎显示层换，下一次按键就用新设置；26 键随 REVISION 重新部署。
                 com.kingzcheung.xime.settings.SpellingPatches.DOUBLE_PINYIN_RAW_PREEDIT_KEY -> {
                     rimeEngine.doublePinyinKeysPreedit = com.kingzcheung.xime.settings.SpellingPatches.doublePinyinRawPreedit(this)
+                }
+                // 笔画编码显示：没对上候选的那段在引擎显示层换，下一次按键就用新设置；对上候选的那段随 REVISION 重新部署。
+                com.kingzcheung.xime.settings.SpellingPatches.STROKE_GLYPH_PREEDIT_KEY -> {
+                    rimeEngine.strokeGlyphPreedit = com.kingzcheung.xime.settings.SpellingPatches.strokeGlyphPreedit(this)
                 }
                 // Saved custom phrases: an open session re-reads them only when its schema is selected again.
                 // Not tied to an editor: the keyboard may be hidden while phrases are edited in settings.
