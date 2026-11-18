@@ -987,6 +987,10 @@ object SchemaManager {
             ?: available.firstOrNull()
     )
 
+    /** 部署过程中界面暂用内置列表，迁移只能读取用户实际保存的顺序。 */
+    internal fun readSavedEnabledSchemas(context: Context): List<String>? =
+        getCustomYamlFile(context).takeIf { it.isFile }?.let { readEnabledSchemaList(it.readText()) }
+
     fun getEnabledSchemas(context: Context): List<String> {
         val customFile = getCustomYamlFile(context)
         if (File(getRimeDir(context), ASSET_INSTALL_MARKER).exists()) return BUILTIN_SCHEMAS
