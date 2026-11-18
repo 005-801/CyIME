@@ -59,7 +59,7 @@ class StrokeNextCandidateTest {
     private fun show(state: CandidateState) {
         AppFonts.initialize(rule.activity.application)
         KeysConfigHelper.loadConfig(rule.activity.application)
-        val callbacks = KeyboardCallbacks(onKeyPress = { _, _ -> },
+        val callbacks = KeyboardCallbacks(onKeyPress = { _, _ -> }, onCandidateSelect = {},
             onNextCandidate = { nexts += it }, onPreviousCandidate = { previous += it })
         val candidateState = mutableStateOf(state)
         rule.setContent {
