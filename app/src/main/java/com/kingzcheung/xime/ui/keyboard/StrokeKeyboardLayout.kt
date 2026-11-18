@@ -66,7 +66,7 @@ import com.kingzcheung.xime.util.SubcharHelper
  * 笔画键盘布局 — 与 [T9KeyboardLayout] 同一套排布（用户 11-05：第 2 层数字要有 9 和 0，空格旁不要「.」）。
  *
  * 布局说明：
- * - 左侧候选区：。？ ！ ~ 4 个常用标点，纵向排列；下面 !@#。
+ * - 左侧符号列：和九键侧栏同一套（，。？！… 一屏四格，可上下滑，末尾「编辑」）；下面 !@#。
  * - 中间主键区（上滑出角标数字 1-9）：
  *   第1行：一(h)1 | 丨(s)2 | 丿(p)3
  *   第2行：丶(n)4 | 乛(z)5 | *6
@@ -442,12 +442,17 @@ private fun StrokeKeyboardContent(
                     .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
                     .background(frostedKeyColor(keyBackgroundColor, keyTextColor, frostedGlass))
             ) {
-                if (strokeSideSymbols.size <= NineGridFrame.SIDE_VISIBLE_SLOTS) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
+                // 和九键左栏一样：一屏四格，多出的上下滑，右缘有滚动条；末尾一格「编辑」打开「按键符号 → 笔画侧栏」（11-18 贡献者）。
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val rowHeight = maxHeight / NineGridFrame.SIDE_VISIBLE_SLOTS
+                    val railState = androidx.compose.foundation.lazy.rememberLazyListState()
+                    LazyColumn(
+                        state = railState,
+                        modifier = Modifier.fillMaxSize().testTag("stroke-side-symbols")
+                            .railScrollIndicator(railState, keyTextColor.copy(alpha = 0.35f)),
                         verticalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
-                        strokeSideSymbols.forEach { symbol ->
+                        itemsIndexed(strokeSideSymbols) { index, symbol ->
                             StrokeSymbolItem(
                                 text = symbol,
                                 preserveWidth = customSymbols != null,
@@ -456,27 +461,13 @@ private fun StrokeKeyboardContent(
                                 backgroundColor = keyBackgroundColor,
                                 textColor = keyTextColor,
                                 fontSize = symbolFontSize,
-                                modifier = Modifier.fillMaxWidth().weight(1f)
+                                modifier = Modifier.fillMaxWidth().height(rowHeight).testTag("stroke-side-symbol:$index")
                             )
                         }
-                    }
-                } else {
-                    // 超过 4 个滚动显示（对齐九键 side_symbols 体验），条目定高、由面板圆角统一裁切
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(0.dp)
-                    ) {
-                        itemsIndexed(strokeSideSymbols) { _, symbol ->
-                            StrokeSymbolItem(
-                                text = symbol,
-                                preserveWidth = customSymbols != null,
-                                onClick = { commitSymbol(symbol) },
-                                onPress = { onKeyPressDown?.invoke(symbol) },
-                                backgroundColor = keyBackgroundColor,
-                                textColor = keyTextColor,
-                                fontSize = symbolFontSize,
-                                modifier = Modifier.fillMaxWidth().height(if (compactMode) 26.dp else 32.dp)
-                            )
+                        item(key = "edit") {
+                            SideRailEditItem(SideSymbolTarget.STROKE, keyTextColor, keyBackgroundColor,
+                                iconSize = (symbolFontSize.value * 1.1f).dp, onPress = { onKeyPressDown?.invoke("edit") },
+                                modifier = Modifier.fillMaxWidth().height(rowHeight).testTag("stroke-side-symbols-edit"))
                         }
                     }
                 }

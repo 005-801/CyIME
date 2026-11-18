@@ -623,8 +623,11 @@ object KeysConfigHelper {
     val DEFAULT_T9_SIDE_SYMBOLS: List<String> = listOf("，", "。", "？", "！", "…", "～", "、", "：",
         "“", "”", "；", "（", "）")
 
-    /** 笔画键盘左侧符号列内置默认（与历史硬编码一致）。 */
-    val DEFAULT_STROKE_SIDE_SYMBOLS: List<String> = listOf("。", "？", "！", "~")
+    /**
+     * 笔画键盘左侧符号列内置默认：和九键侧栏同一套，前四个是 ，。？！，超过 4 个上下滑（11-18 贡献者）。
+     * 原来只有 。？！~ 四个、滑不动，也没有逗号。自己改过的（设置里的「笔画侧栏」、xime.custom.yaml）照旧。
+     */
+    val DEFAULT_STROKE_SIDE_SYMBOLS: List<String> = DEFAULT_T9_SIDE_SYMBOLS
     
     private val yaml = Yaml(configuration = YamlConfiguration(strictMode = false))
     
