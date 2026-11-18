@@ -133,9 +133,12 @@ internal fun rememberImeKeyboardCallbacks(
                     // 日语 26 键的长音键（键面 ー）送 -：和字母一样进罗马字转换（ko-hi- → コーヒー），不当标点直接上屏。
                     val choonpu = !numberPanel && japaneseChoonpuIsCode(key, service.uiState.value.isAsciiMode,
                         service.uiState.value.inputProfile)
+                    // 注音键盘的轻声 ˙ 是修饰符号，不能按标点上屏（见 zhuyinKeyIsCode）。
+                    val zhuyinKey = !numberPanel && zhuyinKeyIsCode(key, service.uiState.value.isAsciiMode,
+                        service.uiState.value.inputProfile)
                     if (schemeCode != null) {
                         service.keyRouter.handleKeyPress(schemeCode, false)
-                    } else if (choonpu) {
+                    } else if (choonpu || zhuyinKey) {
                         service.keyRouter.handleKeyPress(key, false)
                     } else if (!numberPanel && !separator && !semicolonCode && isLiteralPunctuation(key)) {
                         service.textCommit.commitLiteralText(key)

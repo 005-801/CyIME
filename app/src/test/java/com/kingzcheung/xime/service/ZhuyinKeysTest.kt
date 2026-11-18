@@ -90,4 +90,16 @@ class ZhuyinKeysTest {
         assertFalse(ZhuyinKeys.isHardwareSymbolCode("="))
         assertFalse(ZhuyinKeys.isHardwareSymbolCode("44"))
     }
+
+    /** 用户 11-18：轻声 ˙ 是修饰符号，以前被当标点，打 ㄉㄜ 再按 ˙ 把「ㄉㄜ˙」原样上屏。每个注音键帽都要进按键队列，不按标点上屏。 */
+    @Test fun `every zhuyin key cap goes to the engine, not the punctuation path`() {
+        val zhuyin = InputProfiles.describe("cyime_zhuyin")
+        assertTrue(isLiteralPunctuation("˙"))
+        assertTrue(zhuyinKeyIsCode("˙", false, zhuyin))
+        val rows = KeysConfigHelper.parseKeyboardLayoutYamlText(repoFile("src/main/assets/xime.yaml").readText(), "zhuyin")!!
+        for (key in rows.flatten()) assertTrue(key, zhuyinKeyIsCode(key, false, zhuyin))
+        assertFalse(zhuyinKeyIsCode("˙", true, zhuyin))
+        assertFalse(zhuyinKeyIsCode("˙", false, InputProfiles.describe("rime_ice")))
+        assertFalse(zhuyinKeyIsCode("，", false, zhuyin))
+    }
 }
