@@ -365,12 +365,14 @@ class DoublePinyinSchemeTest {
             assertFalse(text.contains("joint_decoder") || text.contains("cylm"))
             val rules = text.substringAfter("  algebra:\n").lines().takeWhile { it.startsWith("    - ") }
                 .map { it.removePrefix("    - \"").removeSuffix("\"").replace("\\\"", "\"").replace("\\\\", "\\") }
-            assertEquals(scheme.algebra().size + 8, rules.size)
+            assertEquals(scheme.algebra().size + scheme.separatorRules().size + 8, rules.size)
             for (syllable in DoublePinyinScheme.SYLLABLES) {
                 val code = scheme.code(syllable)!!
                 val result = spellings(rules, syllable)
                 assertTrue("$syllable $result", code in result && t9(code) in result)
-                assertTrue("$syllable $result", result.all { it.length == 2 })
+                // 分词键后的单个数字是这个键开头的字（4' 出好、吃），不按分词时拼写一个不多。
+                assertTrue("$syllable $result", t9(code.take(1)) + "'" in result)
+                assertTrue("$syllable $result", result.filterNot { it.endsWith("'") }.all { it.length == 2 })
             }
         }
         assertEquals("87", t9(DoublePinyinScheme.FLYPY.code("zhong")!!))

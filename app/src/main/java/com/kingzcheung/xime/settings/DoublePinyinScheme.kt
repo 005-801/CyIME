@@ -176,7 +176,9 @@ data class DoublePinyinScheme(
         require(this == FLYPY || valid())
         val t9 = t9Id(id)
         // ing 在分号上的方案（微软双拼）：分号和 L 同在 5 键上（键盘上分号紧挨着 L）。
-        val algebra = algebra() + t9Digits().map { (letters, digit) -> "derive/[$letters]/$digit/" }
+        // 分词键（1）跟 26 键一样认单个键加 '（4' 是这个键开头的字）：以前没有这几条，单个数字后按分词，
+        // 那一段一个拼写都对不上，候选只到分词前，后面打什么都不变，看着像卡死（11-18）。
+        val algebra = algebra() + separatorRules() + t9Digits().map { (letters, digit) -> "derive/[$letters]/$digit/" }
         val laiLe = listOfNotNull(code("lai"), code("le")).takeIf { it.size == 2 }?.joinToString("")
             ?.takeIf { keys -> keys.all { it in 'a'..'z' } }
             ?.map { key -> t9Digits().first { key in it.first }.second }?.joinToString("")
