@@ -127,6 +127,11 @@ class XimeApplication : Application(), ImageLoaderFactory {
             // 日语也是插件（11-11）：开着日语的老用户升级时自动装上，轻量版缺的引擎马上补下载。
             com.kingzcheung.xime.settings.JapanesePlugin.migrateOnce(this@XimeApplication)
         }
+        // 轻量版不带语音引擎（1.16）：下过语音模型的老用户升级后马上补下引擎。
+        applicationScope.launch {
+            runCatching { com.kingzcheung.xime.speech.SpeechEnginePack.migrateOnce(this@XimeApplication) }
+                .onFailure { FileLogger.e(TAG, "语音引擎补下载失败", it) }
+        }
         
         ExtensionManager.initialize(this)
 
