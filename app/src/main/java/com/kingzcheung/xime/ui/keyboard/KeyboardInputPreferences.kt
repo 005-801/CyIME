@@ -114,7 +114,7 @@ data class KeyboardInputPreferences(
     /** 分体中缝比例（竖屏/横屏），null 为自动。 */
     val splitGapPortrait: Float? = null,
     val splitGapLandscape: Float? = null,
-    /** 26 键三行错位；自定义时取 [qwertyStaggerCustom]（0 手机常见，1 实体键盘）。 */
+    /** 26 键三行错位；自定义时取 [qwertyStaggerCustom]（0 手机常见，负数向右更多，1 实体键盘）。 */
     val qwertyStagger: QwertyStaggerMode = QwertyStaggerMode.AUTO,
     val qwertyStaggerCustom: Float = 0.5f,
     /** 空格左侧逗号键、右侧句号键。 */
@@ -409,7 +409,7 @@ data class KeyboardInputPreferences(
                 splitGapLandscape = SettingsPreferences.getSplitGapFraction(context, true),
                 qwertyStagger = QwertyStaggerMode.entries.firstOrNull { it.name == prefs.getString("qwerty_stagger_mode", null) }
                     ?: QwertyStaggerMode.AUTO,
-                qwertyStaggerCustom = prefs.getFloat("qwerty_stagger_custom", 0.5f).takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0.5f,
+                qwertyStaggerCustom = prefs.getFloat("qwerty_stagger_custom", 0.5f).takeIf { it.isFinite() }?.coerceIn(QWERTY_STAGGER_MIN, QWERTY_STAGGER_MAX) ?: 0.5f,
                 // 11-09 起默认开。旧键 v2 会被 save() 连同其他设置写成旧默认 false，分不出是不是用户自己关的，只认新键。
                 bottomPunctuationSwipeUp = prefs.getBoolean("bottom_punctuation_swipe_up_v3", true),
                 handwritingWubiHints = prefs.getBoolean(SettingsPreferences.KEY_HANDWRITING_WUBI_HINTS, false),
@@ -575,7 +575,7 @@ data class KeyboardInputPreferences(
             .putString("handwriting_formula_delimiter", formulaDelimiter.name)
             .putString("fixed_symbols", fixedSymbols)
             .putString("qwerty_stagger_mode", qwertyStagger.name)
-            .putFloat("qwerty_stagger_custom", qwertyStaggerCustom.coerceIn(0f, 1f))
+            .putFloat("qwerty_stagger_custom", qwertyStaggerCustom.coerceIn(QWERTY_STAGGER_MIN, QWERTY_STAGGER_MAX))
             .putBoolean("bottom_punctuation_swipe_up_v3", bottomPunctuationSwipeUp)
             .putBoolean(com.kingzcheung.xime.service.ENGLISH_SENTENCE_CAPS, englishSentenceCaps)
             .putBoolean("qwerty_comma_key", qwertyCommaKey)
