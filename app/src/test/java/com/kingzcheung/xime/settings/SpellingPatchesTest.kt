@@ -176,10 +176,12 @@ class SpellingPatchesTest {
         assertTrue(spellingsOf(rules, "shi").containsAll(listOf("ui", "s", "u")))
         assertTrue(spellingsOf(rules, "guo").containsAll(listOf("go", "g")))
         assertEquals(spellingsOf(original, "ai") + "a", spellingsOf(rules, "ai"))
-        // 单字母的音节没有简拼：e 还是 ee。
-        assertEquals(spellingsOf(original, "e"), spellingsOf(rules, "e"))
+        // 单字母的音节也有简拼（用户 11-19：开着简拼打 a 出不来啊）：e 是 ee，也是 e；a、o 一样。
+        assertEquals(spellingsOf(original, "e") + "e", spellingsOf(rules, "e"))
+        assertEquals(spellingsOf(original, "a") + "a", spellingsOf(rules, "a"))
+        assertEquals(spellingsOf(original, "o") + "o", spellingsOf(rules, "o"))
         // 方案不明时只按拼音首字母。
-        assertEquals(listOf("abbrev/^([a-z]).+$/\$1#/"), SpellingPatches.abbreviationRules(null).first)
+        assertEquals(listOf("abbrev/^([a-z]).*$/\$1#/"), SpellingPatches.abbreviationRules(null).first)
     }
 
     @Test fun doublePinyinAbbreviationSitsBetweenFuzzyRulesAndTheSchemeRules() {

@@ -411,10 +411,12 @@ object SpellingPatches {
      * 双拼简拼：按拼音取每个字的第一个字母（zh、ch、sh 取 z、c、s，同全拼的简拼），也取本方案 zh、ch、sh 所在的键
      * （小鹤 v、i、u，同 Rime 双拼方案注释里的简拼）。新拼写先带上 #，双拼规则就不会把 a、o、e 当成零声母音节改掉；
      * 双拼规则（含自建布局的合并键派生）做完后去掉 #。abbrev 派生的拼写权重低，完整的双拼编码仍排在前面。
+     * a、o、e 这种一个字母的音节也算（用户 11-19：开了简拼打 a 出不来啊、打 uia 出不来是啊）：a 本来就是 ai、an 等的简拼，
+     * 只是啊自己不在里面，开着简拼时单打 a 只查简拼、不再补全成 aa，啊就没了。
      * 返回（排在双拼规则前面的，接在最后的）。
      */
     internal fun abbreviationRules(scheme: DoublePinyinScheme?): Pair<List<String>, List<String>> =
-        (listOf("abbrev/^([a-z]).+$/\$1#/") + listOf("zh", "ch", "sh").mapNotNull { initial ->
+        (listOf("abbrev/^([a-z]).*$/\$1#/") + listOf("zh", "ch", "sh").mapNotNull { initial ->
             scheme?.initials?.get(initial)?.let { key -> "abbrev/^$initial.+$/$key#/" }
         }) to listOf("xform/#$//")
 
