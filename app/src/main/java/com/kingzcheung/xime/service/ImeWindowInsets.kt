@@ -115,8 +115,9 @@ internal data class BottomNavDecision(val kind: BottomNavKind, val step: Int)
 
 /**
  * 决策表，按顺序第一条命中就停，每一步只有一个结果：
- * 1 大屏有导航栏 → 任务栏；2 本窗口里系统画了按钮条 → 按钮条；
- * 3 厂商手势开关说关（且 navigation_mode 没说手势），或 navigation_mode 可靠的厂商写 0/1 → 三键；
+ * 1 大屏有导航栏 → 任务栏；
+ * 2 厂商手势开关说关（且 navigation_mode 没说手势），或 navigation_mode 可靠的厂商写 0/1 → 三键；
+ * 3 本窗口里系统画了按钮条 → 按钮条（系统只在手势导航时画；开关明说三键时仍按整条三键留，只留按钮条会挡住三键）；
  * 4 navigation_mode=2（厂商开关没说关），或厂商手势开关说开 → 手势；
  * 开关读不到或互相矛盾才看 inset：5 可点区域占满整条 → 三键；6 可点区域没占满，且强制手势区比导航栏矮或整条只有手势条高 → 手势；
  * 7 其余说不清 → 整条留着（用户可选「贴到最底」）。
@@ -127,10 +128,10 @@ internal fun classifyBottomNav(r: BottomNavReading): BottomNavDecision {
     fun at(kind: BottomNavKind, step: Int) = BottomNavDecision(kind, step)
     return when {
         r.largeScreen && r.navPx > 0 -> at(BottomNavKind.TASKBAR, 1)
-        r.imeButtonsPx > 0 -> at(BottomNavKind.IME_BUTTONS, 2)
         r.vendorGesture == false && r.navigationMode != 2 ||
             r.verifiedVendor && r.vendorGesture != true && (r.navigationMode == 0 || r.navigationMode == 1) ->
-            at(BottomNavKind.BUTTONS, 3)
+            at(BottomNavKind.BUTTONS, 2)
+        r.imeButtonsPx > 0 -> at(BottomNavKind.IME_BUTTONS, 3)
         r.navigationMode == 2 && r.vendorGesture != false || r.vendorGesture == true -> at(BottomNavKind.GESTURE, 4)
         r.navPx <= 0 && r.tappablePx <= 0 -> at(BottomNavKind.GESTURE, 6)
         r.tappablePx > 0 && r.tappablePx >= r.navPx - slack -> at(BottomNavKind.BUTTONS, 5)

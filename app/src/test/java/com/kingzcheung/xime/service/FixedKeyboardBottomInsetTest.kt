@@ -186,7 +186,7 @@ class FixedKeyboardBottomInsetTest {
         val insets = WindowInsets.Builder().setInsets(WindowInsets.Type.navigationBars(), Insets.of(0, 0, 0, 48)).build()
         val line = bottomNavDiagnostic(activity, readBottomNav(insets, activity, activity.window),
             SettingsPreferences.KeyboardBottomPosition.AUTO, -4, 44)
-        for (part in listOf("Android ", "CyIME ", "navigation_mode=0", "导航栏 48", "第3步 三键", "底部位置 自动 调整 -4 dp", "留 44 dp"))
+        for (part in listOf("Android ", "CyIME ", "navigation_mode=0", "导航栏 48", "第2步 三键", "底部位置 自动 调整 -4 dp", "留 44 dp"))
             org.junit.Assert.assertTrue("$part 不在 $line", part in line)
         SettingsPreferences.setKeyboardBottomDiagnostic(activity, line)
         assertEquals(line, SettingsPreferences.getKeyboardBottomDiagnostic(activity))
@@ -211,7 +211,7 @@ class FixedKeyboardBottomInsetTest {
         val exact = android.view.View.MeasureSpec.EXACTLY
         decor.measure(android.view.View.MeasureSpec.makeMeasureSpec(360, exact), android.view.View.MeasureSpec.makeMeasureSpec(800, exact))
         decor.layout(0, 0, 360, 800)
-        // 第 2 步：系统按钮条 18 + 4 = 22，可点区域不再另算。
+        // 第 3 步：系统按钮条 18 + 4 = 22，可点区域不再另算。
         assertEquals(22, measure())
         assertEquals(22, measure(controls = 32))
         frame.visibility = android.view.View.GONE
@@ -225,6 +225,7 @@ class FixedKeyboardBottomInsetTest {
         frame.visibility = android.view.View.VISIBLE
         decor.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(listOf(0, 22), observed)
+        // 三星 navigation_mode=0 明说三键：第 2 步先于按钮条，整条三键留着，不能只留 22 把三键挡住。
         mode(0)
         assertEquals(48, measure())
     }

@@ -28,12 +28,15 @@ class ImeBottomSpaceTest {
     @Test fun decisionTableStepsInOrder() {
         // 1 大屏任务栏：平板 SM-X800 三键导航实测 nav = tappable = mandatory = 90px（10-31）。
         assertEquals(BottomNavKind.TASKBAR to 1, decide(reading(nav = 90, tappable = 90, mandatory = 90, mode = 0, large = true)))
-        // 2 本窗口里系统画了按钮条，先于一切开关。
-        assertEquals(BottomNavKind.IME_BUTTONS to 2, decide(reading(mode = 2, ime = 144)))
-        // 3 三星三键（11-19 他的手机、平板实测 navigation_mode=0、navigation_bar_gesture_while_hidden=0），inset 什么都没报也是三键。
-        assertEquals(BottomNavKind.BUTTONS to 3, decide(reading(mode = 0, vendor = false, verified = true)))
-        assertEquals(BottomNavKind.BUTTONS to 3, decide(reading(mode = 0, verified = true)))
-        assertEquals(BottomNavKind.BUTTONS to 3, decide(reading(mode = 0, vendor = false)))
+        // 2 三星三键（11-19 他的手机、平板实测 navigation_mode=0、navigation_bar_gesture_while_hidden=0），inset 什么都没报也是三键。
+        assertEquals(BottomNavKind.BUTTONS to 2, decide(reading(mode = 0, vendor = false, verified = true)))
+        assertEquals(BottomNavKind.BUTTONS to 2, decide(reading(mode = 0, verified = true)))
+        assertEquals(BottomNavKind.BUTTONS to 2, decide(reading(mode = 0, vendor = false)))
+        // 开关明说三键时，就算本窗口里看到了系统按钮条也按三键整条留：只留按钮条会挡住三键。
+        assertEquals(BottomNavKind.BUTTONS to 2, decide(reading(mode = 0, verified = true, ime = 66)))
+        // 3 本窗口里系统画了按钮条（系统只在手势导航时画）：开关说手势或读不到时按按钮条。
+        assertEquals(BottomNavKind.IME_BUTTONS to 3, decide(reading(mode = 2, ime = 144)))
+        assertEquals(BottomNavKind.IME_BUTTONS to 3, decide(reading(ime = 144)))
         // 4 明确的手势：navigation_mode=2，或厂商开关开着（navigation_mode 还写 0 也算）。
         assertEquals(BottomNavKind.GESTURE to 4, decide(reading(mode = 2, tappable = 144)))
         assertEquals(BottomNavKind.GESTURE to 4, decide(reading(mode = 0, vendor = true, tappable = 144)))
