@@ -11,6 +11,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -92,15 +93,17 @@ fun SetupGuideScreen(firstRun: Boolean, onDone: () -> Unit, onOpenPerformance: (
     var hideDoublePinyin by remember { mutableStateOf(draft.hideDoublePinyin) }
     // 「更多配置」：从跳转页回来仍停在这一页；回答每次打开都从现在的设置读起。
     var showMore by rememberSaveable { mutableStateOf(false) }
-    var moreFacts by remember { mutableStateOf<SetupMoreFacts?>(null) }
-    var moreAnswers by remember { mutableStateOf<SetupMoreChoices?>(null) }
-    var moreResult by remember { mutableStateOf<List<String>?>(null) }
+    // 从跳转页回来接着显示原来的内容（11-19 用户：回来选项变回去、页面拉回顶上）：内容一直在，滚动位置才接得上；
+    // 「好了」比的仍是这次打开时的设置。只有从推荐配置页重新点进来才从头读。
+    var moreFacts by remember { mutableStateOf(draft.moreFacts) }
+    var moreAnswers by remember { mutableStateOf(draft.moreAnswers) }
+    var moreResult by remember { mutableStateOf(draft.moreResult) }
     LaunchedEffect(showMore) {
         if (!showMore) return@LaunchedEffect
         val read = withContext(Dispatchers.IO) { SetupGuide.readMore(context) }
-        moreFacts = read
+        val opened = moreFacts
+        moreFacts = if (opened == null) read else read.copy(current = opened.current)
         moreAnswers = read.current
-        moreResult = null
     }
     LaunchedEffect(Unit) {
         val read = withContext(Dispatchers.IO) { SetupGuide.readFacts(context) }
@@ -122,6 +125,9 @@ fun SetupGuideScreen(firstRun: Boolean, onDone: () -> Unit, onOpenPerformance: (
         draft.allowMetered = allowMetered
         draft.hideDoublePinyin = hideDoublePinyin
         draft.keepRemoveIds(removable, removeIds)
+        draft.moreFacts = moreFacts
+        draft.moreAnswers = moreAnswers
+        draft.moreResult = moreResult
     }
     if (showMore) {
         BackHandler { showMore = false }
@@ -147,6 +153,7 @@ fun SetupGuideScreen(firstRun: Boolean, onDone: () -> Unit, onOpenPerformance: (
                 else moreResult = SetupMore.changes(from, to)
             },
             onDone = onDone,
+            scroll = draft.moreScroll,
         )
         return
     }
@@ -172,7 +179,13 @@ fun SetupGuideScreen(firstRun: Boolean, onDone: () -> Unit, onOpenPerformance: (
         onSkip = { SetupGuide.markShown(context); onDone() },
         onDone = onDone,
         // 没按推荐设置就直接去「更多配置」，也算看过这一页，下次不再自动弹出。
-        onOpenMore = { SetupGuide.markShown(context); showMore = true },
+        onOpenMore = {
+            SetupGuide.markShown(context)
+            moreFacts = null; moreAnswers = null; moreResult = null
+            scope.launch { draft.moreScroll.scrollTo(0) }
+            showMore = true
+        },
+        scroll = draft.scroll,
     )
 }
 
@@ -186,6 +199,12 @@ class SetupGuideDraft : ViewModel() {
     var result: SetupGuide.Result? = null
     var allowMetered: Boolean = false
     var hideDoublePinyin: Boolean = SetupGuidePlanner.HIDE_OTHER_DOUBLE_PINYIN_BY_DEFAULT
+    var moreFacts: SetupMoreFacts? = null
+    var moreAnswers: SetupMoreChoices? = null
+    var moreResult: List<String>? = null
+    /** 两页各自的滚动位置：进「更多配置」、跳转页再回来停在原处（rememberScrollState 离开这一段界面就没了）。 */
+    val scroll = ScrollState(0)
+    val moreScroll = ScrollState(0)
     private var removable: Set<String>? = null
     private var removeIds: Set<String> = emptySet()
 
@@ -218,6 +237,7 @@ internal fun SetupGuideContent(
     /** 首次设置时不给：先走完这一页。 */
     onOpenPerformance: (() -> Unit)? = null,
     onOpenMore: (() -> Unit)? = null,
+    scroll: ScrollState = rememberScrollState(),
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -238,7 +258,7 @@ internal fun SetupGuideContent(
         }
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Spacer(Modifier.height(4.dp))
@@ -677,6 +697,7 @@ internal fun SetupMoreContent(
     onApply: () -> Unit,
     onDone: () -> Unit,
     onOpenRoute: ((String) -> Unit)? = null,
+    scroll: ScrollState = rememberScrollState(),
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -698,7 +719,7 @@ internal fun SetupMoreContent(
         }
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+            Modifier.fillMaxSize().padding(padding).verticalScroll(scroll).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Spacer(Modifier.height(4.dp))
