@@ -2465,8 +2465,8 @@ settings-fold:语言键切换方式	=
 显示拼音编辑栏	Show pinyin edit bar
 打字时显示编码，支持编辑的方案可点按修改。	Shows the code while typing; schemes that support editing can be tapped to change it.
 拼音位置	Pinyin position
-候选上方	Above candidates
-键盘内候选上方一行小字，纠错的读音也在这一行。	A small line above the candidates inside the keyboard; corrected readings show there too.
+紧贴候选上方	Right above candidates
+键盘内紧贴候选的一行小字，纠错的读音也在这一行。	A small line right above the candidates inside the keyboard; corrected readings show there too.
 浮在键盘上方	Floating above the keyboard
 气泡浮在应用上，拼音长时也显示得全。	A bubble over the app that shows long pinyin in full.
 候选栏左侧	Left of the candidate bar

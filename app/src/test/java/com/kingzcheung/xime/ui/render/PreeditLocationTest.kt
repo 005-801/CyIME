@@ -119,7 +119,10 @@ class PreeditLocationTest {
             assertEquals("刷新候选不能把正在编辑的光标拉回末尾", "正文".length + 3, editor.selectionStart)
         }
         location(SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR)
-        // 默认：拼音在键盘内候选上方一行，不浮气泡。
+        // 默认照原来浮气泡；选了「紧贴候选上方」后拼音在键盘内候选上方一行，不浮气泡。
+        rule.onNodeWithTag("candidate-preedit", true).assertExists()
+        rule.onNodeWithTag("preedit-line", true).assertDoesNotExist()
+        rule.runOnIdle { SettingsPreferences.setPreeditStyle(app, SettingsPreferences.PREEDIT_STYLE_LINE) }
         rule.onNodeWithTag("preedit-line-text", true).assertExists()
         rule.onNodeWithTag("candidate-preedit", true).assertDoesNotExist()
         run {

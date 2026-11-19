@@ -639,14 +639,14 @@ private fun LayoutDisplayPage(
                         SettingsToggleItem(Icons.TwoTone.DataObject, "显示拼音编辑栏", "打字时显示编码，支持编辑的方案可点按修改。",
                             showPreview, { showPreview = it; SettingsPreferences.setShowPreeditPreview(context, it) })
                         if (showPreview) {
-                            // 拼音位置三选一（11-19）：默认候选上方一行小字；原「拼音放在键盘内」开关并进来，开过的算「候选栏左侧」。
+                            // 拼音位置三选一（11-19）：默认照旧浮在键盘上方；紧贴候选的一行小字（微信那样）可选；原「拼音放在键盘内」开关并进来，开过的算「候选栏左侧」。
                             var preeditStyle by remember { mutableStateOf(SettingsPreferences.preeditStyle(context)) }
                             Column(Modifier.fillMaxWidth().settingsSearchAnchor("拼音位置", bleed = 16.dp, bleedVertical = 6.dp)
                                 .padding(horizontal = 16.dp, vertical = 8.dp)) {
                                 Text("拼音位置", style = MaterialTheme.typography.titleSmall)
                                 listOf(
-                                    Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "候选上方", "键盘内候选上方一行小字，纠错的读音也在这一行。"),
                                     Triple(SettingsPreferences.PREEDIT_STYLE_BUBBLE, "浮在键盘上方", "气泡浮在应用上，拼音长时也显示得全。"),
+                                    Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "紧贴候选上方", "键盘内紧贴候选的一行小字，纠错的读音也在这一行。"),
                                     Triple(SettingsPreferences.PREEDIT_STYLE_LEFT, "候选栏左侧", "和候选同一行，放在最左边。"),
                                 ).forEach { (style, label, description) ->
                                     Row(Modifier.fillMaxWidth().clickable { preeditStyle = style; SettingsPreferences.setPreeditStyle(context, style) }

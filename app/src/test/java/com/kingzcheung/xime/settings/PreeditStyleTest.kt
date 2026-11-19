@@ -11,7 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-/** 拼音位置（11-19）：没设过的用候选上方一行；老开关「拼音放在键盘内」亲手设过的照旧；纠错读音默认不在候选旁。 */
+/** 拼音位置（11-19）：没设过的照原来浮在键盘上方；老开关「拼音放在键盘内」亲手开过的照旧；纠错读音默认照旧在候选旁。 */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34], application = Application::class)
 class PreeditStyleTest {
@@ -20,8 +20,8 @@ class PreeditStyleTest {
 
     @Before fun clear() { prefs.edit().clear().commit() }
 
-    @Test fun unsetUsesTheTopLine() {
-        assertEquals(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.preeditStyle(app))
+    @Test fun unsetKeepsTheFloatingBubble() {
+        assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.preeditStyle(app))
         assertTrue("拼音编辑栏本身默认照旧打开", SettingsPreferences.showPreeditPreview(app))
     }
 
@@ -41,16 +41,17 @@ class PreeditStyleTest {
     }
 
     @Test fun resolveTable() {
-        assertEquals(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.resolvePreeditStyle(null, null))
+        assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.resolvePreeditStyle(null, null))
         assertEquals(SettingsPreferences.PREEDIT_STYLE_LEFT, SettingsPreferences.resolvePreeditStyle(null, true))
         assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.resolvePreeditStyle(null, false))
         assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.resolvePreeditStyle("bubble", true))
-        assertEquals(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.resolvePreeditStyle("x", null))
+        assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.resolvePreeditStyle("x", null))
+        assertEquals(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.resolvePreeditStyle("line", false))
     }
 
-    @Test fun correctionMarksBesideCandidatesDefaultOffSavedKept() {
-        assertFalse(SettingsPreferences.showCorrectionMarks(app))
-        SettingsPreferences.setShowCorrectionMarks(app, true)
+    @Test fun correctionMarksBesideCandidatesDefaultOnSavedKept() {
         assertTrue(SettingsPreferences.showCorrectionMarks(app))
+        SettingsPreferences.setShowCorrectionMarks(app, false)
+        assertFalse(SettingsPreferences.showCorrectionMarks(app))
     }
 }

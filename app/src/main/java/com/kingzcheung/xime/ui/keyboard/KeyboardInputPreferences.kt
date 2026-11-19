@@ -96,7 +96,7 @@ data class KeyboardInputPreferences(
     val showPreeditPreview: Boolean = true,
     val inputTextLocation: String = SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR,
     /** 「显示在候选栏」时拼音的位置，见 [SettingsPreferences.preeditStyle]。 */
-    val preeditStyle: String = SettingsPreferences.PREEDIT_STYLE_LINE,
+    val preeditStyle: String = SettingsPreferences.PREEDIT_STYLE_BUBBLE,
     /** 拼音气泡和拼音编辑条底色的不透明度，见 [SettingsPreferences.preeditBubbleOpacity]。 */
     val preeditBubbleOpacity: Float = SettingsPreferences.DEFAULT_PREEDIT_BUBBLE_OPACITY,
     val chineseLetterSwipes: Map<String, String> = emptyMap(),
@@ -263,7 +263,7 @@ data class KeyboardInputPreferences(
     val inlinePreeditPreview: Boolean get() = preeditStyle == SettingsPreferences.PREEDIT_STYLE_LEFT
     /** 拼音不浮出键盘（候选上方一行或候选栏左侧）：只在「显示在候选栏」下生效；切到输入框后留着的旧值不把气泡挤进栏里。 */
     internal val preeditInsideKeyboard: Boolean get() = showCodeInCandidateBar && preeditStyle != SettingsPreferences.PREEDIT_STYLE_BUBBLE
-    /** 拼音是候选上方的一行小字（默认）。 */
+    /** 拼音是紧贴候选上方的一行小字。 */
     internal val preeditOnTopLine: Boolean get() = showCodeInCandidateBar && preeditStyle == SettingsPreferences.PREEDIT_STYLE_LINE
     /** 删除键实际是否「上滑清空、下滑撤回」：跟「反转上下滑方向」走，「删除键单独反向」打开再对调一次。 */
     val deleteSwipeReversed: Boolean get() = reverseSymbolSwipe != reverseDeleteSwipe
