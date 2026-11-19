@@ -68,6 +68,7 @@ internal class ImePreeditEditor(private val service: XimeInputMethodService) {
             }
             var text = session.text
             var caret = (selection ?: session.caret).coerceIn(0, text.length)
+            if (selection != null && key == null && replacement == null) caret = snapDoublePinyin(session, caret, 0)
             // 14 键：与编辑缓冲逐字对齐的按键（合并键大写），删改时跟着改，送进引擎的是它而不是显示的读音。
             val merged14 = !session.isT9 && com.kingzcheung.xime.settings.InputProfiles.describe(session.schemaId).layout ==
                 com.kingzcheung.xime.settings.InputLayout.MERGED14
@@ -113,8 +114,11 @@ internal class ImePreeditEditor(private val service: XimeInputMethodService) {
                     else -> if (movement.startsWith("inline:")) {
                         val code = service.inlinePinyinText()
                             ?: service.candidateState.value.shownPreedit(service.uiState.value.inputProfile)
-                        movement.removePrefix("inline:").toIntOrNull()?.let { session.editOffset(code, it) } ?: caret
-                    } else (caret + (movement.toIntOrNull() ?: 0)).coerceIn(0, text.length)
+                        movement.removePrefix("inline:").toIntOrNull()?.let { session.editOffset(code, it) }
+                            ?.let { snapDoublePinyin(session, it, 0) } ?: caret
+                    } else (movement.toIntOrNull() ?: 0).let { step ->
+                        snapDoublePinyin(session, (caret + step).coerceIn(0, text.length), step.coerceIn(-1, 1))
+                    }
                 }
             } else if (key == "delete") {
                 if (caret > 0) { text = text.removeRange(caret - 1, caret); keys = keys?.removeRange(caret - 1, caret); caret-- }
@@ -194,6 +198,20 @@ internal class ImePreeditEditor(private val service: XimeInputMethodService) {
                 reply(next)
             }
         }
+    }
+
+    /**
+     * 双拼只挪光标时落到音节分界（[com.kingzcheung.xime.rime.snapDoublePinyinCaret]）。读音取引擎当前的，
+     * 去掉已经选好的字。别的方案原样返回。
+     */
+    private fun snapDoublePinyin(session: PinyinEditSession, caret: Int, direction: Int): Int {
+        if (session.isT9 || com.kingzcheung.xime.settings.InputProfiles.describe(session.schemaId).scheme !=
+            com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN) return caret
+        val snapshot = service.rimeEngine.readPinyinEditSnapshot()
+        val reading = snapshot.getOrNull(4).orEmpty().removePrefix(snapshot.getOrNull(3).orEmpty())
+            .removePrefix(session.protectedText).trim()
+        return com.kingzcheung.xime.rime.snapDoublePinyinCaret(session.text, reading,
+            com.kingzcheung.xime.settings.DoublePinyinSchemes.find(session.schemaId), caret, direction)
     }
 
     private fun t9Digit(c: Char): Char = when (c) {
