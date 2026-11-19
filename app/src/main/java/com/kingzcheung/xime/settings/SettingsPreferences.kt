@@ -527,8 +527,11 @@ object SettingsPreferences {
     const val INPUT_TEXT_CANDIDATE_BAR = "candidate_bar"
     const val DEFAULT_PAGE_SIZE = 20 // 手机候选栏每页候选词数；schema 里的 page_size 来自 PC 版（5），太短，默认用 20
 
-    /** 候选旁的纠错读音默认显示，和原来一样（11-19 改成默认关后用户要求默认照旧）；拼音在候选上方时读音也显示在那一行。存过的照旧。 */
-    fun showCorrectionMarks(context: Context): Boolean = getPrefs(context).getBoolean(KEY_SHOW_CORRECTION_MARKS, true)
+    /**
+     * 候选旁的纠错读音默认不显示（用户 11-19：「纠错也别显示了他屏幕就这么窄」）；纠错照常，拼音在候选上方一行时读音照样在那一行。
+     * 只改没存过时的默认，亲手开过或关过的照旧。11-19 拼音默认改回气泡时（e8e3dc48）把它一起改回了显示，那句只说拼音。
+     */
+    fun showCorrectionMarks(context: Context): Boolean = getPrefs(context).getBoolean(KEY_SHOW_CORRECTION_MARKS, false)
 
     fun setShowCorrectionMarks(context: Context, show: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_SHOW_CORRECTION_MARKS, show).apply()

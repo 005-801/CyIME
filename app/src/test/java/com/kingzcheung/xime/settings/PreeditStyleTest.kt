@@ -49,7 +49,10 @@ class PreeditStyleTest {
         assertEquals(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.resolvePreeditStyle("line", false))
     }
 
-    @Test fun correctionMarksBesideCandidatesDefaultOnSavedKept() {
+    /** 用户 11-19「纠错也别显示了」：没存过时默认不显示；亲手开过、关过的都照旧。 */
+    @Test fun correctionMarksBesideCandidatesDefaultOffSavedKept() {
+        assertFalse(SettingsPreferences.showCorrectionMarks(app))
+        SettingsPreferences.setShowCorrectionMarks(app, true)
         assertTrue(SettingsPreferences.showCorrectionMarks(app))
         SettingsPreferences.setShowCorrectionMarks(app, false)
         assertFalse(SettingsPreferences.showCorrectionMarks(app))
