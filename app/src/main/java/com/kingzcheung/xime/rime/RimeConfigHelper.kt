@@ -251,6 +251,8 @@ object RimeConfigHelper {
     internal fun isAppSchema(context: Context, id: String): Boolean =
         id in com.kingzcheung.xime.settings.ChineseSchemas.ids || id in com.kingzcheung.xime.settings.CyimeInputDefaults.recommended ||
             com.kingzcheung.xime.settings.DoublePinyinSchemes.isGenerated(id) ||
+            // 双拼停顿纠错索引（cyime_pause_*）等依赖方案也是 CyIME 生成的，不列进「导入方案的语言」。
+            com.kingzcheung.xime.settings.CyimeInputDefaults.isDependency(id) ||
             com.kingzcheung.xime.settings.CustomKeyboardLayouts.isCustom(id) || bundledSchemaIds(context).contains(id)
 
     @Volatile private var bundledSchemaIdsCache: Set<String>? = null
