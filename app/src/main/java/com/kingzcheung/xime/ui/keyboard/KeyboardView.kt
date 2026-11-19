@@ -138,12 +138,24 @@ internal const val DEPLOY_NOTICE_DELAY_MS = 600L
 
 /**
  * 首选上拖选改局部（PR #363）：26 键全拼和双拼都有（11-18 全拼也接上，原来只有双拼，全拼上找不到）；
- * 九键、14 键等其它方案照旧用长按首选里的拆词重选，两种入口不同时出现。
+ * 内置 14 键全拼、双拼也有（11-20：引擎按合并键编码对字，已能换词；按键换成合并键的大写代表字母，见 [sentenceEditKey]）。
+ * 九键、自建合并键布局等其它方案照旧用长按首选里的拆词重选，两种入口不同时出现。
  */
 internal fun usesSentenceDragEdit(profile: com.kingzcheung.xime.settings.InputProfile): Boolean =
     (profile.scheme == com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN ||
         profile.scheme == com.kingzcheung.xime.settings.InputScheme.PINYIN) &&
-        profile.layout.kind == com.kingzcheung.xime.settings.LayoutKind.ALPHABETIC
+        (profile.layout.kind == com.kingzcheung.xime.settings.LayoutKind.ALPHABETIC ||
+            profile.layout == com.kingzcheung.xime.settings.InputLayout.MERGED14)
+
+/**
+ * 拖选改局部时按下的键接到编码后面的样子；不是编码键时为 null。26 键是小写字母；内置 14 键的合并键（qw）
+ * 换成大写代表字母（Q），同打字时送给引擎的一样，l、m 和点选的单个字母照旧小写。
+ */
+internal fun sentenceEditKey(key: String, merged14: Boolean): String? = when {
+    com.kingzcheung.xime.rime.MergedLetterInput.isGroup(key, merged14) -> key.first().uppercase()
+    key.length == 1 && (key[0].lowercaseChar() in 'a'..'z' || key == ";" || key == "'") -> key.lowercase()
+    else -> null
+}
 
 /** Keep choices for the unconfirmed suffix when an earlier candidate is selected. */
 internal fun remainingSentenceSyllables(
@@ -871,6 +883,8 @@ fun KeyboardView(
             }
             callbacks.onPreeditKeyInput = if (sentenceEdit != null) ({ key ->
                 val owner = sentenceEdit
+                val typed = sentenceEditKey(key,
+                    state.inputProfile.layout == com.kingzcheung.xime.settings.InputLayout.MERGED14 && !state.isAsciiMode)
                 when {
                     owner == null -> false
                     sentenceApplying -> true
@@ -910,8 +924,8 @@ fun KeyboardView(
                         if (sentenceCode.isEmpty()) viewModel.setCandidatePageExpanded(false)
                         true
                     }
-                    key.length == 1 && (key[0].lowercaseChar() in 'a'..'z' || key == ";" || key == "'") -> {
-                        sentenceCode = (if (sentenceReplaceOnType) "" else sentenceCode) + key.lowercase()
+                    typed != null -> {
+                        sentenceCode = (if (sentenceReplaceOnType) "" else sentenceCode) + typed
                         sentenceJustSelected = false
                         sentenceReplaceOnType = false
                         sentenceWordCode = ""
