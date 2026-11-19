@@ -151,17 +151,19 @@ local function lookup_words(env, parts, from, to, limit, seen)
   for i = from, to do slice[#slice + 1] = parts[i] end
   local budget = #codes == 1 and SCAN_EXACT or math.max(SCAN_PER_CODE, math.floor(SCAN_EXACT / #codes))
   local found, taken = {}, {}
-  for _, code in ipairs(codes) do
-    if env.phrases:dict_lookup(code, false, 0) then
-      local scanned, kept = 0, 0
-      for entry in env.phrases:iter_dict() do
-        scanned = scanned + 1
-        if scanned > budget or kept >= limit then break end
-        local text = entry.text
-        if not taken[text] and not (seen and seen[text]) and matches(env, text, slice) then
-          taken[text] = true
-          kept = kept + 1
-          found[#found + 1] = { text = text, weight = entry.weight, order = #found }
+  for _, mem in ipairs(env.word_tables) do
+    for _, code in ipairs(codes) do
+      if mem:dict_lookup(code, false, 0) then
+        local scanned, kept = 0, 0
+        for entry in mem:iter_dict() do
+          scanned = scanned + 1
+          if scanned > budget or kept >= limit then break end
+          local text = entry.text
+          if not taken[text] and not (seen and seen[text]) and matches(env, text, slice) then
+            taken[text] = true
+            kept = kept + 1
+            found[#found + 1] = { text = text, weight = entry.weight, order = #found }
+          end
         end
       end
     end
@@ -467,6 +469,22 @@ function M.init(env)
 
   -- 内置分词打词用的词表与笔顺反查
   pcall(function() env.phrases = Memory(env.engine, Schema("stroke_phrase")) end)
+  -- 用户导入的词库（设置「导入词库」里选上的），应用词库时换成每字首笔写成 stroke_cells（StrokeCellDictionary.kt）。
+  -- 没导入时没有这个词表，只查内置的。导入的词权重低，同一编码下排在内置词后面。
+  env.word_tables = { env.phrases }
+  local config = env.engine.schema.config
+  local imported = false
+  pcall(function()
+    for i = 0, (config:get_list_size("schema/dependencies") or 0) - 1 do
+      if config:get_string("schema/dependencies/@" .. i) == "stroke_cells" then imported = true end
+    end
+  end)
+  if imported then
+    pcall(function()
+      local cells = Memory(env.engine, Schema("stroke_cells"))
+      if cells then env.word_tables[#env.word_tables + 1] = cells end
+    end)
+  end
   pcall(function() env.strokes = ReverseLookup("stroke") end)
   -- 补字与造词各用一个独立 Memory，互不干扰
   pcall(function() env.chars = Memory(env.engine, env.engine.schema) end)
@@ -485,6 +503,7 @@ function M.fini(env)
   if env.conn and env.conn.disconnect then pcall(env.conn.disconnect, env.conn) end
   env.conn = nil
   env.phrases, env.strokes, env.chars, env.mem = nil, nil, nil, nil
+  env.word_tables = nil
   env.codes = nil
   env.cache, env.cache_n = nil, nil
   env.learn_cache, env.learn_n = nil, nil
