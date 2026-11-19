@@ -514,7 +514,8 @@ private fun FollowWidthRow(symbol: String, checked: Boolean, tag: String, onChan
 }
 
 /**
- * 「整排输入」：三排键的上方、下方各一行字，一次改完一整排（格式见 [SymbolRowText]）。显示的那一边排在前面。
+ * 「整排输入」：三排键的上方、下方各一行字，一次改完一整排（格式见 [SymbolRowText]：一个字符一格，空格是空位）。
+ * 显示的那一边排在前面。每行下面照键盘排出这一行读成什么，多写、少写一眼看得出。
  */
 @Composable
 private fun SymbolRowsDialog(values: Map<String, String>, variant: CornerVariant, onDismiss: () -> Unit,
@@ -543,12 +544,14 @@ private fun SymbolRowsDialog(values: Map<String, String>, variant: CornerVariant
         title = { Text("整排输入") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("一个字符一格，从左到右对应这一排的键，空格写 ${SymbolRowText.EMPTY}。",
+                Text("一个字符一格，从左到右对应这一排的键；打空格就是空着的格子。几个字的短语用「」括起来算一格。",
                     style = MaterialTheme.typography.bodySmall)
-                for ((direction, directionName) in directions) rows.indices.forEach { index ->
-                    OutlinedTextField(value = drafts.getValue("$direction.$index"), onValueChange = { drafts["$direction.$index"] = it },
+                for ((direction, directionName) in directions) rows.forEachIndexed { index, row ->
+                    val text = drafts.getValue("$direction.$index")
+                    OutlinedTextField(value = text, onValueChange = { drafts["$direction.$index"] = it },
                         singleLine = true,
                         label = { Text("${names[index]} $directionName" + if (shown(direction)) "" else "（键盘上不显示）") },
+                        supportingText = { SymbolRowPreview(row, text) },
                         modifier = Modifier.fillMaxWidth().testTag("symbol-row:$direction.$index"))
                 }
             }
@@ -557,6 +560,27 @@ private fun SymbolRowsDialog(values: Map<String, String>, variant: CornerVariant
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } })
     if (leaving) UnsavedChangesDialog(onSave = { leaving = false; finish() }, onDiscard = { leaving = false; onDismiss() },
         onKeepEditing = { leaving = false })
+}
+
+/** 整排输入框下面：这一行读成哪个键放什么，空着的格子画个淡点；写多了说一声多出的不要。 */
+@Composable
+private fun SymbolRowPreview(row: List<String>, text: String) {
+    val cells = SymbolRowText.parse(text, row.size)
+    val extra = SymbolRowText.cellCount(text) - row.size
+    Column {
+        Row(Modifier.fillMaxWidth()) {
+            row.forEachIndexed { column, key ->
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(key.uppercase(), style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                    val cell = cells[column]
+                    Text(cell.ifEmpty { "·" }, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                        modifier = Modifier.alpha(if (cell.isEmpty()) 0.38f else 1f))
+                }
+            }
+        }
+        if (extra > 0) Text("多写了 $extra 格，最后 $extra 格不放", color = MaterialTheme.colorScheme.error)
+    }
 }
 
 @Composable
