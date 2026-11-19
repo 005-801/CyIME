@@ -34,7 +34,8 @@ class InputModesTest {
     @Test fun currentModeWinsAndRemovedModeFallsBackWithinItsLanguage() {
         val choices = InputModes.languageChoices(modes, "rime_ice",
             mapOf(InputLanguage.CHINESE to "t9_pinyin", InputLanguage.JAPANESE to "removed"))
-        assertEquals(listOf("rime_ice", "japanese", InputModes.ENGLISH), choices.map { it.schemaId })
+        // 语言菜单和别处同一个先后：中文、英文、日语（6eddc7c4）。
+        assertEquals(listOf("rime_ice", InputModes.ENGLISH, "japanese"), choices.map { it.schemaId })
     }
     @Test fun newJapaneseModesCanDeclareTheirLanguageWithoutChangingTheMenu() {
         val extra = SchemaInfo("kana_flick", "假名滑行", "", "", "", language = InputLanguage.JAPANESE)
