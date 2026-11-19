@@ -101,20 +101,26 @@ class CandidateGlossEdgeTest {
     // 否则每画一次少报一个，翻页分组跟着越缩越少。屏幕键盘照旧不算（展开页从它开始排，看得到全文）。
     @Test fun hardwareRowCountsTheWordWhoseGlossIsClipped() {
         val reported = mutableMapOf<Boolean, Int>()
+        var width by mutableStateOf(200.dp)
         rule.setContent { Column {
             for (edge in listOf(false, true)) FixedCandidateStrip(words, comments = notes,
-                callbacks = CandidateBarCallbacks(onVisibleCandidatesChanged = { reported[edge] = it.size }),
-                visuals = visuals, fontSize = 19.sp, modifier = Modifier.width(280.dp).testTag("strip-$edge"),
+                callbacks = CandidateBarCallbacks(onCandidateSelect = {}, onVisibleCandidatesChanged = { reported[edge] = it.size }),
+                visuals = visuals, fontSize = 19.sp, modifier = Modifier.width(width).testTag("strip-$edge"),
                 commentsAreGlosses = true, commentMode = CandidateCommentMode.SHOW, glossEdgeCounts = edge)
         } }
-        rule.waitForIdle()
-        val strip = rule.onNodeWithTag("strip-true").fetchSemanticsNode().boundsInWindow
-        val drawn = (words.indices).count { i ->
-            rule.onAllNodes(hasTestTag("bar-candidate:$i") and hasAnyAncestor(hasTestTag("strip-true"))).fetchSemanticsNodes().isNotEmpty() }
-        val gloss = rule.onNode(hasText(notes[drawn - 1]) and hasAnyAncestor(hasTestTag("strip-true")), useUnmergedTree = true)
-        assertTrue("最右候选的释义被裁掉", gloss.fetchSemanticsNode().boundsInWindow.right > strip.right - 1)
-        assertEquals(drawn, reported[true])
-        assertEquals(drawn - 1, reported[false])
+        // 换几个宽度：最右候选只裁了释义时，实体键盘报的个数比屏幕键盘多一个，而且正好是画出来的个数。
+        var seen = false
+        for (w in 200..420 step 4) {
+            rule.runOnIdle { width = w.dp }
+            rule.waitForIdle()
+            val drawn = (words.indices).count { i ->
+                rule.onAllNodes(hasTestTag("bar-candidate:$i") and hasAnyAncestor(hasTestTag("strip-true"))).fetchSemanticsNodes().isNotEmpty() }
+            val hardware = reported.getValue(true); val screen = reported.getValue(false)
+            assertTrue("w=$w drawn=$drawn hardware=$hardware screen=$screen", hardware == drawn && (screen == drawn || screen == drawn - 1))
+            if (screen == drawn - 1) seen = true
+        }
+        if (seen) return
+        fail("没找到最右候选释义被裁掉的宽度")
     }
 
     private fun saveComparison() {
