@@ -32,7 +32,7 @@ import java.io.File
 
 /** 11-19「每个都是一条可编辑删改重命名调整顺序的条目」：插件设置里的条目列表（AI 改写的提示词）。 */
 @RunWith(AndroidJUnit4::class)
-@Config(sdk = [34], application = Application::class, qualifiers = "w390dp-h800dp-xxhdpi")
+@Config(sdk = [34], application = Application::class, qualifiers = "w390dp-h800dp-hdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PluginEntryListEditorTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
@@ -88,10 +88,14 @@ class PluginEntryListEditorTest {
         show(defaults)
         save("plugin-entries-list")
         rule.onNodeWithTag("entry:1").performClick()
-        save("plugin-entries-edit", dialog = true)
+        // 在卡片里直接改，不弹框
+        rule.onNode(isDialog()).assertDoesNotExist()
+        rule.onNodeWithTag("entry-editor").assertExists()
+        save("plugin-entries-edit")
         rule.onNodeWithTag("entry-name").performTextReplacement("纠错")
         rule.onNodeWithTag("entry-text").performTextReplacement("只改错别字。")
-        rule.onNodeWithText("保存").performClick()
+        rule.onNodeWithText("保存").performScrollTo().performClick()
+        rule.onNodeWithTag("entry-editor").assertDoesNotExist()
         val fix = savedList().getJSONObject(1)
         assertEquals("纠错", fix.getString("name"))
         assertEquals("只改错别字。", fix.getString("text"))
@@ -101,11 +105,11 @@ class PluginEntryListEditorTest {
 
     @Test fun addPutsANewEntryAtTheEndWithoutId() {
         show(defaults)
-        rule.onNodeWithText("添加").performClick()
+        rule.onNodeWithText("添加").performScrollTo().performClick()
         rule.onNodeWithText("保存").assertIsNotEnabled()
         rule.onNodeWithTag("entry-name").performTextInput("日语")
         rule.onNodeWithTag("entry-text").performTextInput("把下面这段话翻译成日语。")
-        rule.onNodeWithText("保存").performClick()
+        rule.onNodeWithText("保存").performScrollTo().performClick()
         val list = savedList()
         assertEquals(7, list.length())
         assertEquals("日语", list.getJSONObject(6).getString("name"))
@@ -116,7 +120,7 @@ class PluginEntryListEditorTest {
     @Test fun deleteRemovesOnlyThatEntry() {
         show(defaults)
         rule.onNodeWithTag("entry:0").performClick()
-        rule.onNodeWithText("删除").performClick()
+        rule.onNodeWithText("删除").performScrollTo().performClick()
         assertEquals(listOf("改错字", "更正式", "更口语", "缩短", "翻译"), names(savedList()))
     }
 
@@ -146,8 +150,13 @@ class PluginEntryListEditorTest {
     private fun save(name: String, dialog: Boolean = false) {
         val out = System.getenv("CYIME_RENDER_OUT") ?: return
         rule.waitForIdle()
-        val node = if (dialog) rule.onNode(isDialog()) else rule.onAllNodes(isRoot())[0]
-        val bitmap = node.captureToImage().asAndroidBitmap()
-        File(out, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        // captureToImage 在 Robolectric 上等不到下一帧会超时：直接把窗口画进位图（弹框是最上面那个窗口）。
+        rule.runOnIdle {
+            val view = if (dialog) android.view.inspector.WindowInspector.getGlobalWindowViews().last()
+                else rule.activity.window.decorView
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            view.draw(android.graphics.Canvas(bitmap))
+            File(out, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }
     }
 }

@@ -46,8 +46,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * 插件设置里 type = "entries" 的字段（11-19，AI 改写的提示词）：一条一张卡片，点开改名字和内容、删除，
- * 长按拖动排序，下面「添加」「恢复默认」。存成 JSON 数组 `[{"name", "text", …}]`，宿主不认识的字段
+ * 插件设置里 type = "entries" 的字段（11-19，AI 改写的提示词）：一条一张卡片，点一下就在卡片里改名字和内容、
+ * 删除（不弹框），长按拖动排序，下面「添加」「恢复默认」。存成 JSON 数组 `[{"name", "text", …}]`，宿主不认识的字段
  * （插件自己的 id）原样带着走。
  */
 internal object PluginEntries {
@@ -91,7 +91,7 @@ internal fun PluginEntryListEditor(
         onChange(PluginEntries.encode(next))
     }
 
-    // 编辑中的条目：uid = -1 是新加的
+    // 正在卡片里编辑的条目（一次只开一条）：uid = -1 是新加的，编辑框接在列表最后
     var editing by remember { mutableStateOf<PluginEntries.Entry?>(null) }
     var confirmReset by remember { mutableStateOf(false) }
 
@@ -131,7 +131,15 @@ internal fun PluginEntryListEditor(
         }
         entries.forEachIndexed { index, entry -> key(entry.uid) {
             val active = dragging == entry.uid
-            Surface(
+            if (editing?.uid == entry.uid) EntryEditorCard(
+                initial = entry, placeholder = placeholder,
+                onSave = { name, text ->
+                    save(entries.map { if (it.uid == entry.uid) it.copy(name = name, text = text) else it })
+                    editing = null
+                },
+                onDelete = { save(entries.filter { it.uid != entry.uid }); editing = null },
+                onCancel = { editing = null },
+            ) else Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 modifier = Modifier.fillMaxWidth()
@@ -145,15 +153,18 @@ internal fun PluginEntryListEditor(
                         clip = true
                     }
                     .reorderOnLongPress(
-                        onStart = { beforeDrag = entries; dragging = entry.uid; dragOffset = 0f },
+                        // 编辑着的时候不拖（编辑框里长按是选字）
+                        onStart = { if (editing == null) { beforeDrag = entries; dragging = entry.uid; dragOffset = 0f } },
                         onDrag = ::dragBy,
                         onEnd = {
-                            dragging = null; dragOffset = 0f
-                            if (entries != beforeDrag) save(entries)
+                            if (dragging != null) {
+                                dragging = null; dragOffset = 0f
+                                if (entries != beforeDrag) save(entries)
+                            }
                         },
-                        onCancel = { dragging = null; dragOffset = 0f; entries = beforeDrag },
+                        onCancel = { if (dragging != null) { dragging = null; dragOffset = 0f; entries = beforeDrag } },
                     )
-                    .clickable { if (dragging == null) editing = entry },
+                    .clickable { if (dragging == null && editing == null) editing = entry },
             ) {
                 Row(Modifier.padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
@@ -173,8 +184,19 @@ internal fun PluginEntryListEditor(
                 }
             }
         } }
+        editing?.takeIf { it.uid < 0 }?.let { adding ->
+            EntryEditorCard(
+                initial = adding, placeholder = placeholder,
+                onSave = { name, text ->
+                    save(entries + PluginEntries.Entry(nextUid++, name, text))
+                    editing = null
+                },
+                onDelete = null,
+                onCancel = { editing = null },
+            )
+        }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { editing = PluginEntries.Entry(-1, "", "") }) {
+            OutlinedButton(onClick = { editing = PluginEntries.Entry(-1, "", "") }, enabled = editing == null) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("添加")
@@ -182,46 +204,6 @@ internal fun PluginEntryListEditor(
             Spacer(Modifier.weight(1f))
             if (defaultValue != null) TextButton(onClick = { confirmReset = true }) { Text("恢复默认") }
         }
-    }
-
-    editing?.let { original ->
-        var name by remember(original) { mutableStateOf(original.name) }
-        var text by remember(original) { mutableStateOf(original.text) }
-        val isNew = original.uid < 0
-        AlertDialog(
-            onDismissRequest = { editing = null },
-            title = { Text(if (isNew) "添加" else "编辑") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true,
-                        label = { Text("名字") }, placeholder = { Text("按钮上显示的字") },
-                        modifier = Modifier.fillMaxWidth().testTag("entry-name"))
-                    OutlinedTextField(value = text, onValueChange = { text = it }, minLines = 3, maxLines = 8,
-                        label = { Text("提示词") }, placeholder = placeholder?.let { { Text(it) } },
-                        modifier = Modifier.fillMaxWidth().testTag("entry-text"))
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val next = if (isNew) {
-                        entries + PluginEntries.Entry(nextUid++, name.trim(), text.trim())
-                    } else {
-                        entries.map { if (it.uid == original.uid) it.copy(name = name.trim(), text = text.trim()) else it }
-                    }
-                    save(next)
-                    editing = null
-                }, enabled = text.isNotBlank()) { Text("保存") }
-            },
-            dismissButton = {
-                Row {
-                    if (!isNew) TextButton(onClick = {
-                        save(entries.filter { it.uid != original.uid })
-                        editing = null
-                    }) { Text("删除", color = MaterialTheme.colorScheme.error) }
-                    TextButton(onClick = { editing = null }) { Text("取消") }
-                }
-            },
-        )
     }
 
     if (confirmReset && defaultValue != null) AlertDialog(
@@ -238,4 +220,40 @@ internal fun PluginEntryListEditor(
         },
         dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("取消") } },
     )
+}
+
+/** 卡片里的编辑框：名字、提示词，下面删除／取消／保存。提示词空着不能保存。 */
+@Composable
+private fun EntryEditorCard(
+    initial: PluginEntries.Entry,
+    placeholder: String?,
+    onSave: (name: String, text: String) -> Unit,
+    onDelete: (() -> Unit)?,
+    onCancel: () -> Unit,
+) {
+    var name by remember(initial.uid) { mutableStateOf(initial.name) }
+    var text by remember(initial.uid) { mutableStateOf(initial.text) }
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        modifier = Modifier.fillMaxWidth().testTag("entry-editor"),
+    ) {
+        Column(Modifier.padding(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true,
+                label = { Text("名字") }, placeholder = { Text("按钮上显示的字") },
+                modifier = Modifier.fillMaxWidth().testTag("entry-name"))
+            OutlinedTextField(value = text, onValueChange = { text = it }, minLines = 2, maxLines = 8,
+                label = { Text("提示词") }, placeholder = placeholder?.let { { Text(it) } },
+                modifier = Modifier.fillMaxWidth().testTag("entry-text"))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (onDelete != null) TextButton(onClick = onDelete) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onCancel) { Text("取消") }
+                TextButton(onClick = { onSave(name.trim(), text.trim()) }, enabled = text.isNotBlank()) { Text("保存") }
+            }
+        }
+    }
 }
