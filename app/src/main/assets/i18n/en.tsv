@@ -3974,3 +3974,10 @@ iOS 渐变	iOS gradient
 薰衣草紫	Lavender
 柔和蓝	Soft blue
 Language · 语言	Language · 语言
+添加	Add
+名字	Name
+提示词	Prompt
+按钮上显示的字	Text on the button
+一条也没有：点下面「添加」	Nothing here yet: tap "Add" below
+长按拖动排序	Long-press and drag to reorder
+现在的条目会换成默认的几条，自己加的和改过的都会去掉。	The list will be replaced by the defaults. Entries you added or changed will be removed.
