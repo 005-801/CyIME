@@ -2457,15 +2457,20 @@ settings-fold:语言键切换方式	=
 释义	Meanings
 拼音显示	Pinyin
 显示纠错标记	Show correction marks
-在纠错候选旁显示修正后的编码；关闭后仍可使用纠错候选。	Shows the corrected code next to correction candidates; when off, correction candidates are still available.
+在纠错候选旁显示修正后的编码；关闭后仍可使用纠错候选，拼音在候选上方时读音显示在那一行。	Shows the corrected code next to correction candidates; when off, correction candidates still work, and with pinyin above the candidates the reading shows in that line.
 编码显示	Code display
-选择输入编码的显示位置。「显示在候选栏」时编码在候选栏上方的拼音气泡里，打开下面的「拼音放在键盘内」就放进候选栏左侧。终端输入框在候选栏显示。	Choose where the typed code is shown. With “In candidate bar” it's in the pinyin bubble above the candidate bar; turn on “Pinyin inside the keyboard” below to put it at the left of the candidate bar. Terminal fields show it in the candidate bar.
+选择输入编码的显示位置。「显示在候选栏」时编码的位置在下面的「拼音位置」里选。终端输入框在候选栏显示。	Choose where the typed code is shown. With “In candidate bar”, pick its place under “Pinyin position” below. Terminal fields show it in the candidate bar.
 显示在输入框	In the text field
 显示在候选栏	In candidate bar
 显示拼音编辑栏	Show pinyin edit bar
-打字时在候选栏上方的气泡里显示编码（放在键盘内时在候选栏左侧），支持编辑的方案可点按修改。	While typing, shows the code in a bubble above the candidate bar (at its left when inside the keyboard); schemes that support editing can be tapped to change it.
-拼音放在键盘内	Pinyin inside the keyboard
-在候选栏左侧显示编码，给应用底部留出空间。	Shows the code at the left of the candidate bar, leaving room at the bottom of the app.
+打字时显示编码，支持编辑的方案可点按修改。	Shows the code while typing; schemes that support editing can be tapped to change it.
+拼音位置	Pinyin position
+候选上方	Above candidates
+键盘内候选上方一行小字，纠错的读音也在这一行。	A small line above the candidates inside the keyboard; corrected readings show there too.
+浮在键盘上方	Floating above the keyboard
+气泡浮在应用上，拼音长时也显示得全。	A bubble over the app that shows long pinyin in full.
+候选栏左侧	Left of the candidate bar
+和候选同一行，放在最左边。	On the candidate row, at the far left.
 拼音气泡不透明度：{0}%	Pinyin bubble opacity: {0}%
 键盘上方拼音气泡的底色。100% 是实底，后面有画面也看得清；调低更透。	Background of the pinyin bubble above the keyboard. 100% is solid and readable over anything; lower is more transparent.
 角标与长按	Hints & hold

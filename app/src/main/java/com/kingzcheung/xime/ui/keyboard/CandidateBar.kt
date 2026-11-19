@@ -457,6 +457,13 @@ fun CandidateBar(
     SideEffect { splitGap?.reportBarTop(if (splitGapX != null) barTopInWindow else null) }
     DisposableEffect(splitGap) { onDispose { splitGap?.reportBarTop(null) } }
 
+    // 拼音放在候选上方一行小字（默认，11-19 参照微信）：栏高 44dp 不变，上面让出一条细行，候选行压到剩下的高度。
+    // 候选字太大放不下这一行时（大字号或系统字体放大），退回候选栏左侧显示，拼音照样在键盘里。
+    val topLineHeight = (44.dp - maxOf(candidateItemHeight(candidateTextSize.sp), TOP_LINE_MIN_ROW)).coerceAtMost(TOP_LINE_MAX)
+    val topLineFits = topLineHeight >= TOP_LINE_MIN
+    val topLineMode = showPreeditPreview && previewPrefs.preeditOnTopLine && topLineFits && showInputTextRow && inlinePreeditEditor == null &&
+        (state is CandidateBarState.ChineseCandidates || state is CandidateBarState.AssociationOnly)
+    val candidateRowHeight = if (topLineMode) 44.dp - topLineHeight else 44.dp
     val cardTopCorner = LocalKeyboardCardTopCorner.current
     Column(
         modifier = modifier
@@ -480,11 +487,30 @@ fun CandidateBar(
             .padding(horizontal = horizontalPadding)
             // 玻璃太薄时字和图标垫反色光晕，宿主是黑是白都看得清（用户 10-31 黑色背景截图）。
             .glassTextHalo(textSurface?.halo),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = if (topLineMode) Arrangement.Top else Arrangement.Center,
     ) {
         PreeditBubbleHost(showPreedit && !previewPrefs.preeditInsideKeyboard) { hidden ->
             PreeditPreview(preeditText, protectedVisuals, onEditPreedit,
                 floatingPreeditColor(themeSurface, visuals.preeditBackgroundColor), hidden)
+        }
+        if (topLineMode) {
+            // 联想态（已上屏）这一行留空，候选行不跟着上下跳。
+            val highlighted = (state as? CandidateBarState.ChineseCandidates)?.let { it.candidates.getOrNull(it.highlightIndex) }
+            val corrected = highlighted?.let { LocalPreeditLineCorrections.current[it] }.orEmpty()
+            val lineColor = protectedVisuals.textColor.copy(alpha = 0.75f)
+            val lineSize = with(LocalDensity.current) { minOf((topLineHeight * 0.8f).toSp().value, 11f * LocalCandidateSizeFactor.current) }.sp
+            Box(Modifier.fillMaxWidth().height(topLineHeight)
+                .then(if (showPreedit && onEditPreedit != null) Modifier.clickable(onClickLabel = "编辑拼音", onClick = onEditPreedit) else Modifier)
+                .padding(horizontal = 4.dp).testTag("preedit-line"), contentAlignment = Alignment.BottomStart) {
+                if (showPreedit) Text(
+                    // 首选是纠错来的：这一行显示纠正后的读音，改动的字母标红（候选旁不再另标）。
+                    if (corrected.isNotEmpty()) correctionAnnotatedString(corrected, lineColor, LocalCorrectionFullScheme.current)
+                        else sentenceSelectionText(preeditText, LocalSentenceSelection.current.value, protectedVisuals.accentColor),
+                    color = lineColor, fontSize = lineSize, lineHeight = lineSize, maxLines = 1,
+                    // 长句只露出正在打的结尾。
+                    overflow = TextOverflow.StartEllipsis, softWrap = false,
+                    modifier = Modifier.testTag(if (corrected.isNotEmpty()) "preedit-line-correction" else "preedit-line-text"))
+            }
         }
 
         if (state is CandidateBarState.ClipboardDisplay) {
@@ -526,9 +552,11 @@ fun CandidateBar(
                 androidx.compose.ui.unit.lerp(edgeSlot ?: 40.dp, idleToolbarCell, blend)
             }
         }
+        androidx.compose.runtime.CompositionLocalProvider(LocalCandidateRowHeight provides candidateRowHeight) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (topLineMode) Modifier.height(candidateRowHeight) else Modifier)
                 .onSizeChanged { toolbarRowWidth = with(rowDensity) { it.width.toDp() } }
                 // 工具栏和候选互换（开始打字、上屏回到空闲）时新内容快速淡入，和键盘换页同一套；
                 // 只淡这一行的图标和字，不淡栏底色，候选从第一帧起就能点。
@@ -552,9 +580,10 @@ fun CandidateBar(
                 // 同上：点在「<」和第一个候选之间算点候选，不算取消输入（#274）。
                 Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
             }
-            if (inlinePreeditEditor != null && previewPrefs.showCodeInCandidateBar && previewPrefs.inlinePreeditPreview) {
+            if (inlinePreeditEditor != null && previewPrefs.preeditInsideKeyboard) {
                 Box(Modifier.width(minOf(240.dp, toolbarRowWidth * 0.42f))) { inlinePreeditEditor() }
-            } else if (showPreedit && previewPrefs.preeditInsideKeyboard) {
+            } else if (showPreedit && (previewPrefs.inlinePreeditPreview || previewPrefs.preeditOnTopLine && !topLineMode)) {
+                // 候选上方放不下（大字号）或空闲时的滑行预览：拼音放到候选栏左侧，照样在键盘里。
                 Box(Modifier.widthIn(max = minOf(108.dp, toolbarRowWidth * 0.32f)).height(44.dp)
                     .then(if (onEditPreedit == null) Modifier else Modifier.clickable(onClickLabel = "编辑拼音", onClick = onEditPreedit))
                     .padding(horizontal = 4.dp).testTag("inline-preedit"), contentAlignment = Alignment.CenterStart) {
@@ -844,6 +873,7 @@ fun CandidateBar(
                 }
             }
         }
+        }
     }
 }
 
@@ -1126,6 +1156,14 @@ internal fun candidateTwoLineTextStyle(primary: TextStyle, fontSize: androidx.co
 internal val LocalLearnedCandidates = androidx.compose.runtime.compositionLocalOf<Set<String>> { emptySet() }
 internal val LocalCorrectedCandidates = androidx.compose.runtime.compositionLocalOf<Map<String, String>> { emptyMap() }
 internal val LocalCorrectionFullScheme = androidx.compose.runtime.compositionLocalOf<com.kingzcheung.xime.settings.DoublePinyinScheme?> { null }
+/** 候选上方那行拼音用的纠错读音：不受「显示纠错标记」影响，由键盘根部提供。 */
+internal val LocalPreeditLineCorrections = androidx.compose.runtime.compositionLocalOf<Map<String, String>> { emptyMap() }
+/** 候选行的高度：拼音放在上方一行时比 44dp 矮，两行长候选按它收字号。 */
+internal val LocalCandidateRowHeight = androidx.compose.runtime.staticCompositionLocalOf { 44.dp }
+/** 候选上方拼音行：最高 12dp，低于 9dp 放不下就退回候选栏左侧；候选行至少留 32dp（两端按钮的高度）。 */
+private val TOP_LINE_MAX = 12.dp
+private val TOP_LINE_MIN = 9.dp
+private val TOP_LINE_MIN_ROW = 32.dp
 
 private val CorrectionRed = Color(0xFFE53935)
 
@@ -1198,7 +1236,7 @@ fun CandidateItem(
         modifier = modifier
             .then(if (interactive) Modifier.onGloballyPositioned {
                 CandidateDropTargets.shared.put(dropId, dragSpace.bounds(it)) { currentClick() } } else Modifier)
-            .height(if (fit?.twoLines == true) maxOf(candidateItemHeight(fontSize), CANDIDATE_TWO_LINE_HEIGHT)
+            .height(if (fit?.twoLines == true) maxOf(candidateItemHeight(fontSize), LocalCandidateRowHeight.current - 4.dp)
                 else candidateItemHeight(fontSize))
             .clip(RoundedCornerShape(5.dp))
             .background(
@@ -1721,9 +1759,6 @@ private class CandidateStripWindow(val split: CandidateWindowSplit, val complete
 class CandidateFit(val fontSize: androidx.compose.ui.unit.TextUnit, val twoLines: Boolean,
     val textWidth: Int, val totalWidth: Int)
 
-/** 两行长候选占的高度；候选栏 44dp，上下各留 2dp。 */
-private val CANDIDATE_TWO_LINE_HEIGHT = 40.dp
-
 /** 两行时的行高（字号的倍数）。 */
 private const val CANDIDATE_TWO_LINE_SPACING = 1.2f
 
@@ -1818,7 +1853,8 @@ internal fun FixedCandidateStrip(
         val learnedCandidates = LocalLearnedCandidates.current
         val correctedCandidates = shownCorrections(LocalCorrectedCandidates.current, commentsShown)
         val fullCorrectionScheme = LocalCorrectionFullScheme.current
-        val window = remember(viewport, all, candidates.size, shownComments, commentsAreGlosses, scrollable, focused, fontSize, density, measurer, textWidths, inheritedTextStyle, showNumberLabels, itemSpacing, itemPadding, constraints.maxWidth, AppFonts.candidateFontFamily, AppFonts.commentFontFamily, localGap, learnedCandidates, correctedCandidates, fullCorrectionScheme) {
+        val twoLineHeight = LocalCandidateRowHeight.current - 4.dp
+        val window = remember(twoLineHeight, viewport, all, candidates.size, shownComments, commentsAreGlosses, scrollable, focused, fontSize, density, measurer, textWidths, inheritedTextStyle, showNumberLabels, itemSpacing, itemPadding, constraints.maxWidth, AppFonts.candidateFontFamily, AppFonts.commentFontFamily, localGap, learnedCandidates, correctedCandidates, fullCorrectionScheme) {
             val bodyWidths = HashMap<Int, Int>()
             fun bodyWidth(index: Int): Int = bodyWidths.getOrPut(index) {
                 val numbered = index < candidates.size
@@ -1861,7 +1897,7 @@ internal fun FixedCandidateStrip(
                     size -= 0.5f
                 }
                 // 两行：字号取原字号 3/4，且两行要放进 40dp 高。两行还放不下就照旧一行，滑着看。
-                val twoLineCap = with(density) { ((CANDIDATE_TWO_LINE_HEIGHT - 4.dp) / (2 * CANDIDATE_TWO_LINE_SPACING)).toSp().value }
+                val twoLineCap = with(density) { ((twoLineHeight - 4.dp) / (2 * CANDIDATE_TWO_LINE_SPACING)).toSp().value }
                 val twoSize = (kotlin.math.floor(minOf(fontSize.value * CANDIDATE_SHRINK_FLOOR, twoLineCap) * 2f) / 2f).sp
                 val wrapped = measurer.measure(text, candidateTwoLineTextStyle(candidatePrimaryTextStyle(twoSize,
                     AppFonts.candidateFontFamily, index == focused), twoSize), maxLines = 2,

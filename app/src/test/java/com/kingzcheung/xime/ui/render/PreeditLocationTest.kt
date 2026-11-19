@@ -119,7 +119,18 @@ class PreeditLocationTest {
             assertEquals("刷新候选不能把正在编辑的光标拉回末尾", "正文".length + 3, editor.selectionStart)
         }
         location(SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR)
+        // 默认：拼音在键盘内候选上方一行，不浮气泡。
+        rule.onNodeWithTag("preedit-line-text", true).assertExists()
+        rule.onNodeWithTag("candidate-preedit", true).assertDoesNotExist()
+        run {
+            val line = rule.onNodeWithTag("preedit-line", true).fetchSemanticsNode().boundsInWindow
+            val keyboard = rule.onNodeWithTag("keyboard", true).fetchSemanticsNode().boundsInWindow
+            org.junit.Assert.assertTrue("拼音行必须在键盘内", keyboard.contains(line.center))
+        }
+        shot("candidate-line")
+        rule.runOnIdle { SettingsPreferences.setPreeditStyle(app, SettingsPreferences.PREEDIT_STYLE_BUBBLE) }
         rule.onNodeWithTag("candidate-preedit", true).assertExists()
+        rule.onNodeWithTag("preedit-line", true).assertDoesNotExist()
         rule.runOnIdle { assertEquals("正文", editor.text.toString()); SettingsPreferences.setInlinePreeditPreview(app, true) }
         rule.onNodeWithTag("inline-preedit", true).performClick()
         assertEquals(1, edits)

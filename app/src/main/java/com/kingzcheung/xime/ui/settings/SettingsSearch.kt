@@ -306,7 +306,7 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         SettingsSearchEntry("编码显示", candidates, candidatePage, "预编辑 输入框 候选栏 编码位置 拼音显示 拼音框 拼音浮框 拼音气泡"),
         SettingsSearchEntry("双拼编码显示全拼", candidates, candidatePage, "编码 显示 双拼键 原始按键 按键 字母 全拼 拼音 ul pb 小鹤 九键", section = "拼音显示"),
         SettingsSearchEntry("显示拼音编辑栏", candidates, candidatePage, "关闭 隐藏 顶部 拼音浮条 编码"),
-        SettingsSearchEntry("拼音放在键盘内", candidates, candidatePage, "候选栏内部 拼音 编辑 遮挡 底栏"),
+        SettingsSearchEntry("拼音位置", candidates, candidatePage, "拼音放在键盘内 候选上方 候选栏左侧 气泡 浮在上方 一行小字 微信 候选栏内部 拼音 编辑 遮挡 底栏 抢戏"),
         SettingsSearchEntry("拼音气泡不透明度", candidates, candidatePage, "拼音 气泡 透明度 不透明度 透明 看不清 实底 浮条"),
         SettingsSearchEntry("每页候选词数", candidates, candidatePage, "候选数量 分页 每页 个数"),
         // 外观 › 按键效果

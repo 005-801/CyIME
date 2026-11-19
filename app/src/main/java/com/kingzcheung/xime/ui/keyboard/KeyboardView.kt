@@ -1323,9 +1323,10 @@ fun KeyboardView(
                     onClose = { closePreeditEditor() },
                     onCaret = { editPreedit(caret = it) },
                     onReplace = { editPreedit(text = it) },
-                    preedit = candidateState.value.preeditText, inline = inputPreferences.inlinePreeditPreview)
+                    preedit = candidateState.value.preeditText, inline = inputPreferences.preeditInsideKeyboard)
             })
-            if (!inputPreferences.inlinePreeditPreview) drawPreeditEditor?.invoke()
+            // 拼音在键盘内（候选上方一行或候选栏左侧）时，点开的编辑条也放在候选栏里，不浮到应用上。
+            if (!inputPreferences.preeditInsideKeyboard) drawPreeditEditor?.invoke()
 
             // 候选栏与展开页共用：展开页从同一版本中实际显示的候选之后接着排。
             var visibleBarAssociations by remember(singleCharFilter) { mutableStateOf(emptyList<String>()) }
@@ -1465,18 +1466,20 @@ fun KeyboardView(
             val correctionScheme = remember(state.currentSchemaId) {
                 com.kingzcheung.xime.settings.DoublePinyinSchemes.find(state.currentSchemaId)
             }
-            val correctionMarks = remember(cs.correctedCandidates, correctionVisible, correctionScheme, doublePinyinKeysShown) {
+            // 候选上方那行拼音不管「显示纠错标记」开没开都显示首选的纠正读音；候选旁边的只在开着时显示。
+            val allCorrectionMarks = remember(cs.correctedCandidates, correctionScheme, doublePinyinKeysShown) {
                 when {
-                    !correctionVisible -> emptyMap()
                     correctionScheme == null || !doublePinyinKeysShown -> cs.correctedCandidates
                     else -> cs.correctedCandidates.mapValues { (_, marks) ->
                         com.kingzcheung.xime.rime.CorrectionMarks.doublePinyin(marks, correctionScheme)
                     }
                 }
             }
+            val correctionMarks = if (correctionVisible) allCorrectionMarks else emptyMap()
             androidx.compose.runtime.CompositionLocalProvider(
                 LocalLearnedCandidates provides cs.learnedCandidates,
                 LocalCorrectedCandidates provides correctionMarks,
+                LocalPreeditLineCorrections provides allCorrectionMarks,
                 LocalSentenceSelection provides sentenceDragOwnerState,
                 LocalSentenceCandidateHighlight provides sentenceEdit?.let { owner ->
                     val replacement = sentenceReplacement(owner)

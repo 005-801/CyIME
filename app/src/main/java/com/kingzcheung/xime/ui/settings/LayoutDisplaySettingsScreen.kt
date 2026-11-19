@@ -583,7 +583,7 @@ private fun LayoutDisplayPage(
                 SettingsSection(title = "拼音显示", content = {
                     var showCorrectionMarks by remember { mutableStateOf(SettingsPreferences.showCorrectionMarks(context)) }
                     SettingsToggleItem(Icons.TwoTone.Spellcheck, "显示纠错标记",
-                        "在纠错候选旁显示修正后的编码；关闭后仍可使用纠错候选。",
+                        "在纠错候选旁显示修正后的编码；关闭后仍可使用纠错候选，拼音在候选上方时读音显示在那一行。",
                         showCorrectionMarks, { showCorrectionMarks = it; SettingsPreferences.setShowCorrectionMarks(context, it) })
                     var inputTextLocation by remember {
                         mutableStateOf(SettingsPreferences.getInputTextLocation(context))
@@ -597,7 +597,7 @@ private fun LayoutDisplayPage(
                             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                         )
                         Text(
-                            text = "选择输入编码的显示位置。「显示在候选栏」时编码在候选栏上方的拼音气泡里，打开下面的「拼音放在键盘内」就放进候选栏左侧。终端输入框在候选栏显示。",
+                            text = "选择输入编码的显示位置。「显示在候选栏」时编码的位置在下面的「拼音位置」里选。终端输入框在候选栏显示。",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)
@@ -636,12 +636,31 @@ private fun LayoutDisplayPage(
                     DoublePinyinRawPreeditToggle()
                     if (inputTextLocation == SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR) {
                         var showPreview by remember { mutableStateOf(SettingsPreferences.showPreeditPreview(context)) }
-                        SettingsToggleItem(Icons.TwoTone.DataObject, "显示拼音编辑栏", "打字时在候选栏上方的气泡里显示编码（放在键盘内时在候选栏左侧），支持编辑的方案可点按修改。",
+                        SettingsToggleItem(Icons.TwoTone.DataObject, "显示拼音编辑栏", "打字时显示编码，支持编辑的方案可点按修改。",
                             showPreview, { showPreview = it; SettingsPreferences.setShowPreeditPreview(context, it) })
                         if (showPreview) {
-                            var insideKeyboard by remember { mutableStateOf(SettingsPreferences.inlinePreeditPreview(context)) }
-                            SettingsToggleItem(Icons.TwoTone.DashboardCustomize, "拼音放在键盘内", "在候选栏左侧显示编码，给应用底部留出空间。",
-                                insideKeyboard, { insideKeyboard = it; SettingsPreferences.setInlinePreeditPreview(context, it) })
+                            // 拼音位置三选一（11-19）：默认候选上方一行小字；原「拼音放在键盘内」开关并进来，开过的算「候选栏左侧」。
+                            var preeditStyle by remember { mutableStateOf(SettingsPreferences.preeditStyle(context)) }
+                            Column(Modifier.fillMaxWidth().settingsSearchAnchor("拼音位置", bleed = 16.dp, bleedVertical = 6.dp)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Text("拼音位置", style = MaterialTheme.typography.titleSmall)
+                                listOf(
+                                    Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "候选上方", "键盘内候选上方一行小字，纠错的读音也在这一行。"),
+                                    Triple(SettingsPreferences.PREEDIT_STYLE_BUBBLE, "浮在键盘上方", "气泡浮在应用上，拼音长时也显示得全。"),
+                                    Triple(SettingsPreferences.PREEDIT_STYLE_LEFT, "候选栏左侧", "和候选同一行，放在最左边。"),
+                                ).forEach { (style, label, description) ->
+                                    Row(Modifier.fillMaxWidth().clickable { preeditStyle = style; SettingsPreferences.setPreeditStyle(context, style) }
+                                        .testTag("preedit-style:$style").padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(selected = preeditStyle == style, onClick = null)
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(label, style = MaterialTheme.typography.bodyLarge)
+                                            Text(description, style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     // 拼音气泡底色可调透明（用户 11-01「我就喜欢透明度」）；点开的编辑条用同一个值（11-16）。只在键盘上方会浮出气泡时显示。

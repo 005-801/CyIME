@@ -481,9 +481,33 @@ object SettingsPreferences {
     fun showPreeditPreview(context: Context) = getPrefs(context).getBoolean(KEY_SHOW_PREEDIT_PREVIEW, true)
     fun setShowPreeditPreview(context: Context, show: Boolean) =
         getPrefs(context).edit().putBoolean(KEY_SHOW_PREEDIT_PREVIEW, show).apply()
-    fun inlinePreeditPreview(context: Context) = getPrefs(context).getBoolean(KEY_INLINE_PREEDIT_PREVIEW, false)
+    /**
+     * 「显示在候选栏」时拼音放哪（11-19，参照微信）：默认 [PREEDIT_STYLE_LINE] 键盘内候选上方一行小字，纠错读音也在这一行；
+     * 原来的浮在应用上的气泡、候选栏左侧两种照样可选。新键；没存过时看旧开关「拼音放在键盘内」：
+     * 亲手开过的算候选栏左侧，亲手关过的算气泡，都没动过的才用新默认。
+     */
+    const val KEY_PREEDIT_STYLE = "preedit_style"
+    const val PREEDIT_STYLE_LINE = "line"
+    const val PREEDIT_STYLE_BUBBLE = "bubble"
+    const val PREEDIT_STYLE_LEFT = "left"
+    private val PREEDIT_STYLES = setOf(PREEDIT_STYLE_LINE, PREEDIT_STYLE_BUBBLE, PREEDIT_STYLE_LEFT)
+    fun resolvePreeditStyle(saved: String?, legacyInline: Boolean?): String = when {
+        saved in PREEDIT_STYLES -> saved!!
+        legacyInline == true -> PREEDIT_STYLE_LEFT
+        legacyInline == false -> PREEDIT_STYLE_BUBBLE
+        else -> PREEDIT_STYLE_LINE
+    }
+    fun preeditStyle(context: Context): String {
+        val prefs = getPrefs(context)
+        return resolvePreeditStyle(prefs.getString(KEY_PREEDIT_STYLE, null),
+            if (prefs.contains(KEY_INLINE_PREEDIT_PREVIEW)) prefs.getBoolean(KEY_INLINE_PREEDIT_PREVIEW, false) else null)
+    }
+    fun setPreeditStyle(context: Context, style: String) {
+        if (style in PREEDIT_STYLES) getPrefs(context).edit().putString(KEY_PREEDIT_STYLE, style).apply()
+    }
+    fun inlinePreeditPreview(context: Context) = preeditStyle(context) == PREEDIT_STYLE_LEFT
     fun setInlinePreeditPreview(context: Context, inline: Boolean) =
-        getPrefs(context).edit().putBoolean(KEY_INLINE_PREEDIT_PREVIEW, inline).apply()
+        setPreeditStyle(context, if (inline) PREEDIT_STYLE_LEFT else PREEDIT_STYLE_BUBBLE)
     /**
      * 浮在应用上面的拼音气泡和点开后的拼音编辑条共用这一个底色不透明度：20%~100%，按 5% 一档。
      * 默认 80%：能隐约看到下面的应用，拼音照样清楚（用户 11-16：实底挡住下面，点拼音编辑又变透明，两样不统一）。
@@ -503,7 +527,8 @@ object SettingsPreferences {
     const val INPUT_TEXT_CANDIDATE_BAR = "candidate_bar"
     const val DEFAULT_PAGE_SIZE = 20 // 手机候选栏每页候选词数；schema 里的 page_size 来自 PC 版（5），太短，默认用 20
 
-    fun showCorrectionMarks(context: Context): Boolean = getPrefs(context).getBoolean(KEY_SHOW_CORRECTION_MARKS, true)
+    /** 候选旁的纠错读音默认不显示（11-19：长句时挤占候选栏）；纠错照常，读音改在候选上方那行拼音里显示。存过的照旧。 */
+    fun showCorrectionMarks(context: Context): Boolean = getPrefs(context).getBoolean(KEY_SHOW_CORRECTION_MARKS, false)
 
     fun setShowCorrectionMarks(context: Context, show: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_SHOW_CORRECTION_MARKS, show).apply()

@@ -95,7 +95,8 @@ data class KeyboardInputPreferences(
     val showPressBubble: Boolean = false,
     val showPreeditPreview: Boolean = true,
     val inputTextLocation: String = SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR,
-    val inlinePreeditPreview: Boolean = false,
+    /** 「显示在候选栏」时拼音的位置，见 [SettingsPreferences.preeditStyle]。 */
+    val preeditStyle: String = SettingsPreferences.PREEDIT_STYLE_LINE,
     /** 拼音气泡和拼音编辑条底色的不透明度，见 [SettingsPreferences.preeditBubbleOpacity]。 */
     val preeditBubbleOpacity: Float = SettingsPreferences.DEFAULT_PREEDIT_BUBBLE_OPACITY,
     val chineseLetterSwipes: Map<String, String> = emptyMap(),
@@ -258,8 +259,12 @@ data class KeyboardInputPreferences(
 ) {
     internal val showCodeInCandidateBar: Boolean get() = showPreeditPreview &&
         com.kingzcheung.xime.service.TerminalEditor.inputTextLocation { inputTextLocation } == SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR
-    /** 拼音放进候选栏左侧：只在「显示在候选栏」下生效；切到输入框后留着的旧值不把气泡挤进栏里。 */
-    internal val preeditInsideKeyboard: Boolean get() = showCodeInCandidateBar && inlinePreeditPreview
+    /** 拼音放在候选栏左侧。 */
+    val inlinePreeditPreview: Boolean get() = preeditStyle == SettingsPreferences.PREEDIT_STYLE_LEFT
+    /** 拼音不浮出键盘（候选上方一行或候选栏左侧）：只在「显示在候选栏」下生效；切到输入框后留着的旧值不把气泡挤进栏里。 */
+    internal val preeditInsideKeyboard: Boolean get() = showCodeInCandidateBar && preeditStyle != SettingsPreferences.PREEDIT_STYLE_BUBBLE
+    /** 拼音是候选上方的一行小字（默认）。 */
+    internal val preeditOnTopLine: Boolean get() = showCodeInCandidateBar && preeditStyle == SettingsPreferences.PREEDIT_STYLE_LINE
     /** 删除键实际是否「上滑清空、下滑撤回」：跟「反转上下滑方向」走，「删除键单独反向」打开再对调一次。 */
     val deleteSwipeReversed: Boolean get() = reverseSymbolSwipe != reverseDeleteSwipe
     /** 删除键上下滑清空、撤回的触发距离（dp）。 */
@@ -357,7 +362,7 @@ data class KeyboardInputPreferences(
         const val HIDE_FUNCTION_KEY_HINTS_KEY = "hide_function_key_hints"
         internal val watchedKeys: Set<String> by lazy {
             setOf(CORNER_SYMBOL_INPUT_KEY, KeyEffectPreferences.GLOW, KeyEffectPreferences.ANIMATION, SettingsPreferences.KEY_SHOW_PRESS_BUBBLE,
-                SettingsPreferences.KEY_SHOW_PREEDIT_PREVIEW, SettingsPreferences.KEY_INLINE_PREEDIT_PREVIEW, SettingsPreferences.KEY_INPUT_TEXT_LOCATION,
+                SettingsPreferences.KEY_SHOW_PREEDIT_PREVIEW, SettingsPreferences.KEY_INLINE_PREEDIT_PREVIEW, SettingsPreferences.KEY_PREEDIT_STYLE, SettingsPreferences.KEY_INPUT_TEXT_LOCATION,
                 SettingsPreferences.KEY_PREEDIT_BUBBLE_OPACITY,
                 com.kingzcheung.xime.settings.LetterSwipeBindings.CHINESE, com.kingzcheung.xime.settings.LetterSwipeBindings.ENGLISH,
                 SettingsPreferences.KEY_SPLIT_KEYBOARD, SettingsPreferences.KEY_SPLIT_RIGHT_G, SettingsPreferences.KEY_FILL_KEYBOARD_BLANK, SettingsPreferences.KEY_WIDE_KEYS, SettingsPreferences.KEY_EVEN_MERGED_KEYS, SettingsPreferences.KEY_NUMBER_ROW, SettingsPreferences.KEY_SPLIT_GAP_PORTRAIT, SettingsPreferences.KEY_SPLIT_GAP_LANDSCAPE, CHINESE_GLIDE_KEY, DELETE_CHINESE_GLIDE_CHARACTER_KEY, GLIDE_PREVIEW_KEY, ENGLISH_AUTO_SPACE_KEY, ENGLISH_PUNCTUATION_SPACE_KEY, EMAIL_SUFFIXES_KEY, ADDRESS_FIELDS_ENGLISH_KEY, SYMBOL_NAMES_KEY, GREEK_LETTERS_KEY, CYLM_LONG_ALTERNATIVE_KEY,
@@ -397,7 +402,7 @@ data class KeyboardInputPreferences(
                 showPressBubble = SettingsPreferences.shouldShowPressBubble(context),
                 showPreeditPreview = SettingsPreferences.showPreeditPreview(context),
                 inputTextLocation = SettingsPreferences.getInputTextLocation(context),
-                inlinePreeditPreview = SettingsPreferences.inlinePreeditPreview(context),
+                preeditStyle = SettingsPreferences.preeditStyle(context),
                 preeditBubbleOpacity = SettingsPreferences.preeditBubbleOpacity(context),
                 chineseLetterSwipes = com.kingzcheung.xime.settings.LetterSwipeBindings.load(context, false),
                 englishLetterSwipes = com.kingzcheung.xime.settings.LetterSwipeBindings.load(context, true),

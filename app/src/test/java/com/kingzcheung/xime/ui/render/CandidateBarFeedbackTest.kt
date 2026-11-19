@@ -72,7 +72,7 @@ class CandidateBarFeedbackTest {
         val preview = androidx.compose.runtime.mutableStateOf("ni hao")
         rule.setContent {
             CompositionLocalProvider(LocalKeyboardInputPreferences provides KeyboardInputPreferences(
-                inlinePreeditPreview = true,
+                preeditStyle = SettingsPreferences.PREEDIT_STYLE_LEFT,
                 inputTextLocation = if (candidateLocation.value) SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR
                     else SettingsPreferences.INPUT_TEXT_INPUT_BOX)) {
                 CandidateBar(state = CandidateBarState.Idle, glidePreviewText = preview.value,
