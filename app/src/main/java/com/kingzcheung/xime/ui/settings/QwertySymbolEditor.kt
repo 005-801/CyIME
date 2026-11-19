@@ -439,7 +439,11 @@ private fun KeySymbolDialog(key: String, up: String, down: String, topGesture: S
         ?.let { "现在是「${LetterSwipeBindings.label(it)}」，清掉下面的滑动动作才输入符号" }
     val upNote = shadowedBy(upperSlot)
     val downNote = shadowedBy(lowerSlot)
-    AlertDialog(onDismissRequest = onDismiss, modifier = Modifier.testTag("symbol-editor-dialog"),
+    fun finish() = onDone(upText, downText, swipeDraft, upFollows.takeIf { followUp != null }, downFollows.takeIf { followDown != null })
+    val changed = upText != up || downText != down || swipeDraft != swipes ||
+        (followUp != null && upFollows != (followUp == true)) || (followDown != null && downFollows != (followDown == true))
+    var leaving by remember(key) { mutableStateOf(false) }
+    AlertDialog(onDismissRequest = { if (changed) leaving = true else onDismiss() }, modifier = Modifier.testTag("symbol-editor-dialog"),
         title = { Text(key.uppercase()) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -460,10 +464,28 @@ private fun KeySymbolDialog(key: String, up: String, down: String, topGesture: S
                 }
             }
         },
-        confirmButton = { TextButton(onClick = {
-            onDone(upText, downText, swipeDraft, upFollows.takeIf { followUp != null }, downFollows.takeIf { followDown != null })
-        }) { Text("完成") } },
+        confirmButton = { TextButton(onClick = { finish() }) { Text("完成") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } })
+    if (leaving) UnsavedChangesDialog(onSave = { leaving = false; finish() }, onDiscard = { leaving = false; onDismiss() },
+        onKeepEditing = { leaving = false })
+}
+
+/**
+ * 小框里改了还没点「完成」时点了框外（比如顶部的页签）或返回：不直接关掉、丢掉改的字，先问一句
+ * （用户 11-19：改到一半切顶部语言，改的全没了）。点「取消」是明确不要，不问。
+ */
+@Composable
+internal fun UnsavedChangesDialog(onSave: () -> Unit, onDiscard: () -> Unit, onKeepEditing: () -> Unit) {
+    AlertDialog(onDismissRequest = onKeepEditing, modifier = Modifier.testTag("symbol-unsaved-dialog"),
+        title = { Text("改的还没保存") },
+        text = { Text("要保存这次的修改吗？") },
+        confirmButton = { TextButton(onClick = onSave, modifier = Modifier.testTag("symbol-unsaved-save")) { Text("保存") } },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDiscard, modifier = Modifier.testTag("symbol-unsaved-discard")) { Text("不保存") }
+                TextButton(onClick = onKeepEditing, modifier = Modifier.testTag("symbol-unsaved-keep")) { Text("接着改") }
+            }
+        })
 }
 
 /** 本页的开关一律是「标题 + 一行说明 + 右侧 Switch」的整行开关。 */
@@ -501,14 +523,23 @@ private fun SymbolRowsDialog(values: Map<String, String>, variant: CornerVariant
     val names = listOf("第一排 Q 到 P", "第二排 A 到 L", "第三排 Z 到 M")
     fun shown(direction: String) = if (direction == "up") variant.showsUp else variant.showsDown
     val directions = listOf("up" to "上方", "down" to "下方").sortedByDescending { shown(it.first) }
-    val drafts = remember {
-        mutableStateMapOf<String, String>().apply {
+    val initial = remember {
+        buildMap {
             for ((direction, _) in directions) rows.forEachIndexed { index, row ->
                 put("$direction.$index", SymbolRowText.format(row.map { values["$direction.$it"].orEmpty() }))
             }
         }
     }
-    AlertDialog(onDismissRequest = onDismiss, modifier = Modifier.testTag("symbol-rows-dialog"),
+    val drafts = remember { mutableStateMapOf<String, String>().apply { putAll(initial) } }
+    var leaving by remember { mutableStateOf(false) }
+    fun finish() = onDone(values + buildMap {
+        for ((direction, _) in directions) rows.forEachIndexed { index, row ->
+            SymbolRowText.parse(drafts.getValue("$direction.$index"), row.size)
+                .forEachIndexed { column, cell -> put("$direction.${row[column]}", cell) }
+        }
+    })
+    AlertDialog(onDismissRequest = { if (drafts.toMap() != initial) leaving = true else onDismiss() },
+        modifier = Modifier.testTag("symbol-rows-dialog"),
         title = { Text("整排输入") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -522,15 +553,10 @@ private fun SymbolRowsDialog(values: Map<String, String>, variant: CornerVariant
                 }
             }
         },
-        confirmButton = { TextButton(onClick = {
-            onDone(values + buildMap {
-                for ((direction, _) in directions) rows.forEachIndexed { index, row ->
-                    SymbolRowText.parse(drafts.getValue("$direction.$index"), row.size)
-                        .forEachIndexed { column, cell -> put("$direction.${row[column]}", cell) }
-                }
-            })
-        }) { Text("完成") } },
+        confirmButton = { TextButton(onClick = { finish() }) { Text("完成") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } })
+    if (leaving) UnsavedChangesDialog(onSave = { leaving = false; finish() }, onDiscard = { leaving = false; onDismiss() },
+        onKeepEditing = { leaving = false })
 }
 
 @Composable

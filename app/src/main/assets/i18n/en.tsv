@@ -3627,6 +3627,10 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 「字幕」把身边的人说的话实时变成大字，适合开会、上课或和听力不好的人交流。	“Captions” shows what people around you say in large text, in real time, for meetings, classes or talking with hard-of-hearing people.
 「智能联想」关着，这项不起作用。	“Smart prediction” is off, so this has no effect.
 一个字符一格，从左到右对应这一排的键，空格写 {0}。	One character per key, left to right; use {0} for an empty key.
+改的还没保存	Unsaved changes
+要保存这次的修改吗？	Save these changes?
+不保存	Discard
+接着改	Keep editing
 三行字母左右错开的方式	How the three letter rows are staggered
 上下滑动按键输入角标里的符号和数字	Swipe keys up or down to type their hint symbols and digits
 上滑出上角标，下滑出下角标，删除键也反过来	Swipe up for the top hint, down for the bottom one; Delete swipes are reversed too

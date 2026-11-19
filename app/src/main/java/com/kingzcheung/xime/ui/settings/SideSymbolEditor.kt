@@ -175,7 +175,17 @@ internal fun SideSymbolEditor(target: SideSymbolTarget, onResetReady: ((() -> Un
         val list = items(of)
         val adding = index >= list.size
         val canGrow = of.slots == null
-        AlertDialog(onDismissRequest = { editingKey = null }, modifier = Modifier.testTag("side-symbol-dialog"),
+        fun finish() {
+            editingKey = null
+            val value = draft.trim()
+            if (adding) { if (value.isNotEmpty()) save(of, list + value) }
+            else if (value != list[index]) save(of, list.toMutableList().also { it[index] = value })
+        }
+        // 框里改了字还没点「完成」就点了框外或返回：先问，不直接丢（用户 11-19）。
+        var leaving by remember(editingKey, index) { mutableStateOf(false) }
+        val changed = draft.trim() != (if (adding) "" else list[index])
+        AlertDialog(onDismissRequest = { if (changed) leaving = true else editingKey = null },
+            modifier = Modifier.testTag("side-symbol-dialog"),
             title = { Text(if (adding) "加一格" else if (targets.size > 1) "${of.label}第 ${index + 1} 格" else "第 ${index + 1} 格") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -198,13 +208,10 @@ internal fun SideSymbolEditor(target: SideSymbolTarget, onResetReady: ((() -> Un
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = {
-                editingKey = null
-                val value = draft.trim()
-                if (adding) { if (value.isNotEmpty()) save(of, list + value) }
-                else if (value != list[index]) save(of, list.toMutableList().also { it[index] = value })
-            }) { Text("完成") } },
+            confirmButton = { TextButton(onClick = { finish() }) { Text("完成") } },
             dismissButton = { TextButton(onClick = { editingKey = null }) { Text("取消") } })
+        if (leaving) UnsavedChangesDialog(onSave = { leaving = false; finish() },
+            onDiscard = { leaving = false; editingKey = null }, onKeepEditing = { leaving = false })
     }
 }
 
