@@ -1309,16 +1309,25 @@ fun CandidateItem(
             overflow = TextOverflow.Ellipsis,
         )
         if (learned) {
+            // 不占宽度：画在字的右上角外面、候选自己的留白里，候选之间的距离和没有角标时一样（用户 11-19：编辑按钮太宽）。
             androidx.compose.material3.Icon(
                 imageVector = androidx.compose.material.icons.Icons.Filled.Edit,
                 contentDescription = null,
                 tint = accentColor,
-                modifier = Modifier.align(Alignment.Top).size(with(LocalDensity.current) { learnedMarkSize(fontSize).toDp() })
+                modifier = Modifier.align(Alignment.Top)
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        // 角标比右边留白宽时往左挪进字的右上角一点，不超出候选（候选外面会被裁掉）。
+                        val shift = minOf(0, with(this) { horizontalPadding.roundToPx() } - placeable.width)
+                        layout(0, placeable.height) { placeable.place(shift, 0) }
+                    }
+                    .size(with(LocalDensity.current) { learnedMarkSize(fontSize).toDp() })
                     .testTag("candidate-learned:$index"),
             )
         }
         if (correction.isNotEmpty() || comment.isNotEmpty()) {
-            Spacer(modifier = Modifier.width(3.dp))
+            // 后面跟着注释时让出角标那一点，免得压到注释。
+            Spacer(modifier = Modifier.width(if (learned) learnedCommentGap(fontSize) else 3.dp))
             val commentColor = if (isSelected) selectedTextColor.copy(alpha = if (opaqueComment) 1f else 0.6f) else textColor.copy(alpha = if (opaqueComment) 1f else 0.5f)
             Text(
                 text = if (correction.isNotEmpty()) correctionAnnotatedString(correction, commentColor, LocalCorrectionFullScheme.current)
@@ -1336,9 +1345,13 @@ fun CandidateItem(
     }
 }
 
-/** 「打过的词」小图标的边长：画图标和量候选宽度共用，量少了最后一个候选会被挤到栏外。 */
+/** 「打过的词」小图标的边长（约四分之一字高）。图标不占宽度，只在后面有注释时让出 [learnedCommentGap]。 */
 internal fun learnedMarkSize(fontSize: androidx.compose.ui.unit.TextUnit): androidx.compose.ui.unit.TextUnit =
-    (fontSize.value * 0.45f).sp
+    (fontSize.value * 0.25f).sp
+
+/** 有角标的候选后面跟注释时，字和注释之间的空：角标宽再留 1dp。画和量候选宽度共用。 */
+internal fun learnedCommentGap(fontSize: androidx.compose.ui.unit.TextUnit): androidx.compose.ui.unit.Dp =
+    maxOf(3.dp, fontSize.value.dp * 0.25f + 1.dp)
 
 /** 候选后面那段小字：有纠错显示纠错，否则显示注释（和 [CandidateItem] 一致）。 */
 internal fun candidateSecondaryText(comment: String, correction: String,
@@ -1861,9 +1874,7 @@ internal fun FixedCandidateStrip(
                 val text = candidateNumberedText(all[index], index, showNumberLabels && numbered)
                 val primary = textWidths.of(text,
                     candidatePrimaryTextStyle(fontSize, AppFonts.candidateFontFamily, index == focused))
-                val learnedMark = if (numbered && all[index] in learnedCandidates)
-                    with(density) { learnedMarkSize(fontSize).toDp().roundToPx() } else 0
-                primary + learnedMark + with(density) { 2 * itemPadding.roundToPx() }
+                primary + with(density) { 2 * itemPadding.roundToPx() }
             }
             val fullWidths = HashMap<Int, Int>()
             fun widthAt(index: Int): Int = fullWidths.getOrPut(index) {
@@ -1871,7 +1882,8 @@ internal fun FixedCandidateStrip(
                     if (index < candidates.size) correctedCandidates[all[index]].orEmpty() else "", fullCorrectionScheme)
                 val secondary = if (secondaryText.isEmpty()) 0 else textWidths.of(secondaryText,
                     inheritedTextStyle.merge(TextStyle(fontSize = (fontSize.value * 11f / 19f).sp,
-                        fontWeight = FontWeight.Normal, fontFamily = AppFonts.commentFontFamily))) + with(density) { 3.dp.roundToPx() }
+                        fontWeight = FontWeight.Normal, fontFamily = AppFonts.commentFontFamily))) + with(density) {
+                        (if (index < candidates.size && all[index] in learnedCandidates) learnedCommentGap(fontSize) else 3.dp).roundToPx() }
                 bodyWidth(index) + secondary
             }
             // 纠错标记和拼音仍要完整。只有释义可以越过本段右边界。
