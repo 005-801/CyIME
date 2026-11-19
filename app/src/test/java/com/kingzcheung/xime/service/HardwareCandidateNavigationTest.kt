@@ -487,15 +487,18 @@ class HardwareCandidateNavigationTest {
     }
 
     // 用户 11-16：平板接蓝牙键盘输 yi，一行放得下 9 个，原来按 9、9、2 分组，第三组空一大片，每页循环。
+    // 11-19：第一组放满（不再先画满再缩，宽度不跳），最后两组平分。
     @Test fun aPageThatDoesNotDivideEvenlyIsSplitIntoEvenGroups() {
-        assertEquals(listOf(7, 7, 6), generateSequence(20) { it - hardwareWindowSize(it, 9) }
+        assertEquals(listOf(9, 6, 5), generateSequence(20) { it - hardwareWindowSize(it, 9) }
             .takeWhile { it > 0 }.map { hardwareWindowSize(it, 9) }.toList())
         assertEquals(10, hardwareWindowSize(20, 10))
         assertEquals(5, hardwareWindowSize(5, 9))
+        assertEquals(listOf(8, 8), generateSequence(16) { it - hardwareWindowSize(it, 10) }
+            .takeWhile { it > 0 }.map { hardwareWindowSize(it, 10) }.toList())
         val navigation = HardwareCandidateNavigation()
         navigation.reportShown(twentyCandidates.candidates.take(10), 9)
         val first = HardwareCandidateSnapshot(1, pinyin26, twentyCandidates, false, windowStep = navigation.step(twentyCandidates))
-        assertEquals((1..7).map { "候选$it" }, first.words)
+        assertEquals((1..9).map { "候选$it" }, first.words)
         val sizes = mutableListOf(first.words.size)
         while (navigation.moveWindow(twentyCandidates, 1)) {
             val start = navigation.windowStart(twentyCandidates)
@@ -504,7 +507,7 @@ class HardwareCandidateNavigationTest {
             sizes += shown.words.size
             navigation.reportShown(shown.words, shown.words.size)
         }
-        assertEquals(listOf(7, 7, 6), sizes)
+        assertEquals(listOf(9, 6, 5), sizes)
     }
 
     @Test fun anUnmeasuredRowKeepsTheNumberedTen() {

@@ -97,6 +97,26 @@ class CandidateGlossEdgeTest {
         rule.runOnIdle { assertEquals(1, picked) }
     }
 
+    // 用户 11-19：实体键盘开「拼音显示英文」只剩一个候选。最右的候选字放得下、只有释义被裁时，实体键盘也算它显示了，
+    // 否则每画一次少报一个，翻页分组跟着越缩越少。屏幕键盘照旧不算（展开页从它开始排，看得到全文）。
+    @Test fun hardwareRowCountsTheWordWhoseGlossIsClipped() {
+        val reported = mutableMapOf<Boolean, Int>()
+        rule.setContent { Column {
+            for (edge in listOf(false, true)) FixedCandidateStrip(words, comments = notes,
+                callbacks = CandidateBarCallbacks(onVisibleCandidatesChanged = { reported[edge] = it.size }),
+                visuals = visuals, fontSize = 19.sp, modifier = Modifier.width(280.dp).testTag("strip-$edge"),
+                commentsAreGlosses = true, commentMode = CandidateCommentMode.SHOW, glossEdgeCounts = edge)
+        } }
+        rule.waitForIdle()
+        val strip = rule.onNodeWithTag("strip-true").fetchSemanticsNode().boundsInWindow
+        val drawn = (words.indices).count { i ->
+            rule.onAllNodes(hasTestTag("bar-candidate:$i") and hasAnyAncestor(hasTestTag("strip-true"))).fetchSemanticsNodes().isNotEmpty() }
+        val gloss = rule.onNode(hasText(notes[drawn - 1]) and hasAnyAncestor(hasTestTag("strip-true")), useUnmergedTree = true)
+        assertTrue("最右候选的释义被裁掉", gloss.fetchSemanticsNode().boundsInWindow.right > strip.right - 1)
+        assertEquals(drawn, reported[true])
+        assertEquals(drawn - 1, reported[false])
+    }
+
     private fun saveComparison() {
         val out = System.getenv("CYIME_RENDER_OUT") ?: return
         val root = rule.activity.window.decorView

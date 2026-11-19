@@ -1802,6 +1802,11 @@ internal fun FixedCandidateStrip(
     /** 候选栏已按页面定好的注释显示方式（手写里「自动」按显示）；不传就按设置。 */
     commentMode: CandidateCommentMode? = null,
     commentsAreGlosses: Boolean = false,
+    /**
+     * 最右一个候选字放得下、只有释义被栏边裁掉时也算「显示了」（实体键盘按这个数分组翻页）。
+     * 不算的话每画一次少报一个，下一组少给一个，一路缩到只剩一个（用户 11-19：开「拼音显示英文」只剩一个候选）。
+     */
+    glossEdgeCounts: Boolean = false,
 ) {
     val measurer = rememberTextMeasurer()
     var stripOriginX by remember { mutableStateOf(Float.NaN) }
@@ -1945,7 +1950,10 @@ internal fun FixedCandidateStrip(
                 for (index in split.range) {
                     if (localGap != null && count == split.leftCount) available = constraints.maxWidth - localGap.second
                     val width = shownWidth(index)
-                    if (width > available) break
+                    if (width > available) {
+                        if (glossEdgeCounts && localGap == null && (glossBodyWidthAt?.invoke(index) ?: Int.MAX_VALUE) <= available) count++
+                        break
+                    }
                     available -= width + spacing
                     count++
                 }

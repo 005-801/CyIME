@@ -305,7 +305,7 @@ internal fun HardwareCandidateRow(
                 onVisibleCandidatesChanged = { visible -> if (visible.isNotEmpty()) reportShown?.invoke(shownWords, visible.size) }),
             fontSize = SettingsPreferences.getCandidateTextSize(context).sp,
             highlightIndex = highlightIndex, showNumberLabels = showNumberLabels, itemSpacing = 8.dp,
-            commentsAreGlosses = commentsAreGlosses,
+            commentsAreGlosses = commentsAreGlosses, glossEdgeCounts = true,
             modifier = Modifier.weight(1f).padding(vertical = 4.dp))
         if (candidates.isNotEmpty() && onPrevious != null && (hasPrevPage || highlightIndex > 0)) {
             KeyboardToolbarButton(onPrevious, Color.Transparent,
