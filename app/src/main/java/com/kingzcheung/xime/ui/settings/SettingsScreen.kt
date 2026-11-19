@@ -132,6 +132,7 @@ fun SettingsScreen(
         composable("languages") {
             LanguageSettingsContent(onBack = { navController.popBackStack() },
                 onOpenSchemaResources = { navController.navigate(SettingsRoutes.Schema) },
+                onImportSchema = { navController.navigate(SettingsRoutes.SchemaImport) },
                 onOpenDoublePinyin = { navController.navigate(SettingsRoutes.DoublePinyin) },
                 onOpenChineseInput = { navController.navigate(SettingsRoutes.ChineseInput) },
                 onOpenEnglishInput = { navController.navigate(SettingsRoutes.EnglishInput) })
@@ -152,6 +153,13 @@ fun SettingsScreen(
             SchemaSettingsContent(
                 onBack = leaveSchema,
                 onNavigateToRimeFileBrowser = { navController.navigate(SettingsRoutes.RimeFileBrowser) },
+            )
+        }
+        composable(SettingsRoutes.SchemaImport) {
+            SchemaSettingsContent(
+                onBack = { navController.popBackStack() },
+                onNavigateToRimeFileBrowser = { navController.navigate(SettingsRoutes.RimeFileBrowser) },
+                startImport = true,
             )
         }
         composable(

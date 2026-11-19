@@ -2360,9 +2360,9 @@ settings-fold:语言键切换方式	=
 {0}(自动)	{0} (auto)
 已改回未标注语言	Changed back to no language set
 已设为{0}，切到这个方案时生效	Set to {0}; takes effect when you switch to this scheme
-方案资源	Scheme resources
+选 Rime 方案文件或压缩包导入	Pick a Rime scheme file or archive to import
 已安装的方案	Installed schemes
-启用、停用和排序语言、方案与布局的组合，导入方案文件	Enable, disable and order combinations of language, scheme and layout; import scheme files
+启用、停用和排序语言、方案与布局的组合	Enable, disable and order combinations of language, scheme and layout
 小鹤、自然码、微软等 6 种内置双拼的键位，新建和修改自己的双拼方案	Key maps of 6 built-in Shuangpin schemes such as Xiaohe, Ziranma and Microsoft; create and edit your own
 输入设置	Input settings
 繁体、生僻字、拼音纠错、模糊音	Traditional, rare characters, pinyin correction, fuzzy pinyin
@@ -3013,7 +3013,7 @@ Rime 配置文件	Rime config files
 备份并更新	Back up and update
 已启用的输入组合	Enabled input combinations
 暂未启用任何方案	No schemes enabled yet
-长按可排序；语言和默认组合在「语言与方案」选择。	Hold to reorder; choose languages and default combinations in “Languages & schemes”.
+长按可在同一语言里排序；语言的先后和默认组合在「语言与方案」里改。	Hold to reorder within a language; change language order and default combinations in “Languages & schemes”.
 安装、启停方案后自动应用，不用再部署。	Changes apply automatically after installing or toggling schemes; no deploy needed.
 收起其他已安装方案	Hide other installed schemes
 其他已安装方案(高级)	Other installed schemes (advanced)

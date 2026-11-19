@@ -59,7 +59,9 @@ internal fun LayoutMenuManagement(initialLanguage: InputLanguage?, layoutStatus:
     val choices = LayoutMenuPreferences.observe(language)
     val layouts = choices.ordered(InputProfileSelection.layoutRow(group, all))
     val shown = choices.shown(layouts)
-    val languages = (all.map { it.profile.language } + language).distinct()
+    // 语言菜单和别处同一个先后：中文、英文、日语…（以前跟着方案顺序，日语会排到英文前面）。
+    val languageRank = remember(entries) { InputModes.languageRank(context) }
+    val languages = (all.map { it.profile.language } + language).distinct().sortedBy(languageRank)
     key(language) {
         val drag = rememberDragOrder(layouts.map { it.id }) { LayoutMenuPreferences.reorder(context, language, it) }
         val byId = layouts.associateBy { it.id }

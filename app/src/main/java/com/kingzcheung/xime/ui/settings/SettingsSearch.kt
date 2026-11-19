@@ -168,6 +168,7 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         SettingsSearchEntry("希腊字母", chinesePath, chinese, "希腊 希腊字母 西塔 派 圆周率 阿尔法 贝塔 伽马 德尔塔 兰姆达 西格玛 欧米伽 xita pi alpha theta 数学符号 物理符号"),
         page("中文输入", languages, chinese, "中文 拼音 繁体 生僻字 时间日期 表情 符号名 希腊字母 纠错 模糊音 候选"),
         page("英文输入", languages, english, "英文 英语 网址 邮箱 自动空格 空格 邮箱后缀 西班牙语"),
+        SettingsSearchEntry("导入方案", languages, "languages", "导入 导入方案 rime 方案文件 压缩包 zip yaml 外部方案 第三方方案 自定义方案 万象 雾凇 白霜 怎么导入 导入在哪"),
         page("已安装的方案", languages, SettingsRoutes.Schema, "下载 导入 启停 方案 部署 输入资源 排序 方案资源 启用14键 中文14键"),
         page("双拼方案", languages, SettingsRoutes.DoublePinyin, "双拼 自定义双拼 首道双拼 小鹤双拼 自然码 智能ABC 拼音加加 微软双拼 分号 九键双拼 14键双拼 键位 韵母 零声母 新建 编辑 小鹤14 小鹤14键 双拼14键"),
         SettingsSearchEntry("双拼键位提示", theme, SettingsRoutes.Theme, "双拼 键位 提示 键位图 记不住 韵母 声母 显示 键盘上 主题 双拼主题 小鹤 自然码 角标 一起显示 和角标一起显示", section = "角标与气泡"),

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.twotone.ViewModule
 import androidx.compose.material.icons.twotone.Inventory
 import androidx.compose.material.icons.twotone.Translate
 import androidx.compose.material.icons.twotone.Abc
+import androidx.compose.material.icons.twotone.Download
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExpandMore
@@ -38,7 +39,8 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDoublePinyin: () -> Unit = {},
-    onOpenChineseInput: () -> Unit = {}, onOpenEnglishInput: () -> Unit = {}, onBack: () -> Unit) {
+    onOpenChineseInput: () -> Unit = {}, onOpenEnglishInput: () -> Unit = {}, onImportSchema: () -> Unit = {},
+    onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var languages by remember { mutableStateOf(LanguagePreferences.enabled(context)) }
@@ -178,6 +180,18 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
                     }
                 }
             }
+            // 页面从上往下按做事的先后（用户 11-19：顺序诡异、找不到导入方案）：
+            // 语言 → 方案（导入、已安装、双拼）→ 导入方案的语言 → 输入设置（中文、英文、语言键）。
+            item(key = "schema-resources") {
+                SettingsSection(title = "方案") {
+                    SettingsItem(Icons.TwoTone.Download, "导入方案", "选 Rime 方案文件或压缩包导入",
+                        onClick = onImportSchema, showArrow = true)
+                    SettingsItem(Icons.TwoTone.Inventory, "已安装的方案",
+                        "启用、停用和排序语言、方案与布局的组合", onClick = onOpenSchemaResources, showArrow = true)
+                    SettingsItem(Icons.TwoTone.ViewModule, "双拼方案",
+                        "小鹤、自然码、微软等 6 种内置双拼的键位，新建和修改自己的双拼方案", onClick = onOpenDoublePinyin, showArrow = true)
+                }
+            }
             // 没写语言的导入方案（声笔等，GitHub #86）：在这里选一次语言，字母布局、语音、手写跟着走。
             val unlabeled = profilesState.allSchemas.filter { it.languageAssignable }
             if (unlabeled.isNotEmpty()) item(key = "imported-schema-language") {
@@ -203,18 +217,6 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
                     }, onDismiss = { picking = null })
                 }
             }
-            // 已装的方案组合（启停、排序、应用更改）和导入，原首页「输入资源」。
-            item(key = "schema-resources") {
-                SettingsSection(title = "方案资源") {
-                    SettingsItem(Icons.TwoTone.Inventory, "已安装的方案",
-                        "启用、停用和排序语言、方案与布局的组合，导入方案文件", onClick = onOpenSchemaResources, showArrow = true)
-                    SettingsItem(Icons.TwoTone.ViewModule, "双拼方案",
-                        "小鹤、自然码、微软等 6 种内置双拼的键位，新建和修改自己的双拼方案", onClick = onOpenDoublePinyin, showArrow = true)
-                }
-            }
-            item(key = "language-key-switch") {
-                LanguageKeySwitchSettings(availableProfiles, orderedLanguages, profilesState.currentSchema)
-            }
             // 中文输出、拼音纠错、模糊音和英文输入 11-02 各收进一页（原样搬过去，名字和存的值不变），这页只留入口。
             item(key = "input-settings") {
                 SettingsSection(title = "输入设置") {
@@ -223,6 +225,10 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
                     SettingsItem(Icons.TwoTone.Abc, "英文输入", "自动切英文、自动加空格、邮箱后缀",
                         onClick = onOpenEnglishInput, showArrow = true)
                 }
+            }
+            // 语言键切换方式放在输入设置后面收尾，不再夹在方案和输入设置中间。
+            item(key = "language-key-switch") {
+                LanguageKeySwitchSettings(availableProfiles, orderedLanguages, profilesState.currentSchema)
             }
             item { if (message.isNotEmpty()) Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             item { Spacer(Modifier.height(16.dp)) }

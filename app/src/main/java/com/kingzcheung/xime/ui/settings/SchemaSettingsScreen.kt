@@ -57,6 +57,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.compositeOver
@@ -89,6 +90,8 @@ import com.kingzcheung.xime.ui.menubar.dragOrderItem
 fun SchemaSettingsContent(
     onBack: () -> Unit,
     onNavigateToRimeFileBrowser: () -> Unit = {},
+    /** 从「语言与方案 › 导入方案」进来：打开页面就接着选文件（用户 11-19：找不到怎么导入）。 */
+    startImport: Boolean = false,
 ) {
     val context = LocalContext.current
     val viewModel: SchemaSettingsViewModel = viewModel()
@@ -211,6 +214,14 @@ fun SchemaSettingsContent(
             showImportWarning = true
         }
     }
+    // 只在刚进来时开一次；选完文件回到这页、转屏都不再弹。
+    var startImportHandled by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(startImport) {
+        if (startImport && !startImportHandled) {
+            startImportHandled = true
+            requireImportWarning { importLauncher.launch(arrayOf("*/*")) }
+        }
+    }
 
     LaunchedEffect(uiState.toastMessage) {
         uiState.toastMessage?.let { message ->
@@ -291,9 +302,13 @@ fun SchemaSettingsContent(
                 orderedInstalledModeIds(context, uiState.allSchemas)
             }
             val enabledIds = uiState.enabledSchemas.toSet()
+            // 按语言分组，语言的先后和「语言与方案」一样（中文、英文、日语…）；同一语言里照旧按拖动的顺序。
+            val languageRank = remember(modeOrderRevision) { InputModes.languageRank(context) }
+            fun rankOf(id: String) = languageRank(if (id == InputModes.ENGLISH) InputLanguage.ENGLISH
+                else schemaById[id]?.toSchemaInfo()?.profile?.language ?: InputLanguage.UNSPECIFIED)
             val savedEnabledIds = fullOrder.filter { id ->
                 (id == InputModes.ENGLISH && englishEnabled) || (id in enabledIds && id in schemaById)
-            }
+            }.sortedBy(::rankOf)
             val dragOrder = rememberDragOrder(savedEnabledIds) { reordered ->
                 if (reorderEnabledModes(context, uiState.allSchemas, enabledIds, englishEnabled, reordered)) modeOrderRevision++
             }
@@ -367,7 +382,7 @@ fun SchemaSettingsContent(
                 }
 
                 item {
-                    SettingsNote("长按可排序；语言和默认组合在「语言与方案」选择。",
+                    SettingsNote("长按可在同一语言里排序；语言的先后和默认组合在「语言与方案」里改。",
                         Modifier.padding(top = 4.dp), jumps = listOf("语言与方案"))
                     SettingsNote("安装、启停方案后自动应用，不用再部署。")
                     Spacer(modifier = Modifier.height(8.dp))
@@ -375,7 +390,7 @@ fun SchemaSettingsContent(
 
                 // 关着的方案：常用的（14 键、双拼）一直列出；其余收在「其他已安装方案（高级）」里，折叠行写明有几个、带展开箭头。
                 // 以前按收起后的列表判断，收起时写「没有其他可用方案」，点开却是一长串（用户 10-31）。
-                val disabledAll = visibleSchemas.filter { it.schemaId !in uiState.enabledSchemas }
+                val disabledAll = visibleSchemas.filter { it.schemaId !in uiState.enabledSchemas }.sortedBy { rankOf(it.schemaId) }
                 val listedOff = disabledAll.filter { it.schemaId in com.kingzcheung.xime.settings.CyimeInputDefaults.listedWhenOff }
                 val extraOff = disabledAll.filterNot { it.schemaId in com.kingzcheung.xime.settings.CyimeInputDefaults.listedWhenOff }
 

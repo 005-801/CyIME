@@ -45,6 +45,14 @@ class SettingsSearchTest {
         assertEquals(SettingsRoutes.ChineseInput, settingsJumpEntry("语言与方案 › 中文输入")?.target)
     }
 
+    /** 用户 11-19：找不到怎么导入 Rime 方案。搜「导入方案」「rime」直接到语言与方案页的那一行。 */
+    @Test fun importSchemeIsFoundOnTheLanguagePage() {
+        for (q in listOf("导入方案", "rime", "怎么导入")) {
+            val entry = searchSettings(q).first { it.title == "导入方案" }
+            assertEquals(q, "languages", entry.target)
+        }
+    }
+
     @Test fun titleMatchesComeFirst() {
         assertEquals("拂动选字母", titles("拂动").first())
     }
