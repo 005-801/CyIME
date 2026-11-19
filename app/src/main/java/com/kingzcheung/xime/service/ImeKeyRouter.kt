@@ -3352,7 +3352,22 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         postRimeJob("reselect") { reselectSentenceWordAsync(words, target, snapshot) }
     }
 
-    private suspend fun reselectSentenceWordAsync(words: List<String>, target: Int, snapshot: CandidateState) {
+    /**
+     * 九键首选上拖选了第 [start] 到 [end] 个字：从拖选开头所在的词起重选，光标放到拖选最后一个字后面
+     * （见 [com.kingzcheung.xime.rime.t9DragReselect]）。首选已经变了时不做。
+     */
+    internal fun reselectSentenceRange(sentence: String, start: Int, end: Int) {
+        val snapshot = service.candidateState.value
+        if (snapshot.candidates.firstOrNull() != sentence) return
+        postRimeJob("reselect") {
+            val words = service.rimeEngine.firstSentenceWords(sentence) ?: listOf(sentence)
+            val reading = service.rimeEngine.candidateReading(sentence).orEmpty()
+            val (target, keys) = com.kingzcheung.xime.rime.t9DragReselect(words, reading, start, end) ?: return@postRimeJob
+            reselectSentenceWordAsync(words, target, snapshot, keys)
+        }
+    }
+
+    private suspend fun reselectSentenceWordAsync(words: List<String>, target: Int, snapshot: CandidateState, t9Keys: Int = -1) {
         if (usesDirectFieldInput || hasPendingCandidateCommit) return
         if (!snapshot.hasSameSelectionSource(service.candidateState.value) ||
             !service.rimeEngine.isCandidateRevisionCurrent(snapshot.engineRevision)) return
@@ -3385,7 +3400,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         }
         val doublePinyin = com.kingzcheung.xime.settings.InputProfiles.describe(schema).scheme ==
             com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN
-        val result = service.rimeEngine.placeT9CaretAfterWord(words[target], doublePinyin)
+        val result = if (t9Keys > 0) service.rimeEngine.placeT9CaretAfterKeys(t9Keys, doublePinyin)
+            else service.rimeEngine.placeT9CaretAfterWord(words[target], doublePinyin)
         withEditor {
             service.keyboardCallbacks?.onT9RefreshAfterPreeditEdit?.invoke()
             if (result != null) service.sessionController.updateUIWithResult(result)

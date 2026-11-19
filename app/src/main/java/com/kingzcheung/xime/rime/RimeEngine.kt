@@ -1822,6 +1822,19 @@ class RimeEngine {
         true
     }
 
+    /**
+     * 九键拖选重选：前面的词已由九键选词选定后，把光标放到前 [keys] 个数字键后面（拖选的最后一个字后面）。
+     * 双拼九键的注释是全拼、和数字键数对不上，不挪光标；[keys] 不在剩下的数字里面时也不挪。
+     */
+    internal fun placeT9CaretAfterKeys(keys: Int, doublePinyin: Boolean): RimeProcessResult? = editPinyinAndReadState {
+        if (!isInitialized || !nativeHasSession() || nativeIsMaintaining() || nativeIsAsciiMode() || doublePinyin)
+            return@editPinyinAndReadState false
+        val input = nativeGetInput().orEmpty()
+        if (keys <= 0 || keys >= codeKeysBefore(input, input.length)) return@editPinyinAndReadState true
+        placeT9CodeCaret(keys, input)
+        true
+    }
+
     /** 光标挪到 [word] 后面；挪过去后候选里没有 [word]（对不上）就放回末尾 [inputEnd]。须在锁内调用。 */
     private inline fun placeCaretAfterWord(word: String, inputEnd: Int, end: (Triple<Int, String, Int>) -> Int) {
         val span = candidateSpan(word) ?: return

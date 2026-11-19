@@ -148,6 +148,15 @@ internal fun usesSentenceDragEdit(profile: com.kingzcheung.xime.settings.InputPr
             profile.layout == com.kingzcheung.xime.settings.InputLayout.MERGED14)
 
 /**
+ * 九键全拼首选上的拖选（11-20）：九键的引擎处理器全进程只有一个，开不了隔离会话列词，所以不开改局部的面板，
+ * 而是走长按拆词已有的九键重选：从拖选开头所在的词起重选，光标放到拖选最后一个字后面，候选栏就只给这几个字。
+ * 和 26 键一样，有了拖选就不再出长按拆词。九键双拼的注释是全拼、对不上数字键数，不打开。
+ */
+internal fun usesT9DragReselect(profile: com.kingzcheung.xime.settings.InputProfile): Boolean =
+    profile.scheme == com.kingzcheung.xime.settings.InputScheme.PINYIN &&
+        profile.layout.kind == com.kingzcheung.xime.settings.LayoutKind.T9
+
+/**
  * 拖选改局部时按下的键接到编码后面的样子；不是编码键时为 null。26 键是小写字母；内置 14 键的合并键（qw）
  * 换成大写代表字母（Q），同打字时送给引擎的一样，l、m 和点选的单个字母照旧小写。
  */
@@ -1659,6 +1668,12 @@ fun KeyboardView(
                                 android.widget.Toast.makeText(quickContext, "这句话暂时无法按字对应编码", android.widget.Toast.LENGTH_SHORT).show()
                             }
                         }
+                    } else if (sentenceEdit == null && !showHandwritingCandidates && !glossSwap && !state.isAsciiMode &&
+                        usesT9DragReselect(state.inputProfile) && callbacks.onReselectSentenceRange != null &&
+                        !expandedDataMode && (cs.candidates.firstOrNull()?.length ?: 0) >= 2) { start, end ->
+                        val sentence = cs.candidates.firstOrNull()
+                        if (sentence != null && callbacks.isCandidateSnapshotCurrent(cs))
+                            callbacks.onReselectSentenceRange?.invoke(sentence, start, end)
                     } else null,
                     onClearAssociation = {
                         toolbarFeedback()
@@ -3037,7 +3052,7 @@ private class SentenceParts(val words: List<String>, val reselect: (Int) -> Unit
 private fun sentenceParts(callbacks: KeyboardCallbacks, cs: com.kingzcheung.xime.service.CandidateState,
     word: String, first: Boolean, profile: com.kingzcheung.xime.settings.InputProfile): SentenceParts? {
     val reselect = callbacks.onReselectSentenceWord ?: return null
-    if (usesSentenceDragEdit(profile)) return null
+    if (usesSentenceDragEdit(profile) || usesT9DragReselect(profile)) return null
     if (!first || !cs.isComposing || cs.candidates.firstOrNull() != word) return null
     val words = callbacks.sentenceWords(word)?.takeIf { it.size >= 2 } ?: return null
     return SentenceParts(words) { target ->
