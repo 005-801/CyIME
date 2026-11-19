@@ -5057,14 +5057,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val ic = currentInputConnection ?: return
         val value = runCatching { ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest().apply {
             hintMaxChars = code.length * 2 + 2
-        }, 0) }.getOrNull() ?: return
-        val content = value.text ?: return
-        val sel = value.selectionStart
-        if (value.startOffset < 0 || sel !in 0..content.length || sel != value.selectionEnd) return
-        val start = sel - inlineComposition.caret
-        if (start < 0 || start + code.length > content.length ||
-            content.subSequence(start, start + code.length).toString() != code) return
-        val position = value.startOffset + start + offset
+        }, 0) }.getOrNull()
+        val position = inlineCaretPosition(code, inlineComposition.caret, offset, value?.text, value?.startOffset ?: -1,
+            value?.selectionStart ?: -1, value?.selectionEnd ?: -1, inlineComposition.reportedStart) ?: return
         if (ic.setSelection(position, position)) inlineComposition.moveCaret(offset)
     }
 
