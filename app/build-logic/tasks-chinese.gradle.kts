@@ -109,7 +109,7 @@ val prepareChineseDictionaries by tasks.registering {
     inputs.property("pinyin26WordModel", 5)
     inputs.property("pinyinUAsV", 1)
     inputs.property("candidateComments", 1)
-    inputs.property("cyimeTerms", 2)
+    inputs.property("cyimeTerms", 3)
     inputs.property("taiwanTraditional", 1)
     inputs.property("rareCharacters", 2)
     inputs.property("datetimeHints", 2)
@@ -927,31 +927,6 @@ val prepareChineseDictionaries by tasks.registering {
         val directRareChars = linkedSetOf("吔\tye", "蚵\tke", "槻\tgui", "榎\tjia", "塁\tlei",
             // 用户 11-19（蛇喰梦子）：can qi sun 都打不出喰，它只在词里（东京喰种）。补上字典里的三个读音。
             "喰\tcan", "喰\tqi", "喰\tsun")
-        // 同一回：词库的词里用到、8105 没有单字的字（约 450 个：鰕、楢、碁、糬……）都按它在词里的读音补成单字，同样权重 1。
-        run {
-            val single = HashSet<String>()
-            var singleBody = false
-            File(root, "cn_dicts/8105.dict.yaml").forEachLine { line ->
-                if (!singleBody) { singleBody = line.trimEnd() == "..."; return@forEachLine }
-                if (!line.startsWith("#")) single += line.substringBefore('\t')
-            }
-            val syllable = Regex("[a-z]+")
-            listOf("base", "ext", "tencent", "others").forEach { name ->
-                var body = false
-                File(root, "cn_dicts/$name.dict.yaml").forEachLine { line ->
-                    if (!body) { body = line.trimEnd() == "..."; return@forEachLine }
-                    val fields = line.split('\t')
-                    if (line.startsWith("#") || fields.size < 2) return@forEachLine
-                    val syllables = fields[1].split(' ')
-                    // Characters outside the BMP take two chars, so such a word does not line up and is skipped.
-                    if (fields[0].length < 2 || fields[0].length != syllables.size || !syllables.all(syllable::matches)) return@forEachLine
-                    fields[0].forEachIndexed { i, c ->
-                        if (Character.isIdeographic(c.code) && c.toString() !in single) directRareChars += "$c\t${syllables[i]}"
-                    }
-                }
-            }
-            check("喰\tcan" in directRareChars && directRareChars.size in 300..2000) { "Phrase-only characters changed: ${directRareChars.size}" }
-        }
         val directRareTexts = directRareChars.mapTo(HashSet()) { it.substringBefore('\t') }
         // Same IME vocabulary as CyIME-Windows data/rime/cyime_terms.dict.yaml; imported after upstream
         // tables so upstream weights win on duplicates.
