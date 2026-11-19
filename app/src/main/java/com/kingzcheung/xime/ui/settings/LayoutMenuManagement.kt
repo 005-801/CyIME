@@ -104,8 +104,8 @@ internal fun LayoutMenuManagement(initialLanguage: InputLanguage?, layoutStatus:
             item {
                 SettingsNote(failure ?: when {
                     entries == null -> "正在读取布局…"
-                    rows.isEmpty() -> "在「已安装的方案」中启用并部署此语言的方案后，布局会显示在这里。"
-                    else -> "开启的布局显示在键盘切换栏，长按可拖动排序。"
+                    rows.isEmpty() -> "启用这个语言的方案后，布局会显示在这里。"
+                    else -> "开着的布局显示在切换栏，长按拖动排序。"
                 })
                 TextButton(onClick = { context.startActivity(settingsActivityIntent(context, SettingsRoutes.Schema)) }) {
                     Text("已安装的方案")

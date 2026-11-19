@@ -159,13 +159,12 @@ fun SchemaSettingsContent(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "导入后直接安装并打开其中的主方案，出现在「已启用的输入组合」里，自动应用，稍等就能在键盘上用。" +
-                            "和已有文件同名时会先问你，确认后备份再替换，卸载时恢复。",
+                        "导入后自动安装启用，同名文件会先问你。",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     SettingsJumpText(
-                        "五笔等常用方案在「扩展 › 方案」可以直接获取。也可以在手机的文件管理里把文件「分享」给 CyIME 导入。",
+                        "五笔等常用方案在「扩展 › 方案」里获取。",
                         jumps = listOf("扩展 › 方案"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -246,7 +246,7 @@ internal fun QwertySymbolEditor(onBack: () -> Unit, initialTarget: String? = nul
                 SettingsPreferences.setSwipeUpHintsEnabled(context, it) }
             SymbolSwitchRow("下方角标提示", "显示按键左下角的小符号", hints.down, "symbol-switch-down") {
                 SettingsPreferences.setSwipeDownHintsEnabled(context, it) }
-            Text("现在编辑「${variant.label}」这一套。三个开关组合出六套，各自保存，互不影响。", modifier = Modifier.testTag("symbol-variant"),
+            Text("正在编辑「${variant.label}」这一套。", modifier = Modifier.testTag("symbol-variant"),
                 style = MaterialTheme.typography.bodyMedium)
         }
         Text("点按键修改，${topGesture}输入上方，${bottomGesture}输入下方" + (if (merged != null) ""
@@ -348,8 +348,7 @@ internal fun QwertySymbolEditor(onBack: () -> Unit, initialTarget: String? = nul
             title = { Text("从另一套复制") },
             text = {
                 Column {
-                    Text("现在这一套是「${variant.label}」。选一套，把它的全部上下角标和跟随全角半角的设置搬过来，" +
-                        "现在这一套原有的符号会被覆盖；被复制的那一套不变。", style = MaterialTheme.typography.bodySmall)
+                    Text("选一套复制到「${variant.label}」，这一套的符号会被覆盖。", style = MaterialTheme.typography.bodySmall)
                     CornerVariant.entries.filter { it != variant }.forEach { other ->
                         Row(Modifier.fillMaxWidth().testTag("symbol-copy:${other.id}").clickable { source = other }
                             .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -513,7 +512,7 @@ private fun SymbolRowsDialog(values: Map<String, String>, variant: CornerVariant
         title = { Text("整排输入") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("一个字符一格，从左到右对应这一排的键；空着的格子写 ${SymbolRowText.EMPTY}。要放短语时，用空格把各格隔开。",
+                Text("一个字符一格，从左到右对应这一排的键，空格写 ${SymbolRowText.EMPTY}。",
                     style = MaterialTheme.typography.bodySmall)
                 for ((direction, directionName) in directions) rows.indices.forEach { index ->
                     OutlinedTextField(value = drafts.getValue("$direction.$index"), onValueChange = { drafts["$direction.$index"] = it },

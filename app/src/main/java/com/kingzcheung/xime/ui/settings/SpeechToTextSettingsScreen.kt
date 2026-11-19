@@ -151,8 +151,8 @@ fun SpeechToTextSettingsContent(
             var sttEnabled by remember { mutableStateOf(SettingsPreferences.isSttEnabled(context)) }
             SettingsSection(title = "语音输入") {
                 SettingsToggleItem(icon = Icons.TwoTone.GraphicEq, title = "语音转文本",
-                    subtitle = if (sttEnabled) "点工具栏麦克风说话，转成文字上屏；想按住空格说话，在「按键与手势 › 长按空格」选「语音开关」"
-                        else "已关闭：键盘上不显示麦克风，按住空格和 Alt + H 不开麦，不自动下载语音模型",
+                    subtitle = if (sttEnabled) "点工具栏麦克风说话，转成文字"
+                        else "关着时不显示麦克风，也不下载语音模型",
                     subtitleJumps = listOf("按键与手势 › 长按空格"),
                     checked = sttEnabled, onCheckedChange = { sttEnabled = it; SettingsPreferences.setSttEnabled(context, it) })
                 // 连续语音：别人提的需求，默认关（VoicePillResume）。只在语音打开时生效，关着语音就不显示。
@@ -168,8 +168,8 @@ fun SpeechToTextSettingsContent(
                     var remoteTyping by remember { mutableStateOf(SettingsPreferences.isSttRemoteTyping(context)) }
                     val computers = com.kingzcheung.xime.clipboard.sync.WindowsDevices.saved.value
                     SettingsToggleItem(icon = Icons.TwoTone.Computer, title = "隔空输入",
-                        subtitle = if (computers.isEmpty()) "说的话发到电脑光标处；先在「剪贴板同步」连上电脑"
-                            else "说的话发到电脑光标处(电脑要用 CyIME)，手机上不上屏",
+                        subtitle = if (computers.isEmpty()) "说的话发到电脑上，需先在「剪贴板同步」连上电脑"
+                            else "说的话发到电脑上，不在手机上屏",
                         checked = remoteTyping, onCheckedChange = { remoteTyping = it; SettingsPreferences.setSttRemoteTyping(context, it) })
                 }
             }
@@ -177,7 +177,7 @@ fun SpeechToTextSettingsContent(
             // 模型名（Paraformer、SenseVoice…）多数人看不懂：先给一个按手机和用法自动选好的入口。
             SettingsSection(title = "不知道怎么选") {
                 SettingsItem(icon = Icons.TwoTone.Tune, title = "按设备推荐配置",
-                    subtitle = "回答几个问题，自动选好语音模型，删掉用不到的",
+                    subtitle = "回答几个问题，选好语音模型",
                     onClick = onNavigateToSetupGuide, showArrow = true)
             }
 
@@ -213,7 +213,7 @@ fun SpeechToTextSettingsContent(
                                 )
                             }
                             Text(
-                                text = "每次本地语音的录音和识别过程只存在本机应用目录，用于连接电脑后回放分析、调整断句和模型；最多保留 300 段或 500 MB，不会上传。",
+                                text = "录音只存在本机，不会上传。",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -319,7 +319,7 @@ internal fun OnlineSpeechApiSection() {
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (configured) SettingsToggleItem(icon = Icons.TwoTone.GraphicEq, title = "优先使用在线语音",
-            subtitle = "失败时这次改用本地模型，并在键盘上提示",
+            subtitle = "在线识别失败时改用本地模型",
             checked = preferOnline, onCheckedChange = {
                 preferOnline = it
                 if (it) SettingsPreferences.setSttOnlinePluginId(context, com.kingzcheung.xime.speech.OnlineSpeechApi.BUILTIN_ID)

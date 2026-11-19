@@ -126,7 +126,7 @@ private fun ClipboardPanelDisplaySettings(onNavigateToGroups: () -> Unit) {
         SettingsItem(
             icon = Icons.TwoTone.Folder,
             title = "剪贴板分组",
-            subtitle = "自带分类，和自己建的常用语、工作等分组",
+            subtitle = "分类和自建分组",
             onClick = onNavigateToGroups,
             showArrow = true,
             status = groups.groups.size.takeIf { it > 0 }?.let { "$it 个" },
@@ -150,7 +150,7 @@ private fun ClipboardPanelDisplaySettings(onNavigateToGroups: () -> Unit) {
         // 用户 11-09：图片卡片太矮。固定的图片照旧只露一条。
         Column(Modifier.settingsSearchAnchor("图片高度").fillMaxWidth().padding(16.dp)) {
             Text("图片高度", style = MaterialTheme.typography.titleSmall)
-            Text("剪贴板里图片卡片的高度，固定的图片不变", style = MaterialTheme.typography.bodySmall,
+            Text("剪贴板里图片的显示高度", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             ClipboardImageHeight.entries.forEach { option ->
                 Row(Modifier.fillMaxWidth().testTag("clipboard-image-height:${option.key}")
@@ -171,7 +171,7 @@ private fun ClipboardPanelDisplaySettings(onNavigateToGroups: () -> Unit) {
         // 用户 11-17：一打开剪贴板全是图片。「全部」只放最新几张，其余在「图片」里。
         Column(Modifier.settingsSearchAnchor("显示几张图片").fillMaxWidth().padding(16.dp)) {
             Text("显示几张图片", style = MaterialTheme.typography.titleSmall)
-            Text("「全部」里只显示最新的几张没固定的图片，其余在「图片」里看", style = MaterialTheme.typography.bodySmall,
+            Text("「全部」里显示的图片数，其余在「图片」里", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             ClipboardRecentImageCounts.forEach { option ->
                 Row(Modifier.fillMaxWidth().testTag("clipboard-image-count:$option")
@@ -188,7 +188,7 @@ private fun ClipboardPanelDisplaySettings(onNavigateToGroups: () -> Unit) {
         SettingsToggleItem(
             icon = Icons.TwoTone.PhotoLibrary,
             title = "最近截图",
-            subtitle = "「全部」和「图片」里显示最近的截图，需要相册权限",
+            subtitle = "在剪贴板里显示最近的截图",
             checked = screenshotsOn,
             onCheckedChange = { on ->
                 if (!on) images.enableRecentScreenshots(false)
@@ -203,7 +203,7 @@ private fun ClipboardPanelDisplaySettings(onNavigateToGroups: () -> Unit) {
         SettingsToggleItem(
             icon = Icons.TwoTone.PhotoLibrary,
             title = "也显示相册照片",
-            subtitle = "截图之外，再显示相册里最新的 ${com.kingzcheung.xime.clipboard.ScreenshotImageSource.RECENT_PHOTO_LIMIT} 张照片",
+            subtitle = "也显示相册里最新的照片",
             checked = photosToo && screenshotsOn,
             onCheckedChange = { on ->
                 photosToo = on
@@ -224,7 +224,7 @@ private fun ClipboardPasteSettings() {
         SettingsToggleItem(
             icon = Icons.TwoTone.ContentPaste,
             title = "上屏后自动关闭剪贴板",
-            subtitle = "关掉后留在剪贴板里，可以连续贴多条",
+            subtitle = "关掉后可以连续粘贴多条",
             checked = closeAfterPaste,
             onCheckedChange = {
                 closeAfterPaste = it

@@ -140,7 +140,7 @@ internal fun SideSymbolEditor(target: SideSymbolTarget, onResetReady: ((() -> Un
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("下面是键盘的样子，有颜色的格子可以改，点格子修改", style = MaterialTheme.typography.bodySmall,
+        Text("点有颜色的格子修改", style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         when (page) {
             SideSymbolTarget.T9, SideSymbolTarget.STROKE -> {

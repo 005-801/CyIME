@@ -210,7 +210,7 @@ fun CellDictionarySettingsPanel(
             item(key = "import-hint") {
                 Row(Modifier.fillMaxWidth().clickable { showGuide = true }.padding(start = 4.dp)
                     .testTag("cell-dictionary-import-hint"), verticalAlignment = Alignment.CenterVertically) {
-                    Text("可导入搜狗、QQ、百度、Gboard、微软拼音、Rime 等词库", style = MaterialTheme.typography.bodySmall,
+                    Text("支持搜狗、QQ、百度、Gboard、微软拼音、Rime 等格式", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
                     TextButton(onClick = { showGuide = true }) { Text("格式与示例") }
                 }

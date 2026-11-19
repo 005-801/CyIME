@@ -1306,9 +1306,9 @@ object SettingsPreferences {
      * 没选过时，关过贴底的老用户算「留出导航按钮」，其余算「自动」。
      */
     enum class KeyboardBottomPosition(val label: String, val description: String) {
-        AUTO("自动", "按导航方式自动判断，1.15.66 的贴底效果。"),
-        FLUSH("贴到最底", "不给导航按钮留位，键盘一直贴到屏幕底边。适合隐藏了切换输入法、收起键盘按钮的全面屏。"),
-        KEEP_BUTTONS("留出导航按钮", "整条导航栏都留着：底下有切换输入法、收起键盘按钮时，键盘不盖住它们，也不被它们盖住。"),
+        AUTO("自动", "按导航方式自动选择"),
+        FLUSH("贴到最底", "键盘贴到屏幕最底边"),
+        KEEP_BUTTONS("留出导航按钮", "给底部的导航按钮留出位置"),
     }
 
     const val KEY_KEYBOARD_BOTTOM_POSITION = "keyboard_bottom_position"

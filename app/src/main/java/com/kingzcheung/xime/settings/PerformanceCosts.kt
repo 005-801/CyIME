@@ -520,8 +520,7 @@ object PerformanceCosts {
         val mb = source?.device?.voiceResident?.memoryMb?.takeIf { it >= 1 }
         val amount = if (source == null || mb == null) "语音模型会一直占着内存"
             else "语音模型会一直占着 ${mb.roundToInt()} MB 内存" + if (source.sameModel) "" else "(${deviceName(source.device)} 实测)"
-        return "$amount，其他应用退到后台后更容易被系统关掉。系统内存紧张时会自动卸掉语音模型，" +
-            "下次按麦克风先重新加载(平板实测 1.9 秒)，打字不受影响。"
+        return "$amount。内存紧张时系统会自动卸掉，下次按麦克风要先重新加载。"
     }
 
     data class Total(

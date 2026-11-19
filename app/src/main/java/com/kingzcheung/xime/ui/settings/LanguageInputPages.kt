@@ -69,43 +69,43 @@ private fun ChineseOutputSection() {
     SettingsSection(title = "中文输出") {
         if (hasCylm) {
             SettingsToggleItem(Icons.TwoTone.Translate, "全拼长句备选",
-                "连打六个字以上时，CyLM 可在原有整句后补一个读音相符的候选。",
+                "打长句时多给一个整句候选",
                 checked = input.cylmLongAlternative, onCheckedChange = { input.copy(cylmLongAlternative = it).save(context) })
             HorizontalDivider()
         }
         SettingsToggleItem(Icons.TwoTone.Translate, "繁体输出",
-            "拼音、双拼、仓颉和注音的候选与上屏使用繁体字。",
+            "候选和上屏都用繁体字",
             checked = input.traditionalOutput, onCheckedChange = { input.copy(traditionalOutput = it).save(context) },
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.TRADITIONAL)
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.FontDownload, "生僻字",
-            "全拼、双拼(26 键和 14 键)和九键打一个完整拼音(chan、gui；双拼打满两个键)时，在常用字后面补上约 1.8 万个生僻字(瀺、槻)。",
+            "在常用字后面给出生僻字",
             checked = input.rareCharacters, onCheckedChange = { input.copy(rareCharacters = it).save(context) },
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.RARE_CHARACTERS)
         CandidateExtraLegend("rare-characters-legend", "gui", listOf("鬼", "贵", "归"), "槻", input.rareCharacters,
             skipped = true)
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.Schedule, "时间日期候选",
-            "打“时间”“日期”“星期”时显示本机时间或日期。输入 ts(九键 87)还可选当前 Unix 时间戳。",
+            "打“时间”“日期”“星期”时给出当前时间",
             checked = input.datetimeCandidates, onCheckedChange = { input.copy(datetimeCandidates = it).save(context) },
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.DATETIME)
         val now = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.ROOT).format(java.util.Date()) }
         CandidateExtraLegend("datetime-candidates-legend", "shijian", listOf("时间"), now, input.datetimeCandidates)
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.EmojiEmotions, "候选里显示表情",
-            "打「开心」「爱心」这类词时，在词后面多出对应的表情(😄、❤️)。",
+            "在词后面给出对应的表情",
             checked = input.candidateEmoji, onCheckedChange = { input.copy(candidateEmoji = it).save(context) },
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.EMOJI)
         CandidateExtraLegend("candidate-emoji-legend", "kaixin", listOf("开心"), "😄", input.candidateEmoji)
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.Functions, "打符号名出符号",
-            "打符号的名字时，在词后面多出对应的符号，词本身的位置不变：加号 +、摄氏度 ℃、度 °、平方 ²、上标 ¹²³、下标 ₁₂₃、二分之一 ½、约等于 ≈、求和 ∑、西塔 θ、圆圈数字 ①。",
+            "打符号的名字时多给一个符号，如 加号 +、摄氏度 ℃、平方 ²、约等于 ≈",
             checked = input.symbolNames, onCheckedChange = { input.copy(symbolNames = it).save(context) },
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.SYMBOL_NAMES)
         CandidateExtraLegend("symbol-names-legend", "sheshidu", listOf("摄氏度"), "℃", input.symbolNames)
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.Functions, "希腊字母",
-            "打 xita、pi、alpha 这类字母名时，第 3 个候选给出希腊字母(θ、π、α)，前两个词不变。pi、mu、xi 这类常用音节也会出，所以默认关；不开时打中文名(西塔、阿尔法)也能出。",
+            "打 xita、pi、alpha 时给出 θ、π、α",
             checked = input.greekLetters, onCheckedChange = { input.copy(greekLetters = it).save(context) },
             costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.GREEK_LETTERS)
         CandidateExtraLegend("greek-letters-legend", "pi", listOf("批", "皮"), "π", input.greekLetters)
@@ -118,24 +118,21 @@ private fun EnglishInputSection() {
     val input = com.kingzcheung.xime.ui.keyboard.rememberKeyboardInputPreferences()
     SettingsSection(title = "英文输入") {
         SettingsToggleItem(Icons.TwoTone.Link, "网址、邮箱框自动切英文",
-            "关掉后这两种框沿用当前语言。密码框照旧只能打英文。",
+            "在网址和邮箱输入框里自动用英文",
             checked = input.addressFieldsEnglish, onCheckedChange = { input.copy(addressFieldsEnglish = it).save(context) })
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.SpaceBar, "选词后自动加空格",
-            "英文(含西班牙语、英文单词方案)选词后自动补一个空格，接着打下一个词不用再按空格。紧接着按空格不会多出一个；" +
-                "打 , . ? ! : ; 时标点挪到空格前面；退格删掉这个空格。",
+            "英文选词后自动加一个空格",
             checked = input.englishAutoSpace, onCheckedChange = { input.copy(englishAutoSpace = it).save(context) })
         AutoSpaceLegend("english-auto-space-legend", "点 world", "hello world", "|", input.englishAutoSpace)
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.SpaceBar, "标点后自动加空格",
-            "英文(含西班牙语、英文单词方案)键盘在字母后面打 , . ? ! : ; 时自动跟一个空格(Hello, world)。紧接着按空格不会多出一个，" +
-                "连打 ... ?! 空格留在最后；3.14、1,000、10:30 和网址、邮箱、密码框不加；退格删掉这个空格。",
+            "英文打 , . ? ! 后自动加一个空格",
             checked = input.englishPunctuationSpace, onCheckedChange = { input.copy(englishPunctuationSpace = it).save(context) })
         AutoSpaceLegend("english-punctuation-space-legend", "打 ,", "Hello,", "|", input.englishPunctuationSpace)
         HorizontalDivider()
         SettingsToggleItem(Icons.TwoTone.AlternateEmail, "打 @ 时给邮箱后缀",
-            "在邮箱名后面打 @，候选栏给 qq.com、163.com、gmail.com 这些常用后缀，点一下补全；接着打的字只留开头对得上的。" +
-                "密码框里不给。",
+            "打 @ 后给出 gmail.com 等常用后缀",
             checked = input.emailSuffixes, onCheckedChange = { input.copy(emailSuffixes = it).save(context) })
         EmailSuffixLegend(input.emailSuffixes)
     }

@@ -78,7 +78,7 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
             .padding(horizontal = 16.dp, vertical = 8.dp),
             state = dragOrder.list, verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = keyboardPreviewContentPadding()) {
-            item { Text("点开语言，分别设置输入方案和键盘布局；下次切换到该语言时使用。长按可调整语言顺序。",
+            item { Text("点开语言选择方案和布局，长按调整顺序",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant) }
             // 拖动顺序要等下一帧才跟上开关：刚关掉的语言还在 dragOrder.order 里，又出现在未启用那段，
@@ -126,7 +126,7 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
                                         orderedLanguages = InputModes.languageOrder(context)
                                         profilesModel.refresh()
                                         if (enabled) expandedLanguage = language
-                                        message = if (enabled) "已开启，输入方案会在后台自动准备" else "已关闭，已下载词库保留"
+                                        message = if (enabled) "已开启" else "已关闭，已下载词库保留"
                                     } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                                     catch (error: Exception) { message = error.message ?: "保存失败，请稍后再试" }
                                     finally { saving = false }
@@ -189,7 +189,7 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
                     SettingsItem(Icons.TwoTone.Inventory, "已安装的方案",
                         "启用、停用和排序语言、方案与布局的组合", onClick = onOpenSchemaResources, showArrow = true)
                     SettingsItem(Icons.TwoTone.ViewModule, "双拼方案",
-                        "小鹤、自然码、微软等 6 种内置双拼的键位，新建和修改自己的双拼方案", onClick = onOpenDoublePinyin, showArrow = true)
+                        "选择双拼方案，或自建方案", onClick = onOpenDoublePinyin, showArrow = true)
                 }
             }
             // 没写语言的导入方案（声笔等，GitHub #86）：在这里选一次语言，字母布局、语音、手写跟着走。
