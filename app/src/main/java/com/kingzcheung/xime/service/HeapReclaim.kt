@@ -53,7 +53,8 @@ internal object HeapReclaim {
         thread(name = TAG, isDaemon = true) {
             val before = residentMb()
             Runtime.getRuntime().gc()
-            FileLogger.i(TAG, "keyboard hidden: rss ${before} -> ${residentMb()} MB")
+            // 警告级：正式包和个人包也写进日志，才能看出回收跑过、还回去多少。
+            FileLogger.w(TAG, "keyboard hidden: rss ${before} -> ${residentMb()} MB")
         }
     }
 
