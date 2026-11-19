@@ -92,6 +92,10 @@ private fun VoiceOtherAudioItem() {
                             fontWeight = if (mode == current) FontWeight.Medium else FontWeight.Normal)
                     }
                 }
+                // 用户 11-12 转来：抖音暂停后不会接着放。接着放要播放的应用自己做，输入法替不了。
+                Text("暂停播放：说完由播放的应用自己接着放，抖音等部分应用不会接着放，用它们时选「压低音量」。",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp))
             }
         },
         confirmButton = { TextButton(onClick = { picking = false }) { Text("关闭") } },
