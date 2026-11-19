@@ -3109,7 +3109,7 @@ CommentDisplayCard - 显示注释	=
 本地识别	On-device recognition
 屏蔽外放音	Mute other audio
 语音输入	Voice input
-开车连续语音	Continuous voice while driving
+连续语音	Continuous voice
 隔空输入	Remote typing
 保存语音调优录音	Save voice tuning recordings
 中文语音	Chinese voice
@@ -3456,7 +3456,7 @@ vivo / iQOO(OriginOS)的输入法选择框可能是空的。请点下面按钮�
 点工具栏麦克风说话，转成文字上屏；想按住空格说话，在「按键与手势 › 长按空格」选「语音开关」	Tap the toolbar mic to talk and enter the text; to hold space to talk, choose “Voice toggle” in “Keys & gestures › Hold space”
 已关闭：键盘上不显示麦克风，按住空格和 Alt + H 不开麦，不自动下载语音模型	Off: no mic on the keyboard, holding space and Alt + H don't open the mic, and voice models aren't downloaded automatically
 按键与手势 › 长按空格	Keys & gestures › Hold space
-语音收起成悬浮条后，发送完回到输入框自动接着听	After voice collapses into a floating bar, listening resumes automatically when you return to the field after sending
+说话时收起成悬浮条，发完消息或回到这个应用会自动接着听	Collapse to the floating bar while speaking; listening resumes after you send or return to the same app
 说的话发到电脑光标处；先在「剪贴板同步」连上电脑	What you say goes to the computer's cursor; connect the computer in “Clipboard sync” first
 说的话发到电脑光标处(电脑要用 CyIME)，手机上不上屏	What you say goes to the computer's cursor (the computer needs CyIME) and isn't entered on the phone
 不知道怎么选	Not sure what to choose

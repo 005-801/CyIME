@@ -4293,7 +4293,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             return false
         }
         // 悬浮条状态下再点输入框：App 会再次请求弹出键盘，换回完整键盘；语音照常听写，与展开按钮相同。
-        if (!voicePillResumePending &&
+        // 连续语音刚把悬浮条摆出来、还没开麦（约半秒）时，宿主跟着又发的弹键盘请求不算：应用回到输入框时可能再发一次，
+        // 照旧处理会把悬浮条展开、把这次续听取消，看起来就是「没接着听」（11-12 核对代码发现，未在设备上复现）。
+        if (!voicePillResumePending && !voicePillResumeScheduled &&
             voicePillExpandsOnShowRequest(uiState.value.voiceCollapsed, voicePillSelfShow, configChange)) expandFromVoicePill()
         voicePillSelfShow = false
         return true
@@ -4530,7 +4532,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         mainHandler.removeCallbacks(showVoicePillAfterHide)
         mainHandler.removeCallbacks(stopVoiceIfStillHidden)
         // 没有输入框焦点时绝不开麦。
-        mainHandler.removeCallbacks(resumeVoicePill)
+        cancelVoicePillResume()
         voicePillResumePending = false
         voicePillRestartInPlace = false
         voiceKeptAlive = false
@@ -4588,7 +4590,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // App 收起键盘（点了别处）：听写结束，不再自己弹悬浮条；只有收起按钮才出悬浮条（voiceKeepsListeningAfter）。
         voiceKeptAlive = !finishingInput && voiceKeepsAliveOnHide()
         if (!voiceKeptAlive) noteVoicePillInterrupted(VoiceSessionEnd.FOCUS_LEAVES)
-        mainHandler.removeCallbacks(resumeVoicePill)
+        cancelVoicePillResume()
         if (!voiceKeptAlive) voiceRecognitionHandler.endInputSession()
         // 手写模型轻量，按"用键盘时加载、键盘收起即卸载"管理：输入会话结束
         // （收起键盘/焦点离开）即释放，:inference 侧同步卸载模型；未初始化时
@@ -5332,16 +5334,26 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         voicePillResume.disarm()
         voicePillRestartInPlace = false
         voicePillResumePending = false
-        mainHandler.removeCallbacks(resumeVoicePill)
+        cancelVoicePillResume()
     }
+
+    /** 已排好、还没开麦的续听；这段时间里宿主再要求弹键盘不算用户要展开（见 onShowInputRequested）。 */
+    private var voicePillResumeScheduled = false
 
     private fun scheduleVoicePillResume() {
         mainHandler.removeCallbacks(resumeVoicePill)
         mainHandler.postDelayed(resumeVoicePill, VOICE_PILL_RESUME_DELAY_MS)
+        voicePillResumeScheduled = true
+    }
+
+    private fun cancelVoicePillResume() {
+        mainHandler.removeCallbacks(resumeVoicePill)
+        voicePillResumeScheduled = false
     }
 
     /** 真正开麦前再查一遍：窗口在显示、有输入框焦点、悬浮条还在、这个框允许。 */
     private val resumeVoicePill = Runnable {
+        voicePillResumeScheduled = false
         val state = uiState.value
         if (!isInputViewShown || currentInputConnection == null || state.isVoiceMode || !state.voiceCollapsed) return@Runnable
         if (!voicePillResumeEnabled() || !voicePillResume.appliesTo(currentInputEditorInfo?.packageName) ||

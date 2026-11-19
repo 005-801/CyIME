@@ -17,7 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.twotone.GraphicEq
 import androidx.compose.material.icons.twotone.Tune
-import androidx.compose.material.icons.twotone.DirectionsCar
+import androidx.compose.material.icons.twotone.RecordVoiceOver
 import androidx.compose.material.icons.twotone.Computer
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.twotone.VolumeOff
@@ -155,13 +155,14 @@ fun SpeechToTextSettingsContent(
                         else "已关闭：键盘上不显示麦克风，按住空格和 Alt + H 不开麦，不自动下载语音模型",
                     subtitleJumps = listOf("按键与手势 › 长按空格"),
                     checked = sttEnabled, onCheckedChange = { sttEnabled = it; SettingsPreferences.setSttEnabled(context, it) })
-                // 开车连续语音：别人提的需求，默认关（VoicePillResume）。只在语音打开时生效，关着语音就不显示。
+                // 连续语音：别人提的需求，默认关（VoicePillResume）。只在语音打开时生效，关着语音就不显示。
+                // 原名「开车连续语音」：开车只是用户举的例子（11-12），改叫连续语音、换掉汽车图标；设置键名不变。
                 if (sttEnabled) {
                     // 屏蔽外放音：用户 11-04 要的，选项照他的截图，默认不屏蔽（VoiceAudioFocus）。
                     VoiceOtherAudioItem()
                     var pillResume by remember { mutableStateOf(SettingsPreferences.isSttPillResume(context)) }
-                    SettingsToggleItem(icon = Icons.TwoTone.DirectionsCar, title = "开车连续语音",
-                        subtitle = "语音收起成悬浮条后，发送完回到输入框自动接着听",
+                    SettingsToggleItem(icon = Icons.TwoTone.RecordVoiceOver, title = "连续语音",
+                        subtitle = "说话时收起成悬浮条，发完消息或回到这个应用会自动接着听",
                         checked = pillResume, onCheckedChange = { pillResume = it; SettingsPreferences.setSttPillResume(context, it) })
                     // 隔空输入（用户 11-02 要的，参照微信）：默认关；走剪贴板同步已配对的电脑。
                     var remoteTyping by remember { mutableStateOf(SettingsPreferences.isSttRemoteTyping(context)) }
