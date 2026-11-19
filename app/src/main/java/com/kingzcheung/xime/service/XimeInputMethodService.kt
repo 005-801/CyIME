@@ -1154,6 +1154,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         com.kingzcheung.xime.stats.TypingStats.init(this)
         com.kingzcheung.xime.ui.keyboard.HandwritingGlassRegion.reporter = handwritingGlassRegionReporter
         com.kingzcheung.xime.ui.keyboard.CursorLineMetrics.requester = cursorLineRequester
+        com.kingzcheung.xime.ui.keyboard.ImeHighRefresh.apply = highRefreshVote
         // 键盘开着换到九键（14 键、注音）：补读新方案的词组模型，不等头几键读盘。
         rimeEngine.onSchemaSwitched = schemaSwitchPrefetch
         // 记录与打字速度有关的本机状态（用户词库体积、可选模型、内存余量），只记数量不记内容。
@@ -4497,6 +4498,31 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         else -> "UNKNOWN($value)"
     }
 
+    private val highRefreshVote: (Boolean) -> Unit = { on -> setHighRefresh(on) }
+
+    /**
+     * 拖动期间给输入法窗口投「同分辨率最高刷新率」的票，松手撤票（见 [com.kingzcheung.xime.ui.keyboard.ImeHighRefresh]）。
+     * 原来输入法窗口不投票，有的系统就按 60 帧甚至更低给，拖悬浮窗一顿一顿（用户 11-19）。
+     */
+    private fun setHighRefresh(on: Boolean) {
+        val win = window?.window ?: return
+        runCatching {
+            val wanted = if (!on) 0 else {
+                @Suppress("DEPRECATION")
+                val display = (win.decorView.display ?: (getSystemService(WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay)
+                    ?: return
+                fun android.view.Display.Mode.toMode() = com.kingzcheung.xime.ui.keyboard.ImeHighRefresh.Mode(
+                    modeId, physicalWidth, physicalHeight, refreshRate)
+                com.kingzcheung.xime.ui.keyboard.ImeHighRefresh.highestModeId(display.mode.toMode(),
+                    display.supportedModes.map { it.toMode() }) ?: return
+            }
+            val lp = win.attributes
+            if (lp.preferredDisplayModeId == wanted) return
+            lp.preferredDisplayModeId = wanted
+            win.attributes = lp
+        }.onFailure { FileLogger.w(TAG, "high refresh vote failed: ${it.message}") }
+    }
+
     private fun moveFloatingWindow(dx: Int, dy: Int) {
         window.window?.let { win ->
             val lp = win.attributes
@@ -5210,6 +5236,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onDestroy() {
         if (EnterProbe.service?.get() === this) EnterProbe.service = null
+        if (com.kingzcheung.xime.ui.keyboard.ImeHighRefresh.apply === highRefreshVote) {
+            setHighRefresh(false)
+            com.kingzcheung.xime.ui.keyboard.ImeHighRefresh.apply = null
+        }
         if (rimeEngine.onSchemaSwitched === schemaSwitchPrefetch) rimeEngine.onSchemaSwitched = null
         KeyboardPanelLaunch.previewVisible = false
         com.kingzcheung.xime.runtime.adaptation.CpuBenchmarkRunner.keyboardShown = false

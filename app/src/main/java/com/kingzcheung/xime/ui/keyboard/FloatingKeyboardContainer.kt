@@ -310,6 +310,8 @@ internal fun FloatingKeyboardContainer(
         val dragging = isDragging
         // 固定键盘上拉刚变成悬浮：卡片跟着那根手指走（只在摆放阶段读手指位置，不重组键盘）。
         val undockFollow = LocalKeyboardUndockFollow.current?.takeIf { !geometryLocked && previewRect == null && rotatedRect == null }
+        // 拖着走、拖角调大小、上拉变悬浮跟手指时，窗口按屏幕最高刷新率画（用户 11-19）。
+        HighRefreshWhile(isDragging || cornerRect != null || undockFollow != null)
         val followBounds = floatingViewportBounds(maxWidth.value * density.density, maxHeight.value * density.density,
             minOffsetY.coerceAtLeast(0) * density.density)
         fun followShiftPx(): Offset {
@@ -318,9 +320,10 @@ internal fun FloatingKeyboardContainer(
                 UNDOCK_FOLLOW_GRAB_DP * density.density, followBounds)
             return Offset(target.left - normalRect.left, target.top - normalRect.top)
         }
+        // 拖动中按像素跟手指走，不再先取整到整 dp：原来每过一整 dp（约 3 像素）卡片才挪一下，
+        // 慢慢拖时一秒只动几十下，看着像掉帧（用户 11-19）。松手时后台照旧取整到 dp 保存，最多差半个 dp。
         fun liveShiftPx(): Offset = if (dragging)
-            Offset((dragX.roundToInt() - dragStartX.roundToInt()) * density.density,
-                -(dragY.roundToInt() - dragStartY.roundToInt()) * density.density)
+            Offset((dragX - dragStartX) * density.density, -(dragY - dragStartY) * density.density)
             else followShiftPx()
         if (undockFollow != null) {
             // 松手：和拖底部拖动条一样，把整段位移一次交给后台限位、保存，再亮一下四角。

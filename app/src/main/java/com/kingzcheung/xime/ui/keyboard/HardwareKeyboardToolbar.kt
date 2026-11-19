@@ -217,6 +217,8 @@ internal fun HardwareKeyboardToolbar(
             ?: if (samsung) HardwareToolbarOffset(animatedOffset.x, animatedOffset.y)
             else geometry.constrain(animatedOffset.x, animatedOffset.y)
         val currentResting by rememberUpdatedState(displayedOffset)
+        // 拖着浮条时按屏幕最高刷新率跟手（用户 11-19）。
+        HighRefreshWhile(dragging != null)
         val currentDock by rememberUpdatedState(dockAtEdge)
         val currentLocked by rememberUpdatedState(positionLocked)
         // 拖动中松手会停靠到哪：先画出那里的轮廓（设置里「拖近时有蓝色轮廓」），
