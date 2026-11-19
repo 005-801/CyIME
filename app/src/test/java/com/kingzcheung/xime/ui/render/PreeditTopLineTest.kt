@@ -83,22 +83,23 @@ class PreeditTopLineTest {
 
         rule.runOnIdle { corrections.value = mapOf("我们是好朋友" to "wo men shi hao pemg=peng you") }
         rule.onNodeWithTag("preedit-line-correction", true).assertExists()
+        render("preedit-top-line-typing.png")
 
         rule.runOnIdle { state.value = CandidateBarState.AssociationOnly(listOf("的", "了", "吗"), hasMore = true) }
         rule.waitForIdle()
         val association = rule.onNodeWithText("的", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertTrue("联想态候选行和打字时同一高度", association.top >= line.bottom - 1f)
         rule.onNodeWithTag("preedit-line-text", true).assertDoesNotExist()
-        render()
+        render("preedit-top-line.png")
     }
 
-    private fun render() {
+    private fun render(name: String) {
         val out = System.getenv("CYIME_RENDER_OUT") ?: return
         File(out).mkdirs()
         rule.runOnIdle { }
         val root = rule.activity.window.decorView
         val bitmap = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.ARGB_8888)
         rule.runOnIdle { root.draw(android.graphics.Canvas(bitmap)) }
-        File(out, "preedit-top-line.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        File(out, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 }
