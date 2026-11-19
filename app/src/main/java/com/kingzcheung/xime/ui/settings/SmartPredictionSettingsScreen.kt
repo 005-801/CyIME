@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.twotone.Edit
 import androidx.compose.material.icons.twotone.Lock
 import androidx.compose.material.icons.twotone.VisibilityOff
 import androidx.compose.material3.Button
@@ -253,6 +254,23 @@ fun SmartPredictionSettingsContent(
                             SettingsPreferences.setLockWordOrder(context, it)
                         },
                         lockMessage = if (toggles.incognito) "无痕模式开着时什么都不学，不需要这项" else null,
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    // 自造词角标（用户 11-19 要开关，默认显示，同以前）：关掉只是候选上不画小铅笔，照常学习。
+                    var showLearnedMark by remember { mutableStateOf(SettingsPreferences.showLearnedMark(context)) }
+                    SettingsToggleItem(
+                        icon = Icons.TwoTone.Edit,
+                        title = "显示自造词角标",
+                        subtitle = "学到的词在候选右上角显示小铅笔；关掉只是不显示，照常学习",
+                        checked = showLearnedMark,
+                        onCheckedChange = {
+                            showLearnedMark = it
+                            SettingsPreferences.setShowLearnedMark(context, it)
+                        },
                     )
                 })
             }

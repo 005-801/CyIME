@@ -3981,3 +3981,5 @@ Language · 语言	Language · 语言
 一条也没有：点下面「添加」	Nothing here yet: tap "Add" below
 长按拖动排序	Long-press and drag to reorder
 现在的条目会换成默认的几条，自己加的和改过的都会去掉。	The list will be replaced by the defaults. Entries you added or changed will be removed.
+显示自造词角标	Show learned-word badge
+学到的词在候选右上角显示小铅笔；关掉只是不显示，照常学习	Show a small pencil at the top right of words it has learned; turning this off only hides it, learning continues

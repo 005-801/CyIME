@@ -1476,8 +1476,10 @@ fun KeyboardView(
                 }
             }
             val correctionMarks = if (correctionVisible) allCorrectionMarks else emptyMap()
+            // 「显示自造词角标」关着时不画小铅笔，候选宽度也按没角标算；学习照常。
+            val learnedMarkVisible = rememberLearnedMarkVisible()
             androidx.compose.runtime.CompositionLocalProvider(
-                LocalLearnedCandidates provides cs.learnedCandidates,
+                LocalLearnedCandidates provides if (learnedMarkVisible) cs.learnedCandidates else emptySet(),
                 LocalCorrectedCandidates provides correctionMarks,
                 LocalPreeditLineCorrections provides allCorrectionMarks,
                 LocalSentenceSelection provides sentenceDragOwnerState,
