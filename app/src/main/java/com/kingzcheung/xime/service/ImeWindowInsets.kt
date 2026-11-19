@@ -394,7 +394,7 @@ internal fun bottomNavDiagnostic(context: Context, r: BottomNavReading,
     fun dp(px: Int) = if (r.density > 0f) (px / r.density).roundToInt() else px
     val landscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     return listOf(
-        "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}",
+        AndroidPlatform.deviceLabel,
         "Android ${android.os.Build.VERSION.RELEASE}",
         android.os.Build.DISPLAY.orEmpty(),
         "CyIME ${com.kingzcheung.xime.BuildConfig.VERSION_NAME}",
