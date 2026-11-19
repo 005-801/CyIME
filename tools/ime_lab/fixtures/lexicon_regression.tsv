@@ -1245,4 +1245,7 @@ product-cyime-14	14	CTUmE	CyIME	3	用户反馈目标	2026-11-15	同上，14 键
 product-cyime-win	win26	cyime	CyIME	1	用户反馈目标	2026-11-15	同上，电脑版
 product-cyletix-win	win26	cyletix	Cyletix	1	用户反馈目标	2026-11-15	同上，电脑版
 user-shecanmengzi-26	26	shecanmengzi	蛇喰梦子	1	user	2026-11-19	can qi sun 都打不出「喰」，它只在词里（东京喰种）
-user-sun-26	26	sun	喰	60	user	2026-11-19	同上
+user-sun-26	26	sun	喰	10	user	2026-11-19	同上，单字补了 can qi sun，权重 1 排在同音字最后
+user-goushangren-26	26	goushangren	够伤人	1	user	2026-11-19	首选曾是「狗伤人」（腾讯词表有这个词，够伤人不是词）
+user-goushangren-9	9	46874264736	够伤人	1	user	2026-11-19	同上，九键
+user-goushangren-14	14	GOUAGABGEEB	够伤人	1	user	2026-11-19	同上，14 键
