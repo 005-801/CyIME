@@ -420,10 +420,15 @@ internal fun FloatingKeyboardContainer(
                 }
                 Spacer(Modifier.height(footerDp.dp))
             }
-            // Paint from the bottom row's visible cap edge. Its inset still receives key touches.
+            // 底色只铺键区下面那段（拖动条）：键区自己的背景已经铺到最下一排的键帽下沿和底部留白，
+            // 再从键帽下沿起叠一层，玻璃、半透明底色时两层叠出一条更亮的横条（11-19 悬浮键盘开玻璃效果）。
+            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .height(footerDp.dp.coerceAtMost(cardTotalHeight))
+                .testTag("floating-footer-background").keyboardPanelBackground(backgroundColor))
+            // 拖动区从最下一排的键帽下沿算起，小横条在这一段里居中；键帽下沿以下仍接按键触摸。
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .height((dragAreaHeight + capInset.floatValue.dp).coerceAtMost(cardTotalHeight))
-                .testTag("floating-footer").keyboardPanelBackground(backgroundColor), contentAlignment = Alignment.Center) {
+                .testTag("floating-footer"), contentAlignment = Alignment.Center) {
                 if (!hideDragBar) FloatingFooterIndicator(geometryLocked, dragIndicatorColor, footerDp.toFloat(), lockNudge)
             }
             if (!hideDragBar && previewRect == null) DragBar(

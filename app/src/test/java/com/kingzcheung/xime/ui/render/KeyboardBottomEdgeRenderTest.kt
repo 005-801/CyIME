@@ -300,6 +300,10 @@ class KeyboardBottomEdgeRenderTest {
         assertEquals("$id indicator centre x", card.center.x, indicator.center.x, 1f)
         assertEquals("$id indicator centre y", footer.center.y, indicator.center.y, 1f)
         assertTrue("$id drag starts below the last key", hit.top >= key.bottom - 1f && hit.top <= indicator.center.y)
+        // 底色只铺键区下面那段，不和键区背景叠：玻璃时叠两层会多一条更亮的横条（11-19）。
+        val paint = rule.onNodeWithTag("floating-footer-background", true).fetchSemanticsNode().boundsInWindow
+        assertTrue("$id footer paint=$paint starts below the keys", paint.top >= key.bottom - 1f)
+        assertEquals("$id footer paint bottom", card.bottom, paint.bottom, 1f)
     }
 
     private fun save(name: String, tag: String? = null) {
