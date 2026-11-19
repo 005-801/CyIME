@@ -56,6 +56,7 @@ class VoiceKeyboardContainer(
             return true
         }
         ev?.let(KeyLatencyProbe::touch)
+        ev?.let(::logCanceledTouch)
         ev?.let {
             when (it.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -77,6 +78,24 @@ class VoiceKeyboardContainer(
             }
         }
         return super.dispatchTouchEvent(ev)
+    }
+
+    /**
+     * 系统收走的触摸记一行（11-19 荣耀用户：a 和后一个字母快打必丢，日志里没有输入法拒收的记录）。
+     * 整段被收走（ACTION_CANCEL，如边缘返回手势）时所有手指一起作废；单根被判为误触（FLAG_CANCELED）时只丢那一根。
+     * 只记手指个数、横向位置（占键盘宽的百分比，看是不是贴着屏幕边）和按了多久，不记按的是哪个键。
+     */
+    private fun logCanceledTouch(ev: MotionEvent) {
+        val masked = ev.actionMasked
+        val whole = masked == MotionEvent.ACTION_CANCEL
+        val one = (masked == MotionEvent.ACTION_POINTER_UP || masked == MotionEvent.ACTION_UP) &&
+            ev.flags and MotionEvent.FLAG_CANCELED != 0
+        if (!whole && !one) return
+        val w = width.coerceAtLeast(1)
+        val xs = (0 until ev.pointerCount).joinToString(",") { (ev.getX(it) * 100 / w).toInt().toString() }
+        com.kingzcheung.xime.util.FileLogger.w("TouchCancel",
+            "${if (whole) "gesture" else "pointer"} pointers=${ev.pointerCount} x%=$xs " +
+                "heldMs=${ev.eventTime - ev.downTime} width=$w")
     }
 
     private fun handleActionDown(ev: MotionEvent) {
