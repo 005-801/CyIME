@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -232,27 +233,28 @@ fun StorageSpaceScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = Formatter.formatFileSize(context, category.sizeBytes),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        if (category.clearable) {
-                                            TextButton(
-                                                enabled = cleaningId == null,
-                                                onClick = { pendingClear = category }
-                                            ) {
-                                                if (cleaningId == category.id) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(14.dp),
-                                                        strokeWidth = 2.dp
-                                                    )
-                                                } else {
-                                                    Text("清理")
-                                                }
-                                            }
+                                    Text(
+                                        text = Formatter.formatFileSize(context, category.sizeBytes),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                // 「清理」放在这一行右侧、和标题那一块上下居中（用户 11-19：以前贴在行底，看着像下一行的）。
+                                // 0 B 没东西可清，不显示；正在清的那行留着转圈。
+                                if (storageClearShown(category.clearable, category.sizeBytes, cleaningId == category.id)) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    TextButton(
+                                        enabled = cleaningId == null,
+                                        onClick = { pendingClear = category },
+                                        modifier = Modifier.testTag("storage-clear:${category.id}")
+                                    ) {
+                                        if (cleaningId == category.id) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(14.dp),
+                                                strokeWidth = 2.dp
+                                            )
+                                        } else {
+                                            Text("清理")
                                         }
                                     }
                                 }
@@ -347,6 +349,10 @@ private fun MemorySection(
         }
     }
 }
+
+/** 「清理」按钮出不出：能清、而且有东西可清（大于 0 B）；正在清的那行留着转圈。 */
+internal fun storageClearShown(clearable: Boolean, sizeBytes: Long, cleaning: Boolean): Boolean =
+    clearable && (sizeBytes > 0 || cleaning)
 
 private fun categoryIcon(id: String): ImageVector = when (id) {
     StorageStats.ID_MODELS -> Icons.TwoTone.Memory
