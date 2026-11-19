@@ -1,6 +1,7 @@
 package com.kingzcheung.xime.ui.render
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,9 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
@@ -59,7 +58,11 @@ class CandidateLearnedMarkTest {
         val comment = rule.onNodeWithTag("learned-comment").fetchSemanticsNode().boundsInRoot
         assertTrue(markWithComment.right <= comment.right)
         System.getenv("CYIME_RENDER_OUT")?.let { out ->
-            val bmp = rule.onNodeWithTag("strip").captureToImage().asAndroidBitmap()
+            val root = rule.activity.window.decorView
+            val full = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.ARGB_8888)
+            rule.runOnIdle { root.draw(Canvas(full)) }
+            val box = rule.onNodeWithTag("strip").fetchSemanticsNode().boundsInWindow
+            val bmp = Bitmap.createBitmap(full, box.left.toInt(), box.top.toInt(), box.width.toInt(), box.height.toInt())
             File(out, "candidate-learned-mark.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
     }
