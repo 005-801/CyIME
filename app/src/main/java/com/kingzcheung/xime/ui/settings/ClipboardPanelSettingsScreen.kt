@@ -171,7 +171,7 @@ private fun ClipboardPanelDisplaySettings(onNavigateToGroups: () -> Unit) {
         // 用户 11-17：一打开剪贴板全是图片。「全部」只放最新几张，其余在「图片」里。
         Column(Modifier.settingsSearchAnchor("显示几张图片").fillMaxWidth().padding(16.dp)) {
             Text("显示几张图片", style = MaterialTheme.typography.titleSmall)
-            Text("「全部」里显示的图片数，其余在「图片」里", style = MaterialTheme.typography.bodySmall,
+            Text("「全部」里显示的图片数，截图、相册照片、复制的图各至少一张，其余在「图片」里", style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             ClipboardRecentImageCounts.forEach { option ->
                 Row(Modifier.fillMaxWidth().testTag("clipboard-image-count:$option")
