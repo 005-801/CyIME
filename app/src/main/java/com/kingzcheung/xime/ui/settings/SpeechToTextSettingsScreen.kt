@@ -191,17 +191,11 @@ fun SpeechToTextSettingsContent(
             if (OfflineAsrSettings.isSupported()) {
                 // 不再有「使用本地模型」开关：一律先用本地模型；在线接口测试通过后才可选「优先使用在线接口」。
                 run {
-                    // 模型常驻与空闲释放统一在「性能与省电」设置，这里不再重复（两处会互相覆盖）。
-                    SettingsSection(title = "本地识别") {
-                        SettingsJumpText(
-                            text = "语音模型是否常驻、空闲多久释放，在「性能与省电」中设置。",
-                            jumps = listOf("性能与省电"),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)
-                        )
-                        // 调优录音是开发者工具：只在自用测试包和调试包里显示。
-                        if (com.kingzcheung.xime.BuildConfig.DEV_TOOLS || com.kingzcheung.xime.BuildConfig.DEBUG) Column(Modifier.settingsSearchAnchor("保存语音调优录音").fillMaxWidth().padding(16.dp)) {
+                    // 「本地识别」一组公开版里只剩一句「常驻、释放在性能与省电里设置」的提示，什么也改不了，排版还上松下紧
+                    // （用户 11-12「不明所以」）：去掉。常驻与释放照旧只在「性能与省电」设置，那页搜「语音」能找到。
+                    // 调优录音是开发者工具：只在自用测试包和调试包里显示，这组也只在那时出现。
+                    if (com.kingzcheung.xime.BuildConfig.DEV_TOOLS || com.kingzcheung.xime.BuildConfig.DEBUG) SettingsSection(title = "本地识别") {
+                        Column(Modifier.settingsSearchAnchor("保存语音调优录音").fillMaxWidth().padding(16.dp)) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = "保存语音调优录音",
