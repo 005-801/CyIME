@@ -344,10 +344,10 @@ local function learned(env, input, parts)
           if commits >= 0 and han_len(text) == #parts and matches(env, text, parts) then
             local i = at[text]
             if not i then
-              found[#found + 1] = { text = text, commits = commits, order = #found }
+              found[#found + 1] = { text = text, commits = commits, order = #found, entry = entry }
               at[text] = #found
             elseif commits > found[i].commits then
-              found[i].commits = commits
+              found[i].commits, found[i].entry = commits, entry
             end
           end
         end
@@ -364,27 +364,33 @@ end
 
 local SEEN = "~"
 
-local function save_word(env, text, commits, prefix)
-  local codes = word_codes(env, text)
-  if not codes then return end
-  for _, code in ipairs(codes) do
-    local made, entry = pcall(DictEntry)
-    if not made or not entry then return end
-    entry.text = text
-    entry.custom_code = (prefix or PREFIX) .. code
-    entry.weight = 0
-    pcall(function() return env.mem:update_userdict(entry, commits, "") end)
+-- 一个词只记一条（一种首笔编码），长按「忘记」删掉它就真没了（11-19）。[code] 是打的时候用的首笔
+-- （个别字有两种笔顺，按用户打的那种记，下次同样打法才查得到）；没给时用码表第一种笔顺。
+local function save_word(env, text, commits, prefix, code)
+  if not code then
+    local codes = word_codes(env, text)
+    if not codes then return end
+    code = codes[1]
   end
-  env.learn_cache, env.learn_n = {}, 0
+  local made, entry = pcall(DictEntry)
+  if not made or not entry then return end
+  entry.text = text
+  entry.custom_code = (prefix or PREFIX) .. code
+  entry.weight = 0
+  pcall(function() return env.mem:update_userdict(entry, commits, "") end)
 end
 
+-- 每种首笔编码都看：整词选的按打的笔顺记，可能不是码表第一种。
 local function has_word(env, prefix, text)
   local codes = word_codes(env, text)
   if not codes then return false end
   local ok, found = pcall(function()
-    if not env.mem:user_lookup(prefix .. codes[1], true) then return false end
-    for entry in env.mem:iter_user() do
-      if entry.text == text and (entry.commit_count or 0) >= 0 then return true end
+    for _, code in ipairs(codes) do
+      if env.mem:user_lookup(prefix .. code, true) then
+        for entry in env.mem:iter_user() do
+          if entry.text == text and (entry.commit_count or 0) >= 0 then return true end
+        end
+      end
     end
     return false
   end)
@@ -405,8 +411,25 @@ local function in_phrases(env, text)
   return false
 end
 
+-- 分词打出来的词按打的首笔记；空段（没打笔画的字）用码表第一种笔顺。对不上时返回 nil。
+local function typed_code(env, text, input)
+  local parts = input and split(input)
+  if not parts or han_len(text) ~= #parts or not matches(env, text, parts) then return nil end
+  local firsts, i = {}, 0
+  for _, cp in utf8.codes(text) do
+    i = i + 1
+    local first = parts[i]:sub(1, 1)
+    if first == "" then first = (codes_of(env, utf8.char(cp))[1] or ""):sub(1, 1) end
+    if first == "" then return nil end
+    firsts[i] = first
+  end
+  return table.concat(firsts)
+end
+
 local function on_commit(ctx, env)
   local ok, text = pcall(function() return ctx:get_commit_text() end)
+  local typed = env.pending_code
+  env.pending_code = nil
   if not ok or not text or text == "" then return end
   local n = han_len(text)
   local now = os.time()
@@ -416,7 +439,7 @@ local function on_commit(ctx, env)
   if not n then return end
   if n >= MIN_WORD then
     -- 整个选的词（分词打的、词表的、通配组的）：记一次，下次排在最前。
-    if n <= MAX_WORD_LEARN then save_word(env, text, 1) end
+    if n <= MAX_WORD_LEARN then save_word(env, text, 1, PREFIX, typed_code(env, text, typed)) end
     env.history = {}
     return
   end
@@ -427,31 +450,45 @@ local function on_commit(ctx, env)
   for len = MIN_WORD, #history do
     local word = table.concat(history, "", #history - len + 1, #history)
     if not has_word(env, PREFIX, word) and not in_phrases(env, word) then
-      if has_word(env, SEEN, word) then save_word(env, word, 0) else save_word(env, word, 1, SEEN) end
+      if has_word(env, SEEN, word) then
+        -- 第二次连着打：记成词，「连着打过一次」的记录作废。词被「忘记」以后要再连着打两次才回来。
+        save_word(env, word, 0)
+        save_word(env, word, -1, SEEN)
+      else
+        save_word(env, word, 1, SEEN)
+      end
     end
   end
 end
 
+-- 每次都现查用户词典，不缓存：长按「忘记」时引擎直接删记录（不经过 lua），缓存会让删掉的词还留在候选里。
+-- 一般只查一两个编码，比打一个字的其余工作量小得多。
 local function learned_for(env, input, parts)
   if not env.mem then return {} end
-  local list = env.learn_cache[input]
-  if list == nil then
-    list = learned(env, input, parts) or false
-    env.learn_n = env.learn_n + 1
-    if env.learn_n > CACHE_MAX then env.learn_cache, env.learn_n = {}, 0 end
-    env.learn_cache[input] = list
-  end
-  return list or {}
+  return learned(env, input, parts) or {}
+end
+
+-- 学到的词用用户词典里那条记录造候选（Phrase），长按「忘记」时引擎按这条记录删（rime_jni forgetCandidate）；
+-- 以前是普通候选，引擎认不出是学来的，忘不掉（11-19 平板）。
+local function learned_candidate(env, item, seg, input)
+  local quality = BASE_QUALITY + math.min(item.commits, 4)
+  local ok, cand = pcall(function()
+    local phrase = Phrase(env.mem, "stroke", seg.start, seg._end, item.entry)
+    phrase.quality = quality
+    phrase.preedit = stroke_preedit(input)
+    phrase.comment = ""
+    return phrase:toCandidate()
+  end)
+  if ok and cand then return cand end
+  cand = Candidate("stroke", seg.start, seg._end, item.text, "")
+  cand.quality = quality
+  cand.preedit = stroke_preedit(input)
+  return cand
 end
 
 local function emit_learned(env, input, seg, list, used)
   for _, item in ipairs(list) do
-    if (item.commits > 0) == used then
-      local cand = Candidate("stroke", seg.start, seg._end, item.text, "")
-      cand.quality = BASE_QUALITY + math.min(item.commits, 4)
-      cand.preedit = stroke_preedit(input)
-      yield(cand)
-    end
+    if (item.commits > 0) == used then yield(learned_candidate(env, item, seg, input)) end
   end
 end
 
@@ -463,8 +500,8 @@ function M.init(env)
   glyphs = env.engine.schema.config:get_string("translator/preedit_format/@0") ~= nil
   env.codes = {}
   env.cache, env.cache_n = {}, 0
-  env.learn_cache, env.learn_n = {}, 0
   env.history, env.history_at = {}, nil
+  env.pending_code = nil
   env.conn = nil
 
   -- 内置分词打词用的词表与笔顺反查
@@ -506,14 +543,20 @@ function M.fini(env)
   env.word_tables = nil
   env.codes = nil
   env.cache, env.cache_n = nil, nil
-  env.learn_cache, env.learn_n = nil, nil
   env.history, env.history_at = nil, nil
+  env.pending_code = nil
   collectgarbage()
 end
 
 function M.func(input, seg, env)
   local parts = split(input)
   if not parts then return end
+
+  -- 记下这次组词打的整串（上屏时按它记词的首笔）。逐字选词时剩下的编码是整串的后半截，不覆盖。
+  local pending = env.pending_code
+  if not pending or #input > #pending or pending:sub(-#input) ~= input then
+    env.pending_code = input
+  end
 
   -- 顺序要紧：学过的词必须先 yield。补字会吐几百上千个单字候选，librime
   -- 取够候选即停止迭代，放后面就没机会执行了。
