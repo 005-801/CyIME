@@ -155,7 +155,7 @@ fun BackupSettingsContent(onBack: () -> Unit) {
                     SettingsToggleItem(
                         icon = Icons.TwoTone.Person,
                         title = "包含个人词库与学习数据",
-                        subtitle = "自造词、词频和个人词库",
+                        subtitle = "自造词、词频和个人词库，属于隐私数据",
                         checked = includePersonal,
                         onCheckedChange = { includePersonal = it; BackupChoices.setIncludePersonal(context, it) }
                     )

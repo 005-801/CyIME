@@ -35,6 +35,7 @@ internal fun keyTipGroups(settings: KeyboardInputPreferences): List<KeyTipGroup>
     val lower = if (settings.reverseSymbolSwipe) "下拉" else "上拉"
     val clearSwipe = if (settings.deleteSwipeReversed) "上拉" else "下拉"
     val restoreSwipe = if (settings.deleteSwipeReversed) "下拉" else "上拉"
+    val hold = "%.1f".format(com.kingzcheung.xime.ui.keyboard.normalizeSymbolKeyHoldSeconds(settings.symbolKeyHoldSeconds))
     return listOf(
         KeyTipGroup("Shift", listOf(
             KeyTip("点一下 Shift", "下一个字母大写，打完自动回到小写。"),
@@ -46,12 +47,12 @@ internal fun keyTipGroups(settings: KeyboardInputPreferences): List<KeyTipGroup>
             KeyTip("长按空格移光标时按住 Shift", "选中文字。"),
         )),
         KeyTipGroup("Ctrl(左下角 !@# 键)", buildList {
-            add(KeyTip("按住 !@#", "这个键变成 Ctrl，字母键上显示快捷键。"))
+            add(KeyTip("按住 !@#", "按满 $hold 秒，这个键变成 Ctrl，字母键上显示快捷键。"))
             add(KeyTip("按住 !@# 拖到字母上松手", "发送 Ctrl 加这个字母，如 Ctrl+C 复制。"))
             add(KeyTip("按住 !@# 点回车", "发送消息，同 Ctrl+回车。"))
             add(KeyTip("按住 !@# 点删除", "删掉前一个词，同 Ctrl+删除。"))
             add(KeyTip("按住 !@# 长按空格拖动", "选中文字，同按住 Shift。"))
-            add(KeyTip("点一下 !@#", "打开符号面板。",
+            add(KeyTip("点一下 !@#", "$hold 秒内、没拖动就松手才打开符号面板；时限在「按键与手势 › 符号键松手打开符号的时限」里调。",
                 listOf("按键与手势 › 符号键松手打开符号的时限")))
         }),
         KeyTipGroup("九键", buildList {
@@ -61,7 +62,7 @@ internal fun keyTipGroups(settings: KeyboardInputPreferences): List<KeyTipGroup>
                 add(KeyTip("长按「下一项」", "同按住 Shift，候选换成英文。"))
                 add(KeyTip("从「下一项」拖到候选上松手", "这条候选有英文就上屏英文。"))
             } else if (settings.cornerSymbolInput) {
-                add(KeyTip("回车${if (settings.reverseSymbolSwipe) "上拉" else "下拉"}", "输入 0。",
+                add(KeyTip("回车${if (settings.reverseSymbolSwipe) "上拉" else "下拉"}", "打 0，打字选词时不接。0 键已去掉，见「九键与 14 键 › 去掉 0 键，回车加高」。",
                     listOf("九键与 14 键 › 去掉 0 键，回车加高")))
             }
         }),

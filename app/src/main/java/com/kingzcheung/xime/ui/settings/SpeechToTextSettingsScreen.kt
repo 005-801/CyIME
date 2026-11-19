@@ -213,7 +213,7 @@ fun SpeechToTextSettingsContent(
                                 )
                             }
                             Text(
-                                text = "录音只存在本机，不会上传。",
+                                text = "录音只存在本机，用来改进断句和模型；最多留 300 段或 500 MB，不会上传。",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

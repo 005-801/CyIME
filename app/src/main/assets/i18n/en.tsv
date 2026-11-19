@@ -3616,7 +3616,7 @@ Gboard 导出的压缩包直接导入。	Import the archive exported from Gboard
 Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and Delete
 {0} 已下载，点一下安装	{0} downloaded. Tap to install
 {0} 已发布，点一下打开发布页	{0} is out. Tap to open the release page
-{0}。内存紧张时系统会自动卸掉，下次按麦克风要先重新加载。	{0}. When memory is low the system unloads it, and the next tap on the mic reloads it first.
+{0}。内存紧张时系统会自动卸掉，下次按麦克风要先重新加载，打字不受影响。	{0}. When memory is low the system unloads it, and the next tap on the mic reloads it first. Typing isn't affected.
 {0}在各设备上颜色相同。点击可预览。	{0} looks the same on every device. Tap to preview.
 {0}：九键改为长按输入数字和角标	{0}: on 9-key, long-press types digits and hints
 {0}：角标改为长按输入	{0}: hints are typed by long-press
@@ -3630,7 +3630,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 三行字母左右错开的方式	How the three letter rows are staggered
 上下滑动按键输入角标里的符号和数字	Swipe keys up or down to type their hint symbols and digits
 上滑出上角标，下滑出下角标，删除键也反过来	Swipe up for the top hint, down for the bottom one; Delete swipes are reversed too
-上面的开关关着，图片暂不显示	The switch above is off, so images aren't shown
+上面的开关关着：键盘用配色方案的底色，这些图片留着	The switch above is off: the keyboard uses the color scheme's background, and these images are kept
 下次打字时生效	Takes effect next time you type
 下次说话时生效。	Takes effect the next time you speak.
 下载公式手写模型后可用，见「手写 › 已安装的手写模型」。	Available after downloading the formula model in “Handwriting › Installed handwriting models”.
@@ -3666,8 +3666,8 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 全拼 26 键里夹着英文单词时，照样认出来	Recognize English words mixed into Pinyin on QWERTY
 公式上屏时两边加的标记	Delimiters added around entered formulas
 共 {0} 个模型 · 在本机运行，较耗电	{0} models · run on this device and use more power
-共 {0} 张，打开「动态背景」后轮流显示	{0} images; turn on “Animated background” to rotate them
-共 {0} 张，轮流显示	{0} images, shown in turn
+共 {0} 张，打开下面的「动态背景」才会轮流换	{0} images; turn on “Animated background” below to rotate them
+共 {0} 张，背景每动完一圈换下一张；点哪张就调哪张的位置	{0} images; the background switches to the next one after each loop. Tap one to adjust its position
 关掉动效和特效，最省电	Turn off animations and effects to save the most power
 关掉后可以连续粘贴多条	When off, you can paste several items in a row
 关着时不显示麦克风，也不下载语音模型	Off: no mic button, and no speech models are downloaded
@@ -3698,12 +3698,12 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 双字母键左滑输入左边的字母，右滑输入右边的	On two-letter keys, swipe left or right to type that letter
 双拼也用下面的模糊音	Shuangpin also uses the fuzzy groups below
 双拼按到旁边的键时也能出想打的词	Get the intended word when you hit a neighboring key in Shuangpin
-发给已配对的设备，3 分钟后清除	Send to paired devices; cleared after 3 minutes
+只发给已配对的设备，不进历史，3 分钟后清除	Sent only to paired devices; not added to history, cleared after 3 minutes
 发送 Ctrl 加这个字母，如 Ctrl+C 复制。	Sends Ctrl plus that letter, e.g. Ctrl+C to copy.
 发送消息，同 Ctrl+回车。	Sends the message, same as Ctrl+Enter.
 只删除键位，不删词库。正在用的话会换回小鹤双拼。	Only the key map is deleted, not dictionaries. If it's in use, Xiaohe is used instead.
 只反转删除键的上下滑，角标方向不变	Reverse only the Delete key's swipes; hint direction stays
-只在本机计数，不记录输入内容。	Counted on this device only; what you type isn't recorded.
+只在本机计数，不记录输入内容，不联网。密码框和无痕模式不计数。	Counted on this device only; what you type isn't recorded and nothing goes online. Password fields and incognito aren't counted.
 只导出两个字以上、带拼音的词。	Only words of two or more characters with Pinyin are exported.
 只打声母也出词，如 wxzf 出“微信支付”	Type just the initials, e.g. wxzf for 微信支付
 只把这一个字母打成大写。	Types just this letter in uppercase.
@@ -3743,7 +3743,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 在英文 26 键上划过字母输入整个单词	Glide across letters to type whole English words
 在词后面给出对应的表情	Suggest a matching emoji after the word
 在键盘上左右滑动移动光标	Slide across the keyboard to move the cursor
-在键盘下方的留白处左右滑动移动光标	Slide in the space below the keyboard to move the cursor
+在「键盘尺寸与位置」里拖出底部留白后，在留白处左右滑动移动光标	After dragging out a bottom margin in “Keyboard size & position”, slide in that space to move the cursor
 备份只存到你选的位置，不会上传。	Backups are saved only where you choose and never uploaded.
 备份里的设置和词库会覆盖现在的，剪贴板记录会合并。	Settings and dictionaries in the backup replace the current ones; clipboard items are merged.
 复制的密码也记下来，显示成圆点，1 小时后自动删除	Keep copied passwords too, shown as dots and deleted after 1 hour
@@ -3770,7 +3770,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 开着的布局显示在切换栏，长按拖动排序。	Enabled layouts appear in the switcher; long-press to reorder.
 当前设置的效果	Effect of the current settings
 录屏时能录到按键音	Key sounds are included in screen recordings
-录音只存在本机，不会上传。	Recordings stay on this device and are never uploaded.
+录音只存在本机，用来改进断句和模型；最多留 300 段或 500 MB，不会上传。	Recordings stay on this device to improve sentence breaks and models; up to 300 clips or 500 MB, never uploaded.
 总会备份设置、主题、布局和固定的剪贴板记录；不含插件、模型、剪贴板图片和密码。	Always includes settings, themes, layouts and pinned clipboard items; not plugins, models, clipboard images or passwords.
 所有布局的按键一起改。	Applies to keys on all layouts.
 所有键盘共用	Applies to all keyboards
@@ -3784,7 +3784,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 打完拼音后点「辅」再打字形编码，筛选候选	After the Pinyin, tap “辅” and type the shape code to filter candidates
 打开「语音转文本」后可用	Available after turning on “Speech to text”
 打开后上滑出上角标，下滑出下角标，删除键也反过来	When on, swipe up for the top hint and down for the bottom one; Delete swipes are reversed too
-打开符号面板。	Opens the symbol panel.
+{0} 秒内、没拖动就松手才打开符号面板；时限在「按键与手势 › 符号键松手打开符号的时限」里调。	The symbol panel opens only if you release within {0} s without dragging; change the limit in “Keys & gestures › Time limit for opening symbols on release”.
 打拼音时 Shift 键变成分词键	Shift becomes the syllable separator while typing Pinyin
 打拼音时在逗号键上{0}插入分词符 '	While typing Pinyin, {0} on the comma key to insert the ' separator
 打数字时，候选里给出编码相符的「我的短语」	Typing digits suggests matching entries from “My phrases”
@@ -3792,7 +3792,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 打过的常用长数字，打开头时直接给出	Suggest long numbers you've typed before
 打错时也给出想打的词，原来的候选还在	Suggest the intended word when you mistype; your own input stays in the list
 打长句时多给一个整句候选	Offer one more whole-sentence candidate for long input
-扫码可以再添加一台设备。	Scan a code to add another device.
+扫码可以再添加一台设备；手机或平板的二维码在它的「让其他手机或平板连接本机」里。	Scan a code to add another device; a phone or tablet shows its code under “Let other phones or tablets connect to this one”.
 拂动时在键上方显示方向圆盘	Show a direction disc above the key when flicking
 拂动选字母、双字母键、假名提示	Flick for letters, two-letter keys, kana hints
 拖动「下一项」超过这个距离才算选词	How far to drag “Next” before it picks a candidate
@@ -3813,7 +3813,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 换配色时保留背景图片	Keep the background image when changing colors
 搜狗 .bin 和微软拼音 .dat 读不了，请先在原输入法里导出成文本。	Sogou .bin and Microsoft Pinyin .dat can't be read; export them as text from that keyboard first.
 支持搜狗、QQ、百度、Gboard、微软拼音、Rime 等格式	Sogou, QQ, Baidu, Gboard, Microsoft Pinyin, Rime and more
-收到验证码短信时自动复制验证码，10 分钟后删除	Copy codes from new SMS automatically; cleared after 10 minutes
+只复制新短信里的验证码，不读历史短信、不进剪贴板历史，10 分钟后删除	Copies only the code from new SMS; old messages aren't read and nothing goes into clipboard history. Deleted after 10 minutes
 数字键盘左侧一列的符号	Symbols in the left column of the number pad
 文字识别模型，用到时自动准备	Text recognition model, prepared when needed
 文本和 Rime 词典最多 200 万个词，搜狗词库和 JSON 最多 25 万个词。单字会跳过；形码只认笔画，五笔等形码词库不能从这里导入。	Text and Rime dictionaries hold up to 2 million words; Sogou and JSON up to 250,000. Single characters are skipped; of shape codes only strokes are read, so Wubi and similar dictionaries can't be imported here.
@@ -3858,7 +3858,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 漏打一个字母也能出想打的词，如 chengong 出“成功”	Get the intended word with a missing letter, e.g. chengong → 成功
 点「编辑排列」后拖动按钮，点勾号保存。	Tap “Edit order”, drag buttons, then tap ✓ to save.
 点「调整尺寸」后拖动边框，调好点「确认」。	Tap “Resize”, drag the edges, then tap “Confirm”.
-点图片调整位置，点 ＋ 添加更多轮流显示	Tap an image to adjust it; tap ＋ to add more to rotate
+点图片调整位置或换一张；点 ＋ 加几张，轮流显示	Tap an image to adjust or replace it; tap ＋ to add several that take turns
 点工具栏麦克风说话，转成文字	Tap the mic in the toolbar to speak and get text
 点开语言选择方案和布局，长按调整顺序	Tap a language to choose its scheme and layout; long-press to reorder
 点按时光沿键缝扩散	Light spreads along the key gaps when you tap
@@ -3885,7 +3885,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 背景图片缓慢移动，省电时停止	The background image moves slowly; stops in battery saver
 自动查找同一 Wi-Fi 下的电脑，首次连接要核对连接码。	Finds computers on the same Wi-Fi; check the code the first time.
 自动：宽时显示，窄时隐藏	Auto: show when there's room, hide when narrow
-自造词、词频和个人词库	Your own words, word frequencies and personal dictionary
+自造词、词频和个人词库，属于隐私数据	Your own words, word frequencies and personal dictionary; private data
 英文、中文、九键滑行	English, Chinese and 9-key glide typing
 英文打 , . ? ! 后自动加一个空格	Add a space after , . ? ! in English
 英文打出短语编码时，候选里给出「我的短语」	Typing a phrase code in English suggests the entry from “My phrases”
@@ -3918,11 +3918,11 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 越小越灵敏	Smaller is more sensitive
 越高图片越淡、字越清楚	Higher makes the image fainter and text clearer
 跟随系统：强弱跟系统设置一致	Follow system: strength matches system settings
-输入 0。	Types 0.
+打 0，打字选词时不接。0 键已去掉，见「九键与 14 键 › 去掉 0 键，回车加高」。	types 0 (not while choosing words). The 0 key is removed; see “9-key & 14-key › Remove the 0 key, taller Enter”.
 输入左括号、左引号时自动补上右半边	Typing an opening bracket or quote adds the closing one
 输入方案的缓存，清除后自动重建	Input scheme cache; rebuilt automatically after clearing
 还可以关掉这些：	You can also turn these off:
-这个键变成 Ctrl，字母键上显示快捷键。	The key becomes Ctrl and letter keys show shortcuts.
+按满 {0} 秒，这个键变成 Ctrl，字母键上显示快捷键。	After {0} s the key becomes Ctrl and letter keys show shortcuts.
 这是最后一张，删掉后就没有背景图片了。	This is the last one; deleting it leaves no background image.
 连不上？在电脑上选“使用二维码连接”，再用这里扫码。	Can't connect? Choose “Connect with QR code” on the computer, then scan it here.
 连电脑请用上面的“扫码连接电脑”，下面用于其他同步服务。	To connect a computer, use “Scan to connect” above; below is for other sync services.
@@ -3946,6 +3946,6 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 长按输入上方角标。	Long-press types the top hint.
 隐藏的角标照样能输入。	Hidden hints can still be typed.
 需先在系统无障碍里打开“通话字幕”。	Turn on “Call captions” in system accessibility first.
-需要短信权限，请在系统设置里允许。	SMS permission is needed; allow it in system settings.
+未获得短信权限。请在系统设置 → 应用 → CyIME → 权限里允许接收短信，再回到这里。	SMS permission not granted. Allow receiving SMS in System settings → Apps → CyIME → Permissions, then come back.
 需要通讯录权限，请在系统设置里允许	Contacts permission is needed; allow it in system settings
 高度、宽度、悬浮、透明度	Height, width, floating, transparency

@@ -37,7 +37,7 @@ class VerificationCodeLayoutTest {
             rule.runOnIdle { viewport.value = v; checked.value = false }
             rule.onNode(hasClickAction() and hasText("新短信验证码自动复制")).performScrollTo().performClick()
             rule.runOnIdle { assertTrue(checked.value) }
-            rule.onNodeWithText("需要短信权限", substring = true).performScrollTo()
+            rule.onNodeWithText("未获得短信权限", substring = true).performScrollTo()
             rule.assertGeometry("otp-settings-host", "短信权限设置 $v")
         }
     }

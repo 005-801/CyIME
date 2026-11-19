@@ -98,7 +98,7 @@ fun TypingStatsScreen(onBack: () -> Unit) {
                     checked = enabled, onCheckedChange = { enabled = it; TypingStats.setEnabled(context, it) },
                     costItem = com.kingzcheung.xime.settings.PerformanceCosts.Item.TYPING_STATS)
             })
-            SettingsNote("只在本机计数，不记录输入内容。")
+            SettingsNote("只在本机计数，不记录输入内容，不联网。密码框和无痕模式不计数。")
         }
     }
 }

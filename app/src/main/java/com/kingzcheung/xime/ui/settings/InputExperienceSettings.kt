@@ -367,7 +367,7 @@ internal fun InputExperienceSettings(
                 verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("底部留白滑动移动光标", style = MaterialTheme.typography.titleSmall)
-                    SettingsJumpText("在键盘下方的留白处左右滑动移动光标",
+                    SettingsJumpText("在「键盘尺寸与位置」里拖出底部留白后，在留白处左右滑动移动光标",
                         jumps = listOf("键盘尺寸与位置"), style = MaterialTheme.typography.bodySmall)
                 }
                 Switch(checked = settings.bottomLiftCursor, modifier = Modifier.testTag("bottom-lift-cursor-switch"),

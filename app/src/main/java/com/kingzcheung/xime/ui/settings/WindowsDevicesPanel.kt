@@ -136,7 +136,7 @@ internal fun WindowsDevicesPanelContent(
                 Text(if (paired == null) "扫码连接电脑" else "扫码添加另一台设备")
             }
             SettingsJumpText(if (paired == null) "连不上？在电脑上选“使用二维码连接”，再用这里扫码。"
-                else "扫码可以再添加一台设备。",
+                else "扫码可以再添加一台设备；手机或平板的二维码在它的「让其他手机或平板连接本机」里。",
                 jumps = listOf("让其他手机或平板连接本机"),
                 style = MaterialTheme.typography.bodyMedium)
             val unpaired = devices.filterNot { peer -> saved.any { it.id == peer.id } }
