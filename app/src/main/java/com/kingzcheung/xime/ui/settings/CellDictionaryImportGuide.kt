@@ -52,6 +52,9 @@ internal fun CellDictionaryImportGuide(onDismiss: () -> Unit, onImport: () -> Un
             GuideExample("你好 ni hao\nnihao 你好\n'shang'hai 上海\n计算机\tji suan ji\t100\nTeam Spirit")
             GuideText("最后的数字(词频)不读，所有词同一个权重；没有汉字的一行当作英文词，所有键盘的英文候选里都能打出来；" +
                 "# 开头的行跳过。文件编码 UTF-8、UTF-16、GBK 都可以。")
+            GuideFormat("笔画词库(.txt)", "每行「词 笔画编码」，编码只用 h s p n z(横竖撇点折)，每字首笔、整串笔画或用 ' 隔开都行。" +
+                "这些词只给笔画输入的分词打词用，拼音打不出来。")
+            GuideExample("骆驼 zz\n猫娘 pzpshhsszhsh'zphnzhhzpn")
             GuideFormat("Rime 词典(.dict.yaml)", "只读文件头「...」下面的词条，每行「词⇥拼音⇥权重」，权重同样不读。")
             GuideFormat("Gboard 个人词典(.zip)", "Gboard 导出的压缩包直接导入，读里面的 dictionary.txt。")
             GuideFormat("微软拼音(.dctx)", "微软拼音导出的词库文件，声调去掉后导入。")
@@ -65,7 +68,7 @@ internal fun CellDictionaryImportGuide(onDismiss: () -> Unit, onImport: () -> Un
             GuideHeading("限制")
             GuideText("文本和 Rime 词典最大 128 MB、200 万个词，搜狗词库和 JSON 最大 16 MB、25 万个词。" +
                 "中文词要 2 到 32 个字，单字和没有拼音的行会跳过，导入后会说跳过了几行。" +
-                "只认全拼拼音，五笔等形码词库不能从这里导入。")
+                "拼音只认全拼；形码只认笔画，五笔等别的形码词库不能从这里导入。")
 
             Button(onClick = { onDismiss(); onImport() }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 .heightIn(min = 48.dp)) { Text("选择文件导入") }

@@ -69,8 +69,8 @@ object StrokeCellDictionary {
     }
 
     /**
-     * 把 [sources]（导入词库的 cell_*.dict.yaml，正文每行「词<TAB>拼音<TAB>权重」）里两到四个字的词换成首笔编码，
-     * 写到 [target]。同一个词只写一次。返回写了几个词；来源和码表都没变（每次启动都会走到这里）时不重写，返回 null。
+     * 把 [sources] 里两到四个字的词换成首笔编码，写到 [target]：导入词库的 cell_*.dict.yaml（正文每行「词<TAB>拼音<TAB>权重」），
+     * 和导入的笔画词库 *.stroke.txt（一行一个词）。同一个词只写一次。返回写了几个词；来源和码表都没变（每次启动都会走到这里）时不重写，返回 null。
      */
     fun write(target: File, table: File, sources: List<File>): Int? {
         val signature = "# sources: " + CellDictionaryStore.digest((sources + table).joinToString("\n") {
@@ -85,7 +85,8 @@ object StrokeCellDictionary {
             out.write("$signature\n# 导入词库的笔画首笔词表，由 CyIME 应用词库时生成，不要手改。\n---\n" +
                 "name: $NAME\nversion: \"1\"\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
             for (source in sources) source.bufferedReader().useLines { lines ->
-                var body = false
+                // 导入的笔画词库（*.stroke.txt）一行一个词，没有文件头。
+                var body = !source.name.endsWith(".dict.yaml")
                 for (line in lines) {
                     if (!body) { body = line == "..."; continue }
                     val text = line.substringBefore('\t')

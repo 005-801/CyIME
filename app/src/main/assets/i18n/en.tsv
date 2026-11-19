@@ -1176,6 +1176,7 @@ Android/data 下的语音调校录音、个人手写模型与训练样本等，�
 分类词库的翻译器追加项不是单个条目	The translator append item of the category dictionary isn't a single entry
 词库超过 200 万条词语，请拆分后导入	Dictionary has more than 2 million words; please split it before importing
 没有读到带拼音的词条（每行“词 拼音”或“拼音 词”）	No entries with pinyin found (each line should be “word pinyin” or “pinyin word”)
+没有读到带拼音或笔画编码的词条（每行“词 拼音”“拼音 词”或“词 笔画编码”）	No entries with pinyin or stroke codes found (each line should be “word pinyin”, “pinyin word” or “word strokes”)
 随包插件 {0} 升级失败	Bundled plugin {0} failed to upgrade
 没有可校验的下载地址	No download URL that can be verified
 插件包需要 HTTPS 下载地址	Plugin packages need an HTTPS download URL
@@ -1613,8 +1614,10 @@ CyIME 自己的格式，拼音按字用空格隔开：	CyIME's own format, with 
  "entries": [{"word": "你好", "code": "ni hao"}]}	=
 限制	Limits
 文本和 Rime 词典最大 128 MB、200 万个词，搜狗词库和 JSON 最大 16 MB、25 万个词。中文词要 2 到 32 个字，单字和没有拼音的行会跳过，导入后会说跳过了几行。	Text and Rime dictionaries up to 128 MB and 2 million words; Sogou and JSON dictionaries up to 16 MB and 250,000 words. Chinese words must be 2 to 32 characters; single characters and lines without pinyin are skipped, and you'll be told how many lines were skipped.
-中文词要 2 到 32 个字，单字和没有拼音的行会跳过，导入后会说跳过了几行。只认全拼拼音，五笔等形码词库不能从这里导入。	Chinese words must be 2 to 32 characters; single characters and lines without pinyin are skipped, and you'll be told how many lines were skipped. Only full pinyin is accepted; Wubi and other shape-code dictionaries can't be imported here.
-只认全拼拼音，五笔等形码词库不能从这里导入。	Only full pinyin is accepted; Wubi and other shape-code dictionaries can't be imported here.
+中文词要 2 到 32 个字，单字和没有拼音的行会跳过，导入后会说跳过了几行。拼音只认全拼；形码只认笔画，五笔等别的形码词库不能从这里导入。	Chinese words must be 2 to 32 characters; single characters and lines without pinyin are skipped, and you'll be told how many lines were skipped. Pinyin must be full pinyin; of the shape codes only stroke codes are read, so Wubi and other shape-code dictionaries can't be imported here.
+笔画词库(.txt)	Stroke dictionary (.txt)
+每行「词 笔画编码」，编码只用 h s p n z(横竖撇点折)，每字首笔、整串笔画或用 ' 隔开都行。这些词只给笔画输入的分词打词用，拼音打不出来。	One “word strokes” per line, using only h s p n z (horizontal, vertical, left-falling, dot, turning): the first stroke of each character, the full strokes, or strokes split with ' all work. These words are for word typing in stroke input only; pinyin can't type them.
+拼音只认全拼；形码只认笔画，五笔等别的形码词库不能从这里导入。	Pinyin must be full pinyin; of the shape codes only stroke codes are read, so Wubi and other shape-code dictionaries can't be imported here.
 选择文件导入	Choose a file to import
 导入的词库	Imported dictionaries
 开着 {0} 个词库，{1}，打字最多慢 {2}	{0} dictionaries on, {1}, typing up to {2} slower
@@ -3653,6 +3656,7 @@ GitHub 暂时限制了查询次数，过一会儿再试	GitHub is temporarily li
 无法打开文件	Can't open the file
 ，跳过 {0} 行（单字或没有拼音）	, {0} lines skipped (single characters or no pinyin)
 已导入「{0}」{1} 个词{2}，点「应用更改」后生效	Imported “{0}” with {1} words{2}; tap “Apply changes” to use it
+已导入「{0}」{1} 个词{2}，其中 {3} 个笔画编码的词只给笔画输入用，点「应用更改」后生效	Imported “{0}” with {1} words{2}; {3} of them have stroke codes and are for stroke input only. Tap “Apply changes” to use it
 CyIME 日志 - {0}	CyIME log - {0}
 分享失败: {0}	Sharing failed: {0}
 已安装，重新启动输入法后生效	Installed; takes effect after restarting the keyboard

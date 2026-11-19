@@ -182,8 +182,9 @@ object CellDictionaryRime {
         copies.forEach { (file, source) -> CellDictionaryStore.copyAtomic(source, file) }
         val strokeDictionary = File(rimeDir, "${StrokeCellDictionary.NAME}.dict.yaml")
         if (strokeCells) {
-            StrokeCellDictionary.write(strokeDictionary, strokeTable,
-                ids.sorted().map { File(rimeDir, "cyime_cells/cell_$it.dict.yaml") })
+            StrokeCellDictionary.write(strokeDictionary, strokeTable, ids.sorted().flatMap {
+                listOf(File(rimeDir, "cyime_cells/cell_$it.dict.yaml"), store.strokeWordsFile(it)).filter(File::isFile)
+            })
         } else {
             strokeDictionary.delete()
             File(rimeDir, "${StrokeCellDictionary.NAME}.schema.yaml").delete()

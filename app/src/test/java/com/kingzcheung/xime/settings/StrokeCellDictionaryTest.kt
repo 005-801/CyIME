@@ -48,6 +48,21 @@ class StrokeCellDictionaryTest {
         assertFalse(File(rime, "stroke_cells.schema.yaml").exists())
     }
 
+    @Test fun `an imported stroke dictionary reaches the stroke table and is removed with its dictionary`() {
+        val store = CellDictionaryStore(temp.newFolder())
+        val entry = store.installFile("你好 pz\n律叶 ppszhhhhs'szhhs\n".byteInputStream())
+        assertEquals(0, entry.count)
+        assertEquals(2, entry.stroke)
+        assertEquals("你好\n律叶\n", store.strokeWordsFile(entry.id).readText())
+        val rime = rime()
+        CellDictionaryRime.prepare(rime, store, listOf(SchemaMeta("stroke", "笔画")), setOf(entry.id))
+        val dict = File(rime, "stroke_cells.dict.yaml").readText()
+        assertTrue(dict.contains("你好\tpz\t1\n"))
+        assertTrue(dict.contains("律叶\tps\t1\n"))
+        store.remove(entry.id)
+        assertFalse(store.strokeWordsFile(entry.id).exists())
+    }
+
     @Test fun `a stroke schema with its own dependency patch is left alone and pinyin still applies`() {
         val store = CellDictionaryStore(temp.newFolder())
         val entry = store.install(scelFixture())
