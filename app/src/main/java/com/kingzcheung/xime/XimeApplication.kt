@@ -67,6 +67,16 @@ class XimeApplication : Application(), ImageLoaderFactory {
         val processName = getProcessName()
         if (processName != packageName) return
         SettingsPreferences.initializeIncognitoForVersion(this, BuildConfig.VERSION_CODE)
+        // 键盘和设置页都收起后把用完的 Java 堆还给系统（见 HeapReclaim）。
+        registerActivityLifecycleCallbacks(object : android.app.Application.ActivityLifecycleCallbacks {
+            override fun onActivityStarted(activity: android.app.Activity) = com.kingzcheung.xime.service.HeapReclaim.onActivityStarted()
+            override fun onActivityStopped(activity: android.app.Activity) = com.kingzcheung.xime.service.HeapReclaim.onActivityStopped()
+            override fun onActivityCreated(activity: android.app.Activity, savedInstanceState: android.os.Bundle?) = Unit
+            override fun onActivityResumed(activity: android.app.Activity) = Unit
+            override fun onActivityPaused(activity: android.app.Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: android.app.Activity, outState: android.os.Bundle) = Unit
+            override fun onActivityDestroyed(activity: android.app.Activity) = Unit
+        })
         // 先于任何下载、导入和词库准备列出上次中断的残留，后台删除。
         com.kingzcheung.xime.settings.StorageHousekeeping.sweepAtStartup(this, applicationScope)
         com.kingzcheung.xime.model.DeviceDefaults.initialize(this)

@@ -4614,6 +4614,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         backgroundMotionWindowShown.value = false
         imeWindowShown = false
         inputStallWatchdog?.stop()
+        HeapReclaim.onKeyboardHidden()
         KeyboardPanelLaunch.previewVisible = false
         val keepVoice = voiceKeptAlive
         voiceKeptAlive = false
@@ -4663,6 +4664,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         backgroundMotionWindowShown.value = true
         imeWindowShown = true
         inputStallWatchdog?.start()
+        HeapReclaim.onKeyboardShown()
         KeyboardPanelLaunch.previewVisible = settingsPreviewEditor
         mainHandler.removeCallbacks(hideGlassBlurWindows)
         glassWindowVisible = true
