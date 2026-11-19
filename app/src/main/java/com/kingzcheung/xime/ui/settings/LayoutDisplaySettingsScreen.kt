@@ -723,33 +723,28 @@ private fun LayoutDisplayPage(
 @Composable
 private fun FixedBottomCalibrationSettings() {
     val context = LocalContext.current
-    var edge by remember(context) { mutableStateOf(SettingsPreferences.edgeToEdgeKeyboard(context)) }
     var bottomPosition by remember(context) { mutableStateOf(SettingsPreferences.keyboardBottomPosition(context)) }
     var adjustment by remember(context) { mutableIntStateOf(SettingsPreferences.getKeyboardBottomAdjustmentDp(context)) }
-    var loweringLimit by remember(context) { mutableStateOf(SettingsPreferences.getKeyboardBottomLoweringLimitDp(context)) }
+    var diagnostic by remember(context) { mutableStateOf(SettingsPreferences.getKeyboardBottomDiagnostic(context)) }
     DisposableEffect(context) {
         val prefs = SettingsPreferences.getPrefsPublic(context)
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == SettingsPreferences.KEY_EDGE_TO_EDGE_KEYBOARD || key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_POSITION ||
-                key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_LOWERING_LIMIT_DP || SettingsPreferences.isBottomCalibrationKey(key)) {
-                edge = SettingsPreferences.edgeToEdgeKeyboard(context)
+            if (key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_POSITION || key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_DIAGNOSTIC ||
+                SettingsPreferences.isBottomCalibrationKey(key)) {
                 bottomPosition = SettingsPreferences.keyboardBottomPosition(context)
                 adjustment = SettingsPreferences.getKeyboardBottomAdjustmentDp(context)
-                loweringLimit = SettingsPreferences.getKeyboardBottomLoweringLimitDp(context)
+                diagnostic = SettingsPreferences.getKeyboardBottomDiagnostic(context)
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
-    // 调低最多到安全下限（键盘量过才知道；没量过仍按 80 dp）：到了下限按钮变灰，数字也不再往下走。
-    // 贴底时从贴底位置还能再调低 80 dp（键盘那边到 0 为止），识别不出手势导航的手机也能自己去掉底下那段。
-    // 固定的两档（贴到最底、留出导航按钮）从那一档的位置往下调，也能一直调到 0。
-    val fixedChoice = bottomPosition != SettingsPreferences.KeyboardBottomPosition.AUTO
-    val lowest = if (edge || fixedChoice) -80 else -(loweringLimit ?: 80).coerceIn(0, 80)
+    // 三档都从所选位置往下调（键盘那边到 0 为止）、往上抬，只存一套（11-19：原来跟着隐藏的贴底开关换存储，切档时数值会变）。
+    val lowest = -80
     val value = adjustment.coerceAtLeast(lowest)
-    val reference = if (fixedChoice) "「${bottomPosition.label}」的位置" else if (edge) "安全下限" else "系统建议"
+    val reference = "「${bottomPosition.label}」的位置"
     val position = when {
-        value == 0 -> if (fixedChoice) "底部留白 0 dp" else if (edge) "已选安全下限" else "使用系统建议"
+        value == 0 -> "底部留白 0 dp"
         value > 0 -> "从${reference}抬高 ${value} dp"
         else -> "从${reference}调低 ${-value} dp"
     }
@@ -783,7 +778,21 @@ private fun FixedBottomCalibrationSettings() {
                     enabled = value < 80) { Text("抬高") }
             }
             TextButton(onClick = { SettingsPreferences.resetKeyboardBottomCalibration(context) },
-                enabled = fixedChoice || !edge || adjustment != 0) { Text("恢复默认（自动、留白 0）") }
+                enabled = bottomPosition != SettingsPreferences.KeyboardBottomPosition.AUTO || adjustment != 0) { Text("恢复默认（自动、留白 0）") }
+        }
+        // 底部诊断（11-19）：反馈「被挡住」「底下有缝」时把这一行一起发来，就知道是哪种手机、系统报了什么、按哪一步判断的。
+        diagnostic?.let { line ->
+            HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+            Column(Modifier.fillMaxWidth().settingsSearchAnchor("底部诊断").padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("底部诊断", style = MaterialTheme.typography.titleSmall)
+                Text("反馈底部被挡住或有缝时，把这一行复制一起发来。打开一次键盘后更新。",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    Text(line, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("bottom-diagnostic"))
+                }
+                val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                OutlinedButton(onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(line)) }) { Text("复制") }
+            }
         }
     }
 }

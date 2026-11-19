@@ -1282,8 +1282,8 @@ object SettingsPreferences {
     const val KEY_EDGE_TO_EDGE_KEYBOARD = "edge_to_edge_keyboard"
 
     /**
-     * 「手势导航时键盘贴底」默认开（11-03 用户「这个必须得给我解决了 拖了好几个版本」：手势导航下键盘底下那段默认就该没有）。
-     * 没动过这项的老用户也跟着开；自己关掉过的（存了 false）照旧关着。三键导航和任务栏不受它影响。
+     * 旧的「手势导航时键盘贴底」（界面已并进「底部位置」）。现在只用来给没选过底部位置的老用户定档：
+     * 关过的算「留出导航按钮」，见 [keyboardBottomPosition]。贴底算法和调低都不再看它（11-19 盘点）。
      */
     fun edgeToEdgeKeyboard(context: Context): Boolean =
         getPrefs(context).getBoolean(KEY_EDGE_TO_EDGE_KEYBOARD, true)
@@ -1355,13 +1355,23 @@ object SettingsPreferences {
      * 原来按系统建议调低的值不会被搬到贴底位置下面去，三键导航时也就不会压到系统按钮。
      */
     internal fun getKeyboardBottomAdjustmentDp(context: Context): Int =
-        getKeyboardBottomPaddingDp(context).takeIf { it > 0 }
-            ?: -bottomCalibrationDp(context, loweringKey(context))
+        getKeyboardBottomPaddingDp(context).takeIf { it > 0 } ?: -keyboardBottomLoweringDp(context)
 
     internal const val KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP = "keyboard_bottom_edge_lowering_dp"
 
-    private fun loweringKey(context: Context) =
-        if (edgeToEdgeKeyboard(context)) KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP else KEY_KEYBOARD_BOTTOM_LOWERING_DP
+    /**
+     * 「调低」只存一套（11-19 盘点冲突 2）：三档都从各自位置往下调，都读写 [KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP]。
+     * 原来跟着隐藏的贴底开关换键，在「留出导航按钮」和另两档之间切换时调低的值会丢掉或冒回来。
+     * 升级前停在「留出导航按钮」、调低存在旧键里的，新键还没写过时接着用旧键的值；之后都写新键。
+     */
+    private fun keyboardBottomLoweringDp(context: Context): Int {
+        val prefs = getPrefs(context)
+        val suffix = bottomOrientationSuffix(context)
+        val keys = listOf(KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP + suffix, KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP) +
+            if (keyboardBottomPosition(context) == KeyboardBottomPosition.KEEP_BUTTONS)
+                listOf(KEY_KEYBOARD_BOTTOM_LOWERING_DP + suffix, KEY_KEYBOARD_BOTTOM_LOWERING_DP) else emptyList()
+        return keys.firstOrNull(prefs::contains)?.let { prefs.getInt(it, 0) }?.coerceAtLeast(0) ?: 0
+    }
 
     fun setKeyboardBottomPaddingDp(context: Context, paddingDp: Int) {
         setKeyboardBottomAdjustmentDp(context, paddingDp.coerceAtLeast(0))
@@ -1371,7 +1381,7 @@ object SettingsPreferences {
         // 只写当前方向；调低清零时写 0 而不是删掉，不然会退回不带后缀的旧值。
         val suffix = bottomOrientationSuffix(context)
         getPrefs(context).edit().putInt(KEY_KEYBOARD_BOTTOM_PADDING_DP + suffix, adjustmentDp.coerceAtLeast(0))
-            .putInt(loweringKey(context) + suffix, (-adjustmentDp).coerceAtLeast(0)).apply()
+            .putInt(KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP + suffix, (-adjustmentDp).coerceAtLeast(0)).apply()
     }
 
     /** 键盘上次量到的「最多还能调低多少 dp」（系统建议值减安全下限，按当前方向）；没量过为 null。 */
@@ -1387,9 +1397,20 @@ object SettingsPreferences {
             getPrefs(context).edit().putInt(KEY_KEYBOARD_BOTTOM_LOWERING_LIMIT_DP, value).apply()
     }
 
+    /** 键盘上次量到的底部诊断行（[com.kingzcheung.xime.service.bottomNavDiagnostic]），设置页显示；没量过为 null。 */
+    internal const val KEY_KEYBOARD_BOTTOM_DIAGNOSTIC = "keyboard_bottom_diagnostic"
+
+    internal fun getKeyboardBottomDiagnostic(context: Context): String? =
+        getPrefs(context).getString(KEY_KEYBOARD_BOTTOM_DIAGNOSTIC, null)
+
+    /** 内容变了才写，免得每次 insets 回调都触发设置页刷新。 */
+    internal fun setKeyboardBottomDiagnostic(context: Context, line: String) {
+        if (getKeyboardBottomDiagnostic(context) != line)
+            getPrefs(context).edit().putString(KEY_KEYBOARD_BOTTOM_DIAGNOSTIC, line).apply()
+    }
+
     internal fun resetKeyboardBottomCalibration(context: Context) {
-        // 「恢复系统建议」就是用系统给的底边：明确记下贴底关，不回到默认的开。
-        // 「底部位置」回到自动（66 的效果），留白清零。
+        // 恢复默认：「底部位置」回到自动，留白和调低清零（贴底开关只为旧版本兼容一起写成开）。
         getPrefs(context).edit().putBoolean(KEY_EDGE_TO_EDGE_KEYBOARD, true)
             .putString(KEY_KEYBOARD_BOTTOM_POSITION, KeyboardBottomPosition.AUTO.name).apply {
                 for (key in listOf(KEY_KEYBOARD_BOTTOM_PADDING_DP, KEY_KEYBOARD_BOTTOM_LOWERING_DP, KEY_KEYBOARD_BOTTOM_EDGE_LOWERING_DP))

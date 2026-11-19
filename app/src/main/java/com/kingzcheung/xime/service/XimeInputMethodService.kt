@@ -355,14 +355,19 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         if (insets != null) hasMeasuredBottomInsets = true
         val previousSuggestion = suggestedBottomDp()
         bottomInsetPxState.value = normal
-        val minimum = if (win != null && insets != null) fixedKeyboardMinimumInsetPx(insets, win, normal) else normal
+        // 底部是哪种导航只判断一次（决策表 classifyBottomNav），固定键盘、悬浮键盘和诊断行都用这一份。
+        val reading = if (win != null && insets != null) readBottomNav(insets, this, win) else null
+        val position = SettingsPreferences.keyboardBottomPosition(this)
+        val minimum = if (win != null && insets != null && reading != null)
+            fixedKeyboardMinimumInsetPx(insets, win, normal, position, reading) else normal
         fixedMinimumInsetPxState.value = minimum
-        // 贴底只管固定键盘：悬浮键盘的最低位置照旧按系统按钮和手势区算。
-        floatingMinimumInsetPxState.value = if (win != null && insets != null)
-            floatingMinimumInsetPx(win, insets, fixedKeyboardMinimumInsetPx(insets, win, normal, edge = false,
-                position = SettingsPreferences.KeyboardBottomPosition.AUTO)) else minimum
+        // 「底部位置」只管固定键盘：悬浮键盘的最低位置按系统按钮和手势区算。
+        floatingMinimumInsetPxState.value = if (win != null && insets != null && reading != null)
+            floatingMinimumInsetPx(win, insets, normal, reading) else minimum
         fixedBottomInsetPxState.value = if (win != null && insets != null)
             fixedKeyboardBottomInsetPx(insets, win, normal, minimum) else normal
+        if (reading != null) SettingsPreferences.setKeyboardBottomDiagnostic(this, bottomNavDiagnostic(this, reading, position,
+            SettingsPreferences.getKeyboardBottomAdjustmentDp(this), fixedBottomInsetPxState.value))
         // 设置页的「底部留白校准」看不到输入法窗口，记下这次量到的可调低范围，调低按到下限就停。
         if (insets != null) SettingsPreferences.setKeyboardBottomLoweringLimitDp(this,
             suggestedBottomDp() - imeBottomSpaceDp(minimum, resources.displayMetrics.density))
@@ -2278,16 +2283,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 val activeBottomDp = keyboardBottomSpaceDp(state)
                 val minimumBottomDp = imeBottomSpaceDp(fixedMinimumInsetPxState.value, resources.displayMetrics.density)
                 val editingFixedBottom = state.showKeyboardResize && !state.isFloatingMode
-                // 「底部位置」三档的留白都能调到 0（11-08），键盘调节的底边也一样能拖到屏幕底边（11-10「调不了」）：
-                // 只剩没选过底部位置、又关着贴底的旧状态照原来从系统按钮上沿量。
-                val edgeKeyboard = SettingsPreferences.edgeToEdgeKeyboard(this@XimeInputMethodService) ||
-                    SettingsPreferences.keyboardBottomPosition(this@XimeInputMethodService) != SettingsPreferences.KeyboardBottomPosition.AUTO
+                // 「底部位置」三档的留白都能调到 0（11-08），键盘调节的底边也一样能拖到屏幕底边（11-10「调不了」）。
                 // 调节固定键盘时底边从哪里量起（11-03「用户点到哪儿就是哪儿」）：从屏幕底边量，底边能一直拖到屏幕底边，
                 // 调低过的也从它现在真实的位置开始，确认后停在拖到的地方。
-                val previewInsetDp = if (!editingFixedBottom) activeBottomDp else if (edgeKeyboard) 0 else minimumBottomDp
+                val previewInsetDp = if (!editingFixedBottom) activeBottomDp else 0
                 // 「重置」回到的位置，和确认时换算校准值的基准：贴底时是贴底位置，不贴底时是系统建议。
-                val defaultBottomPadding = if (!editingFixedBottom) 0 else if (edgeKeyboard) minimumBottomDp
-                    else (imeBottomSpaceDp(bottomInsetPxState.value, resources.displayMetrics.density) - minimumBottomDp).coerceAtLeast(0)
+                val defaultBottomPadding = if (!editingFixedBottom) 0 else minimumBottomDp
                 val geometryBottomSpace = if (state.isFloatingMode) floatingMinY else
                     state.keyboardBottomPaddingDp + activeBottomDp
                 val protectedSize = resolveKeyboardSize(screenWidthDp, effectiveScreenH, geometryBottomSpace, state)

@@ -2494,6 +2494,8 @@ Shift、Ctrl(!@#)、空格、删除键的隐藏操作	Hidden moves for Shift, Ct
 调低	Lower
 抬高	Raise
 恢复默认（自动、留白 0）	Restore default (auto, margin 0)
+底部诊断	Bottom diagnostics
+反馈底部被挡住或有缝时，把这一行复制一起发来。打开一次键盘后更新。	When reporting a covered bottom row or a gap, copy this line and send it too. Updates after the keyboard opens once.
 查看键盘底部，调低、抬高或恢复系统建议	View the keyboard bottom; lower, raise or restore the system suggestion
 候选词	Candidates
 字号、候选注释(拼音或中英释义)、取消按钮、输入框或候选栏显示	Text size, candidate notes (pinyin or Chinese–English meanings), cancel button, shown in field or candidate bar

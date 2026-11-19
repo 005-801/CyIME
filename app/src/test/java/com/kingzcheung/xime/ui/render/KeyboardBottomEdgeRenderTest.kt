@@ -152,7 +152,7 @@ class KeyboardBottomEdgeRenderTest {
             .setInsets(WindowInsets.Type.navigationBars(), Insets.of(0, 0, 0, 48)).build()
         val win = rule.activity.window
         Settings.Secure.putInt(app.contentResolver, "navigation_mode", 2)
-        SettingsPreferences.setEdgeToEdgeKeyboard(app, false)
+        SettingsPreferences.setKeyboardBottomPosition(app, SettingsPreferences.KeyboardBottomPosition.KEEP_BUTTONS)
         val normal = extractBottomInset(insets, win)
         val bottom = mutableIntStateOf(fixedKeyboardBottomInsetPx(insets, win, normal))
         val schema = mutableStateOf("rime_ice")
@@ -170,7 +170,7 @@ class KeyboardBottomEdgeRenderTest {
         val initialWord = word.fetchSemanticsNode().boundsInRoot.width
         save("bottom-automatic", "viewport")
         rule.runOnIdle {
-            SettingsPreferences.setEdgeToEdgeKeyboard(app, true)
+            SettingsPreferences.setKeyboardBottomPosition(app, SettingsPreferences.KeyboardBottomPosition.AUTO)
             bottom.intValue = fixedKeyboardBottomInsetPx(insets, win, normal)
             SettingsPreferences.setCandidateTextSize(app, 14)
         }
