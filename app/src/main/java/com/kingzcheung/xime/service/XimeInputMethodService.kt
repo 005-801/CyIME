@@ -1027,7 +1027,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 uiState.value = uiState.value.copy(hardwareOptions = com.kingzcheung.xime.settings.HardwareKeyboardPreferences.read(this))
             }
             // 底部留白、调低按横竖屏分开存（键名带方向后缀），哪个方向的改了都重新量。
-            if (key == SettingsPreferences.KEY_EDGE_TO_EDGE_KEYBOARD || SettingsPreferences.isBottomCalibrationKey(key)) {
+            // 「自动」和「贴到最底」存的贴底开关都是 true，两档互切时那个键不变、不会通知，要看位置键本身（PR #514）。
+            if (key == SettingsPreferences.KEY_EDGE_TO_EDGE_KEYBOARD ||
+                key == SettingsPreferences.KEY_KEYBOARD_BOTTOM_POSITION ||
+                SettingsPreferences.isBottomCalibrationKey(key)) {
                 val decor = window.window?.decorView
                 refreshKeyboardBottomPadding()
                 updateKeyboardBottomInsets(decor?.rootWindowInsets)
