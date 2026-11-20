@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
@@ -95,17 +96,35 @@ fun HardwareKeyboardCandidateBar(
     onShown: ((List<String>, Int) -> Unit)? = null,
     /** 浮窗固定在这一边时，卡片贴着工具条放，不跟光标、不躲输入行（见 [fixedHardwareCandidatePosition]）。 */
     fixedEdge: com.kingzcheung.xime.settings.HardwareToolbarEdge? = null,
+    /** 正在打字的光标和输入框（屏幕坐标）：卡片挡住正在打的字时报告，和浮条一起变淡。 */
+    typingCaret: HardwareCursorAnchor? = null,
+    typingEditor: HardwareCursorAnchor? = null,
+    overlapFaded: Boolean = false,
+    onCoversTyping: (Boolean) -> Unit = {},
 ) {
     val reportBounds by rememberUpdatedState(onBoundsChanged)
     val reportPreeditBounds by rememberUpdatedState(onPreeditBoundsChanged)
-    val displayText = if (showPreedit) preeditText.ifEmpty { inputText } else ""
-    if (candidates.isEmpty() && displayText.isEmpty()) {
-        LaunchedEffect(Unit) { reportBounds(null); reportPreeditBounds(null) }
+    val reportCovers by rememberUpdatedState(onCoversTyping)
+    // 贴底时拼音画在浮条里候选左边（见 HardwareBarSteady.kt）：浮在浮条上方正好压在 App 的输入框上，
+    // 还随每个字母变宽、躲光标行上下跳（用户 11-20）。
+    val displayText = if (showPreedit && !bottomDocked) preeditText.ifEmpty { inputText } else ""
+    if (displayText.isEmpty() && (candidates.isEmpty() || bottomDocked)) {
+        LaunchedEffect(Unit) { reportBounds(null); reportPreeditBounds(null); reportCovers(false) }
         return
     }
     DisposableEffect(Unit) {
-        onDispose { reportBounds(null); reportPreeditBounds(null) }
+        onDispose { reportBounds(null); reportPreeditBounds(null); reportCovers(false) }
     }
+    // 一次输入（拼音没清空）里：卡片只往右加宽不缩回，横向位置定在开始打字的地方（用户 11-20，与 Windows 一致）。
+    // 以前每个字都按这组候选（注释时有时无）重算宽度、跟着光标横移，卡片一直晃。
+    val inputActive = inputText.isNotEmpty() || preeditText.isNotEmpty()
+    val heldWidth = remember(inputActive) { IntArray(1) }
+    var startAnchor by remember { mutableStateOf<HardwareCursorAnchor?>(null) }
+    // 记下这次输入开始后收到的第一个光标位置（光标位置可能晚一拍才到）。
+    LaunchedEffect(inputActive, cursorAnchor == null) {
+        if (!inputActive) startAnchor = null else if (startAnchor == null) startAnchor = cursorAnchor
+    }
+    val steadyAnchor = if (inputActive) hardwareSteadyAnchor(cursorAnchor, startAnchor) else cursorAnchor
 
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -156,7 +175,7 @@ fun HardwareKeyboardCandidateBar(
         }
         val placement = hardwareCandidatePosition(
             constraints.maxWidth, constraints.maxHeight, cardSize.width, cardSize.height,
-            cursorAnchor.takeIf { hostPositionInRoot != null && !bottomDocked }, origin.x, origin.y,
+            steadyAnchor.takeIf { hostPositionInRoot != null && !bottomDocked }, origin.x, origin.y,
             marginPx, with(density) { 8.dp.roundToPx() },
             avoidBounds = toolbarExclusion,
         )
@@ -176,8 +195,12 @@ fun HardwareKeyboardCandidateBar(
         val buttons = (if (candidates.size > 1) 1 else 0) +
             (if (onPrevious != null && (hasPrevPage || highlightIndex > 0)) 1 else 0) +
             (if (onNext != null && (hasNextPage || highlightIndex < candidates.lastIndex)) 1 else 0)
-        val contentWidth = (with(density) { textWidth.toDp() } + (16 * shownCount + 40 * buttons + 12 + 8).dp)
+        val naturalWidth = (with(density) { textWidth.toDp() } + (16 * shownCount + 40 * buttons + 12 + 8).dp)
             .coerceIn(minOf(160.dp, maxCardWidth), maxCardWidth)
+        val contentWidth = if (!inputActive) naturalWidth else with(density) {
+            heldWidth[0] = hardwareGrowOnlyWidth(heldWidth[0], naturalWidth.roundToPx(), 0, maxCardWidth.roundToPx())
+            heldWidth[0].toDp()
+        }
         // 卡片没顶到最宽时宽度是按这组候选算出来的，放不下只能是上面算少了：这时不报「放得下几个」，
         // 免得翻页步长跟着卡片一起缩（同上）。顶到最宽才是真放不下，照常报，按它分组。
         val reportFit = onShown.takeIf { contentWidth >= maxCardWidth }
@@ -195,9 +218,20 @@ fun HardwareKeyboardCandidateBar(
             dockBounds?.let { (it.y - cardSize.height - marginPx).coerceAtLeast(marginPx) } ?: placement.y),
             cardSize.width, cardSize.height, constraints.maxHeight, caretLine, toolbarExclusion,
             marginPx, with(density) { 4.dp.roundToPx() })
+        // 卡片挡住正在打的字：报告给浮条，两者一起淡到 40% 透明（220ms），不挡了再恢复。
+        val typingLine = if (hostPositionInRoot == null) null else hardwareTypingLine(
+            typingCaret?.inHost(origin.x.toFloat(), origin.y.toFloat()),
+            typingEditor?.inHost(origin.x.toFloat(), origin.y.toFloat()), marginPx * 3)
+        val coversTyping = cardSize.width > 0 &&
+            HardwareCandidateExclusion(x, y, x + cardSize.width, y + cardSize.height).overlaps(typingLine)
+        LaunchedEffect(coversTyping) { reportCovers(coversTyping) }
+        val overlapAlpha by androidx.compose.animation.core.animateFloatAsState(
+            if (overlapFaded || coversTyping) HARDWARE_OVERLAP_ALPHA else 1f,
+            androidx.compose.animation.core.tween(HARDWARE_OVERLAP_FADE_MS), label = "hardware-card-overlap")
         // This group has no painted background or pointer handler. Each visible surface reports
         // its own touch region, leaving the gap and the rest of the editor usable.
-        Column(Modifier.absoluteOffset { IntOffset(x, y) }.widthIn(max = maxCardWidth)
+        Column(Modifier.absoluteOffset { IntOffset(x, y) }
+            .graphicsLayer { alpha = overlapAlpha }.widthIn(max = maxCardWidth)
             .heightIn(max = maxCardHeight).onSizeChanged { cardSize = it },
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (displayText.isNotEmpty()) {

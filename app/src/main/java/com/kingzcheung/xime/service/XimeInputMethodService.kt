@@ -2531,6 +2531,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     keyRouter.moveHardwareCandidate(1)
                                 }
                             }
+                            // 浮条、候选卡谁挡住了正在打的字：两者一起变淡（用户 11-20，见 HardwareBarSteady.kt）。
+                            var toolbarCoversTyping by remember { mutableStateOf(false) }
+                            var cardCoversTyping by remember { mutableStateOf(false) }
                             // 实体键盘的候选也按输入语言的写法画汉字（见 inputTextLocaleTag）。
                             com.kingzcheung.xime.ui.keyboard.ProvideInputTextLocale(state.inputProfile.language, state.inputProfile.scheme,
                                 keyboardPrefs.traditionalOutput) {
@@ -2563,6 +2566,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     avoidCaret = state.cursorAnchor.takeIf { state.hardwareOptions.avoidEditor && fixedEdge == null },
                                     onShown = { words, count -> keyRouter.reportHardwareShown(words, count) },
                                     fixedEdge = fixedEdge,
+                                    typingCaret = state.cursorAnchor,
+                                    typingEditor = state.editorBounds,
+                                    overlapFaded = toolbarCoversTyping,
+                                    onCoversTyping = { cardCoversTyping = it },
                                 )
                             }
                             HardwareKeyboardToolbar(
@@ -2615,8 +2622,15 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                 },
                                 showCandidatesWhenFloating = hardwareCandidates.association && !state.hardwareOptions.associationInWindow,
                                 candidatesPending = !hardwareEnglish && pendingPrediction != 0L,
-                                composing = !hardwareCandidates.association && hardwareCandidates.words.isNotEmpty(),
+                                // 正在打字：拼音没清空也算（字与字之间候选会短暂为空），右侧按钮不跟着进出。
+                                composing = !hardwareCandidates.association && (hardwareCandidates.words.isNotEmpty() ||
+                                    (!hardwareEnglish && (cand.isComposing || cand.inputText.isNotEmpty()))),
                                 candidatesRevision = cand.engineRevision,
+                                // 贴底时拼音画在浮条里，不再浮在上方压住 App 的输入框（「编码位置」选显示在候选栏时）。
+                                preeditText = if (bottomDocked && !hardwareEnglish && keyboardPrefs.showCodeInCandidateBar)
+                                    cand.shownPreedit(state.inputProfile).ifEmpty { cand.inputText } else "",
+                                overlapFaded = cardCoversTyping,
+                                onCoversTyping = { toolbarCoversTyping = it },
                                 contentColor = hardwarePalette.candidateText,
                                 position = position,
                                 onPositionChange = { hardwareToolbarPosition.value = it },

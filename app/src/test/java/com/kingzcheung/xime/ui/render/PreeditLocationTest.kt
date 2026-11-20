@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -105,8 +106,13 @@ class PreeditLocationTest {
             rule.onNodeWithTag("candidate-preedit", true).assertDoesNotExist()
             rule.onNodeWithTag("inline-preedit", true).assertDoesNotExist()
             rule.onNodeWithTag("hardware-preedit-card", true).assertDoesNotExist()
+            rule.onNodeWithTag("hardware-docked-preedit", true).assertDoesNotExist()
             rule.runOnIdle { assertEquals("正文$code", editor.text.toString()) }
         }
+        // 实体键盘贴底时拼音画在浮条里（hardware-docked-preedit），不贴底时是浮卡（用户 11-20）。
+        fun assertHardwarePreeditShown() = org.junit.Assert.assertTrue("实体键盘拼音要显示",
+            rule.onAllNodesWithTag("hardware-preedit-card", true).fetchSemanticsNodes().isNotEmpty() ||
+                rule.onAllNodesWithTag("hardware-docked-preedit", true).fetchSemanticsNodes().isNotEmpty())
         location(SettingsPreferences.INPUT_TEXT_INPUT_BOX)
         assertCodeInEditor()
         rule.onNodeWithText("后院").assertExists()
@@ -148,12 +154,12 @@ class PreeditLocationTest {
         assertCodeInEditor()
         rule.onNodeWithTag("hardware-candidate-card", true).assertExists()
         location(SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR)
-        rule.onNodeWithTag("hardware-preedit-card", true).assertExists()
+        assertHardwarePreeditShown()
         rule.runOnIdle { assertEquals("正文", editor.text.toString()) }
         try {
             rule.runOnIdle { TerminalEditor.active = true }
             location(SettingsPreferences.INPUT_TEXT_INPUT_BOX)
-            rule.onNodeWithTag("hardware-preedit-card", true).assertExists()
+            assertHardwarePreeditShown()
             rule.runOnIdle { assertEquals("正文", editor.text.toString()) }
         } finally {
             rule.runOnIdle { TerminalEditor.active = false }

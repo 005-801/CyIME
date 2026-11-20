@@ -109,9 +109,9 @@ internal fun avoidHardwareEditor(
     fun overlap(p: HardwareToolbarOffset) = (minOf(p.x + width, right) - maxOf(p.x, left)).coerceAtLeast(0f) *
         (minOf(p.y + height, bottom) - maxOf(p.y, top)).coerceAtLeast(0f)
     if (overlap(preferred) == 0f) return preferred
+    // 只上下挪开，不横着跳：光标每打一个字都往右走，横向避让会让工具条跟着光标左右跳（用户 11-20，与 Windows 一致）。
     return listOf(preferred, geometry.constrain(preferred.x, top - height),
-        geometry.constrain(preferred.x, bottom), geometry.constrain(left - width, preferred.y),
-        geometry.constrain(right, preferred.y)).minWith(compareBy<HardwareToolbarOffset> { overlap(it) }.thenBy {
+        geometry.constrain(preferred.x, bottom)).minWith(compareBy<HardwareToolbarOffset> { overlap(it) }.thenBy {
             val dx = it.x - preferred.x; val dy = it.y - preferred.y; dx * dx + dy * dy
         })
 }
