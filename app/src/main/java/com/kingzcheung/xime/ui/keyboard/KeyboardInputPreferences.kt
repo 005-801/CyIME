@@ -256,6 +256,8 @@ data class KeyboardInputPreferences(
     val bottomLiftCursor: Boolean = false,
     /** 按住空格说话时上滑取消：手指往上滑出空格约一个键高再松手，这次说的话不上屏（默认关，别人提的需求，11-02）。 */
     val voiceSwipeCancel: Boolean = false,
+    /** 固定键盘按键区左右两边不触发系统边缘手势（返回、侧边栏），默认关（11-20 荣耀用户：边缘手势吞掉贴边按键）。 */
+    val edgeGestureExclusion: Boolean = false,
 ) {
     internal val showCodeInCandidateBar: Boolean get() = showPreeditPreview &&
         com.kingzcheung.xime.service.TerminalEditor.inputTextLocation { inputTextLocation } == SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR
@@ -349,6 +351,8 @@ data class KeyboardInputPreferences(
         const val BOTTOM_LIFT_CURSOR_KEY = "bottom_lift_cursor"
         /** 按住说话上滑取消，见 [voiceSwipeCancel]。 */
         const val VOICE_SWIPE_CANCEL_KEY = "voice_swipe_cancel"
+        /** 按键区挡住屏幕边缘手势，见 [edgeGestureExclusion]。新键（11-20），读不到就是关。 */
+        const val EDGE_GESTURE_EXCLUSION_KEY = "keyboard_edge_gesture_exclusion"
         const val HANDWRITING_RECOGNIZE_EARLY_KEY = "handwriting_recognize_while_writing"
         const val LANGUAGE_KEY_IME_PICKER_KEY = "language_key_ime_picker"
         /** 九键去掉 0 键合并大回车，见 [t9MergeZeroIntoEnter]。新键（11-15），读不到就是关。 */
@@ -374,7 +378,7 @@ data class KeyboardInputPreferences(
                 com.kingzcheung.xime.settings.SpellingPatches.AUX_CODE_KEY,
                 SettingsPreferences.KEY_SWIPE_UP_HINTS_ENABLED, SettingsPreferences.KEY_SWIPE_DOWN_HINTS_ENABLED,
                 *SideSymbolTarget.entries.map { it.prefKey }.toTypedArray(),
-                BOTTOM_LIFT_CURSOR_KEY, VOICE_SWIPE_CANCEL_KEY, HANDWRITING_RECOGNIZE_EARLY_KEY,
+                BOTTOM_LIFT_CURSOR_KEY, VOICE_SWIPE_CANCEL_KEY, EDGE_GESTURE_EXCLUSION_KEY, HANDWRITING_RECOGNIZE_EARLY_KEY,
                 "handwriting_pause_seconds", "handwriting_pause_seconds_v2", "handwriting_formula_delimiter") + FrostedGlassPreferences.keys +
                 com.kingzcheung.xime.settings.KeyGapLightPreferences.keys
         }
@@ -441,6 +445,7 @@ data class KeyboardInputPreferences(
                 cursorStepSound = prefs.getBoolean("cursor_step_sound", false),
                 bottomLiftCursor = prefs.getBoolean(BOTTOM_LIFT_CURSOR_KEY, false),
                 voiceSwipeCancel = prefs.getBoolean(VOICE_SWIPE_CANCEL_KEY, false),
+                edgeGestureExclusion = prefs.getBoolean(EDGE_GESTURE_EXCLUSION_KEY, false),
                 languageMenuHoldSeconds = normalizeLanguageMenuHoldSeconds(languageHold),
                 languageKeyImePicker = prefs.getBoolean(LANGUAGE_KEY_IME_PICKER_KEY, false),
                 symbolKeyHoldSeconds = normalizeSymbolKeyHoldSeconds(prefs.getFloat("symbol_key_hold_seconds", 1f)),
@@ -571,6 +576,7 @@ data class KeyboardInputPreferences(
             .putBoolean("cursor_step_sound", cursorStepSound)
             .putBoolean(BOTTOM_LIFT_CURSOR_KEY, bottomLiftCursor)
             .putBoolean(VOICE_SWIPE_CANCEL_KEY, voiceSwipeCancel)
+            .putBoolean(EDGE_GESTURE_EXCLUSION_KEY, edgeGestureExclusion)
             .putFloat("key_text_scale", keyTextScale.coerceIn(0.8f, 1.6f))
             .putFloat(CORNER_HINT_OPACITY_KEY, normalizeCornerHintOpacity(cornerHintOpacity))
             .putBoolean(HIDE_FUNCTION_KEY_HINTS_KEY, hideFunctionKeyHints)
