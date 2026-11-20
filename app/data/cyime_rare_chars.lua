@@ -99,21 +99,11 @@ function rare_quality(text, default)
   return count >= 2 and LEARNED_QUALITY or math.max(default, LEARNED_ONCE_QUALITY)
 end
 
--- 上屏时数一下这次选中的生僻字（整段里每一节各自选的候选，组词时先选常用字再选生僻字也算）。
+-- 上屏时数一下这次的生僻字（见下面 count_rare_text）。
+local count_rare_text
 local function remember_commit(ctx)
   if not ctx:get_option(OPTION) or ctx:get_option("_cyime_incognito") then return end
-  local segments = ctx.composition:toSegmentation():get_segments()
-  local changed = false
-  for _, seg in ipairs(segments) do
-    local cand = seg:get_selected_candidate()
-    local genuine = cand and (cand:get_genuine() or cand)
-    if genuine and genuine.type == "rare" then
-      local map = load_learned()
-      map[genuine.text] = (map[genuine.text] or 0) + 1
-      changed = true
-    end
-  end
-  if changed then save_learned() end
+  if count_rare_text(ctx:get_commit_text()) then save_learned() end
 end
 
 -- 分词符（' 和空格）不算读音：组词时先选了前面的字，剩下那一节从分词符开始（aaa'bbb 选完 aaa 剩 'bbb），
@@ -233,22 +223,77 @@ local function merged_syllables(map, input)
   return found
 end
 
-local function merged_translate(input, seg, env)
-  local syllables = merged_syllables(merged_map(env), reading(input))
-  for _, syllable in ipairs(syllables) do
-    local comment = #syllables > 1 and syllable or ""
-    local common = yield_common(syllable, seg, comment)
-    for text in (chars[syllable] or ""):gmatch(utf8.charpattern) do
-      if text == common then goto next_char end
-      local cand = Candidate("rare", seg.start, seg._end, text, comment)
-      cand.quality = rare_quality(text, -1000)
-      yield(cand)
-      ::next_char::
-    end
+-- 一个读音的生僻字按三遍出：选过两次起的、选过一次的、其余照文件顺序。Rime 合并几个翻译器时只比各自的下一个
+-- 候选，照文件顺序出时选过的字分数再高也排在第一个没选过的字后面，打多少次都不动（#477）。
+-- each(fn) 把这个读音的每个字和注释交给 fn；仍是边出边建候选，不一次建几百个。
+local function yield_rare(each, start, _end, skip)
+  local map = load_learned()
+  for pass = 1, 3 do
+    each(function(text, comment)
+      if text == skip then return end
+      local count = map[text] or 0
+      if (pass == 1 and count >= 2) or (pass == 2 and count == 1) or (pass == 3 and count == 0) then
+        local cand = Candidate("rare", start, _end, text, comment)
+        cand.quality = rare_quality(text, -1000)
+        yield(cand)
+      end
+    end)
   end
 end
 
+-- 14 键、双拼：reading 能对上的读音各补一遍（common 是已经出过的粤语字）。没有对上的读音返回 false。
+local function merged_yield(map, reading_text, start, _end)
+  local syllables = merged_syllables(map, reading_text)
+  if #syllables == 0 then return false end
+  local commons = {}
+  for _, syllable in ipairs(syllables) do
+    local comment = #syllables > 1 and syllable or ""
+    local common = yield_common(syllable, { start = start, _end = _end }, comment)
+    if common then commons[common] = true end
+  end
+  yield_rare(function(fn)
+    for _, syllable in ipairs(syllables) do
+      local comment = #syllables > 1 and syllable or ""
+      for text in (chars[syllable] or ""):gmatch(utf8.charpattern) do
+        if not commons[text] then fn(text, comment) end
+      end
+    end
+  end, start, _end)
+  return true
+end
+
+-- 全拼 26 键、九键：reading 正好是一个读音（chan，或九键 242）时补；对不上返回 false。
+local function plain_yield(reading_text, start, _end)
+  local list = load_chars()[reading_text:lower()]
+  local common = yield_common(reading_text:lower(), { start = start, _end = _end }, "")
+  if list or common then
+    yield_rare(function(fn)
+      for text in (list or ""):gmatch(utf8.charpattern) do fn(text, "") end
+    end, start, _end, common)
+    return true
+  end
+  local rows = digits[reading_text]
+  if not rows then return false end
+  yield_rare(function(fn)
+    for text, code in rows:gmatch("([^\t]+)\t(%l+)\n") do fn(text, code) end
+  end, start, _end)
+  return true
+end
+
+-- 组词时（chanchan、chan'chan、九键 242626）整段不是一个读音：开头那个读音的生僻字照样补，只占开头那几个键，
+-- 和主词库的单字候选一样选了再接着选后面的（#194、#477：第一个 chan 没有生僻字，第二个才有）。
+-- 有分词符时按分词符前那一节；没有时取最长的、能对上读音的开头（最多 6 个键）。
+local function leading_yield(input, offset, start, try)
+  local first = input:match("^([^' ]+)[' ]")
+  if first then return try(first, start + offset, start + offset + #first) end
+  for len = math.min(#input - 1, 6), 1, -1 do
+    if try(input:sub(1, len), start + offset, start + offset + len) then return true end
+  end
+  return false
+end
+
 local function translator(input, seg, env)
+  local typed = input
   input = reading(input)
   if input == "" then return end
   if env.rare_merged_keys == nil then
@@ -264,26 +309,38 @@ local function translator(input, seg, env)
   end
   if not env.rare_merged_keys then yield_extra(input, seg, env.rare_nine_key) end
   if not env.engine.context:get_option(OPTION) then return end
-  if env.rare_merged_keys then return merged_translate(input, seg, env) end
-  local list = load_chars()[input:lower()]
-  local common = yield_common(input:lower(), seg, "")
-  if list or common then
-    for text in (list or ""):gmatch(utf8.charpattern) do
-      if text == common then goto next_char end
-      local cand = Candidate("rare", seg.start, seg._end, text, "")
-      -- Rime orders whole-input candidates by quality: below every dictionary word of this reading,
-      -- unless the user has picked this character before (rare_quality).
-      cand.quality = rare_quality(text, -1000)
-      yield(cand)
-      ::next_char::
+  load_chars()
+  local try
+  if env.rare_merged_keys then
+    local map = merged_map(env)
+    try = function(text, start, _end) return merged_yield(map, text, start, _end) end
+  else
+    try = plain_yield
+  end
+  if try(input, seg.start, seg._end) then return end
+  local offset = #typed - #typed:gsub("^[' ]+", "")
+  leading_yield(input, offset, seg.start, try)
+end
+
+-- 上屏的文字里每个生僻字记一次（组词时先选常用字再选生僻字也算）。原来看每一节选中的候选是不是生僻字候选，
+-- 九键的选字经过九键自己的处理，候选类型对不上，次数一直不涨（#477）。生僻字都不在主词库里，按字认就够了。
+local chars_all  -- every rare character in one string, built on the first commit that needs it
+function count_rare_text(text)
+  load_chars()
+  if not chars_all then
+    local parts = {}
+    for _, list in pairs(chars) do parts[#parts + 1] = list end
+    for _, common in pairs(COMMON) do parts[#parts + 1] = common end
+    chars_all = table.concat(parts)
+  end
+  local map, changed = load_learned(), false
+  for ch in text:gmatch(utf8.charpattern) do
+    if #ch > 1 and chars_all:find(ch, 1, true) then
+      map[ch] = (map[ch] or 0) + 1
+      changed = true
     end
-    return
   end
-  for text, code in (digits[input] or ""):gmatch("([^\t]+)\t(%l+)\n") do
-    local cand = Candidate("rare", seg.start, seg._end, text, code)
-    cand.quality = rare_quality(text, -1000)
-    yield(cand)
-  end
+  return changed
 end
 
 local function init(env)
