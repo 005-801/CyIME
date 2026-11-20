@@ -22,8 +22,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.ui.draw.rotate
 import androidx.compose.animation.core.tween
 import com.kingzcheung.xime.ui.theme.cySwapFadeIn
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -417,6 +415,12 @@ fun CandidateBar(
         else -> true
     }
 
+    // 在候选栏上左右拉开展开页：有更多候选、还没展开、不是滑行预览时才拉得动。
+    val pullExpand = callbacks.onShowMoreCandidates
+    val pullExpands = pullExpand != null && !candidatePageExpanded && hasAnyMore && !isGlidePreview
+    // 别的宿主（没有「<」时）右边放「清空」，这时不再放收起，一边仍只有一个按钮。
+    val rightClearShown = !candidatePageExpanded && displayAssociation.isNotEmpty() &&
+        callbacks.onClearAssociation != null && callbacks.onCancelInput == null
     val associationHighlight = (state as? CandidateBarState.AssociationOnly)?.highlightIndex
         ?.takeIf { it in displayAssociation.indices }
     // 换了一组候选回到最前；「下一项」移动联想高亮时，高亮已完整露出就不滚，移出栏外才滚到刚好露出，
@@ -428,12 +432,6 @@ fun CandidateBar(
         else candidateListState.revealItem(associationHighlight, associationSpacingPx)
     }
 
-    // Keep this animation outside the conditional button branches so changing pages
-    // does not discard the previous angle and jump directly to the destination.
-    val expansionRotation by animateFloatAsState(
-        targetValue = if (candidatePageExpanded) -180f else 0f,
-        animationSpec = tween(200, easing = FastOutSlowInEasing), label = "candidateExpansion",
-    )
     val existingPreedit = (state as? CandidateBarState.ChineseCandidates)?.let {
         it.preeditText.ifEmpty { it.inputText }
     }.orEmpty()
@@ -634,9 +632,11 @@ fun CandidateBar(
                 }
             }
 
-            if (state is CandidateBarState.ChineseCandidates || (isGlidePreview && state is CandidateBarState.AssociationOnly) ||
-                (splitGapX != null && state !is CandidateBarState.Idle) ||
-                (candidatePageExpanded && state is CandidateBarState.AssociationOnly && state.hasMore)) {
+            // 能展开的打字候选和联想是一行固定的：放得下几个显示几个，不左右滚（用户 11-20），看更多就左右拉开展开页。
+            // 没有展开页的（手写候选等）照旧走下面能左右滑的那行，不然后面的候选看不到。
+            if (state is CandidateBarState.ChineseCandidates ||
+                (state is CandidateBarState.AssociationOnly && (state.hasMore || isGlidePreview)) ||
+                (splitGapX != null && state !is CandidateBarState.Idle)) {
                 val previewAssociations = isGlidePreview && state is CandidateBarState.AssociationOnly
                 val stripCallbacks = if (isGlidePreview) callbacks.copy(
                     onVisibleCandidatesChanged = null,
@@ -644,6 +644,8 @@ fun CandidateBar(
                     onCandidateSelect = if (previewAssociations) { index -> callbacks.onAssociationSelect?.invoke(index); Unit }
                         else callbacks.onCandidateSelect,
                 ) else callbacks
+                PullToExpandCandidates(pullExpands, { pullExpand?.invoke() }, protectedVisuals.textColor,
+                    Modifier.weight(1f).fillMaxHeight()) {
                 FixedCandidateStrip(
                     candidates = if (previewAssociations) displayAssociation else displayCandidates,
                     associations = if (previewAssociations) emptyList() else displayAssociation,
@@ -651,19 +653,20 @@ fun CandidateBar(
                     visuals = protectedVisuals, callbacks = stripCallbacks,
                     fontSize = candidateTextSize.sp,
                     // 铺满栏高：候选上下的留白、候选之间的空隙点下去也算点最近的候选（#274）。
-                    modifier = Modifier.weight(1f).fillMaxHeight().candidateGapTaps(),
+                    modifier = Modifier.fillMaxSize().candidateGapTaps(),
                     commentMode = commentsAllowed,
                     commentsAreGlosses = commentsAreGlosses && state is CandidateBarState.ChineseCandidates,
                     highlightIndex = (state as? CandidateBarState.ChineseCandidates)?.highlightIndex ?: 0,
+                    // 纯联想：高亮跟着「下一项」走，没有高亮时一个都不标（和原来的联想行一样）。
+                    associationHighlight = (state as? CandidateBarState.AssociationOnly)?.highlightIndex
+                        ?.takeUnless { previewAssociations },
                     showNumberLabels = showNumberLabels,
                     gapWindowX = splitGapX,
-                    scrollable = state is CandidateBarState.ChineseCandidates && !isGlidePreview,
-                    onUserScroll = callbacks.onCandidateStripScrolled,
-                    onNearEnd = callbacks.onCandidateStripNearEnd,
-                    scrollKey = (state as? CandidateBarState.ChineseCandidates)?.let { it.inputText to it.candidates.firstOrNull() },
                     itemPadding = candidateItemPadding,
                 )
-            } else if (state !is CandidateBarState.Idle) BoxWithConstraints(Modifier.weight(1f)) {
+                }
+            } else if (state !is CandidateBarState.Idle) PullToExpandCandidates(pullExpands, { pullExpand?.invoke() },
+                protectedVisuals.textColor, Modifier.weight(1f)) { BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val showComments = candidateCommentsVisible(maxWidth.value, density.fontScale,
                     candidateTextSize.toFloat(), commentsAllowed)
                 val showDividers = candidateDividersShown(4.dp, candidateItemPadding)
@@ -746,7 +749,7 @@ fun CandidateBar(
                         )
                     }
                 }
-            }
+            } }
 
             if (state !is CandidateBarState.Idle) Spacer(modifier = Modifier.width(8.dp))
 
@@ -840,16 +843,15 @@ fun CandidateBar(
             }
             // 打字时候选栏只放候选：亮着的开关（悬浮、繁体、全角等）只在空闲工具栏里显示，
             // 不再挤到候选右边（11-03：悬浮键盘里一直多一个蓝色悬浮按钮，候选只剩一个）。
-            if (state !is CandidateBarState.Idle && (candidatePageExpanded || hasAnyMore || isGlidePreview)) {
-                val action = if (candidatePageExpanded) callbacks.onBack else callbacks.onShowMoreCandidates
-                action?.let {
-                    if (isGlidePreview && !candidatePageExpanded && !hasAnyMore) {
-                        Spacer(Modifier.width(edgeSlot ?: 40.dp))
-                    } else {
-                        CandidateExpansionButton(it, edgePressedFill, protectedVisuals.accentColor,
-                            expanded = candidatePageExpanded, rotation = expansionRotation, restingFill = edgeButtonFill,
-                            slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true)
-                    }
+            // 一边只有一个按钮（用户 11-20）：右边打字、联想、英文、展开页都是收起键盘，和空闲时同一个位置；
+            // 展开候选改成在候选上左右拉（[PullToExpandCandidates]），收回展开页在展开页上左右划或按返回。
+            if (state !is CandidateBarState.Idle && !rightClearShown && callbacks.onHideKeyboard != null) {
+                KeyboardToolbarButton(callbacks.onHideKeyboard, edgePressedFill,
+                    modifier = Modifier.testTag("candidate-hide"), restingFill = edgeButtonFill,
+                    slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true) {
+                    Icon(if (isVoiceSticky) Icons.Default.KeyboardDoubleArrowDown else Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isVoiceSticky) "收起成悬浮条" else "收起键盘",
+                        tint = protectedVisuals.textColor, modifier = Modifier.size(24.dp * LocalCandidateSizeFactor.current))
                 }
             }
         }
@@ -1391,28 +1393,6 @@ internal fun rememberCandidateItemPadding(fontSize: androidx.compose.ui.unit.Tex
 internal fun candidateItemHeight(fontSize: androidx.compose.ui.unit.TextUnit): androidx.compose.ui.unit.Dp =
     with(LocalDensity.current) { (fontSize.value * 1.35f).sp.toDp() } + 4.dp
 
-/** 候选词和联想词共用：向下展开，向上返回键盘。 */
-@Composable
-private fun CandidateExpansionButton(
-    onClick: () -> Unit,
-    background: Color,
-    foreground: Color,
-    expanded: Boolean,
-    rotation: Float,
-    restingFill: Color = Color.Transparent,
-    slotWidth: androidx.compose.ui.unit.Dp? = null,
-    cornerRadius: androidx.compose.ui.unit.Dp? = null,
-    continuousPill: Boolean = false,
-) {
-    KeyboardToolbarButton(onClick, background, restingFill = restingFill, slotWidth = slotWidth, cornerRadius = cornerRadius,
-        continuousPill = continuousPill,
-        modifier = Modifier.testTag("candidate-expansion").semantics { stateDescription = if (expanded) "已展开" else "已收起" }) {
-        Icon(Icons.Default.KeyboardArrowDown,
-            contentDescription = if (expanded) "返回键盘" else "展开候选词",
-            tint = foreground, modifier = Modifier.size(24.dp * LocalCandidateSizeFactor.current).rotate(rotation))
-    }
-}
-
 /**
  * 候选栏这一条在键盘玻璃底色上再补多少同样的底色，才和按键一样厚：
  * 1 − (1 − 底色)(1 − 补) = 按键 ⇒ 补 = 1 − (1 − 按键)/(1 − 底色)。底色不比按键薄（深色玻璃、「我的图片」）时不补。
@@ -1826,6 +1806,8 @@ internal fun FixedCandidateStrip(
     callbacks: CandidateBarCallbacks, fontSize: androidx.compose.ui.unit.TextUnit,
     modifier: Modifier = Modifier,
     highlightIndex: Int = 0,
+    /** 只有联想（[candidates] 为空）时高亮第几个联想；-1 不高亮。不传就按 [highlightIndex] 规矩。 */
+    associationHighlight: Int? = null,
     showNumberLabels: Boolean = false,
     itemSpacing: androidx.compose.ui.unit.Dp = 4.dp,
     /** 分体中缝（窗口横坐标）；候选先排左侧，越过中缝接着排右侧。 */
@@ -1887,7 +1869,8 @@ internal fun FixedCandidateStrip(
         }
     }
     val highlightAccent = visuals.accentColor
-    val highlightVisible = candidates.isNotEmpty()
+    val associationFocus = associationHighlight?.takeIf { candidates.isEmpty() }
+    val highlightVisible = candidates.isNotEmpty() || associationFocus in associations.indices
     // 候选栏里这条铺满栏高（见 candidateGapTaps），候选照旧上下居中。
     BoxWithConstraints(modifier.clipToBounds().testTag("candidate-fixed-strip")
         .onGloballyPositioned { stripOriginX = it.positionInWindow().x; stripRootOrigin = it.boundsInRoot().topLeft }
@@ -1906,20 +1889,23 @@ internal fun FixedCandidateStrip(
         val commentsShown = candidateCommentsVisible(maxWidth.value, density.fontScale, fontSize.value, commentsAllowed)
         val shownComments = if (commentsShown) comments else emptyList()
         val all = candidates + associations
-        val focused = highlightIndex.takeIf { it in candidates.indices } ?: 0
+        val focused = associationFocus?.takeIf { it in associations.indices }
+            ?: highlightIndex.takeIf { it in candidates.indices } ?: 0
+        // 画成选中的那一个（纯联想没有高亮时是 -1，一个都不标）。
+        val selectedIndex = if (associationFocus != null && associationFocus !in associations.indices) -1 else focused
         val viewport = remember(candidates, shownComments) { CandidateStripViewport() }
         // 小图标、纠错和画出来的一样算进宽度，否则放不下的最后一个候选也算「显示了」，「下一项」移到它时被栏边切掉。
         val learnedCandidates = LocalLearnedCandidates.current
         val correctedCandidates = shownCorrections(LocalCorrectedCandidates.current, commentsShown)
         val fullCorrectionScheme = LocalCorrectionFullScheme.current
         val twoLineHeight = LocalCandidateRowHeight.current - 4.dp
-        val window = remember(twoLineHeight, viewport, all, candidates.size, shownComments, commentsAreGlosses, scrollable, focused, fontSize, density, measurer, textWidths, inheritedTextStyle, showNumberLabels, itemSpacing, itemPadding, constraints.maxWidth, AppFonts.candidateFontFamily, AppFonts.commentFontFamily, localGap, learnedCandidates, correctedCandidates, fullCorrectionScheme) {
+        val window = remember(twoLineHeight, viewport, all, candidates.size, shownComments, commentsAreGlosses, scrollable, focused, selectedIndex, fontSize, density, measurer, textWidths, inheritedTextStyle, showNumberLabels, itemSpacing, itemPadding, constraints.maxWidth, AppFonts.candidateFontFamily, AppFonts.commentFontFamily, localGap, learnedCandidates, correctedCandidates, fullCorrectionScheme) {
             val bodyWidths = HashMap<Int, Int>()
             fun bodyWidth(index: Int): Int = bodyWidths.getOrPut(index) {
                 val numbered = index < candidates.size
                 val text = candidateNumberedText(all[index], index, showNumberLabels && numbered)
                 val primary = textWidths.of(text,
-                    candidatePrimaryTextStyle(fontSize, AppFonts.candidateFontFamily, index == focused))
+                    candidatePrimaryTextStyle(fontSize, AppFonts.candidateFontFamily, index == selectedIndex))
                 primary + with(density) { 2 * itemPadding.roundToPx() }
             }
             val fullWidths = HashMap<Int, Int>()
@@ -1942,7 +1928,7 @@ internal fun FixedCandidateStrip(
                 if (full <= constraints.maxWidth) return null
                 val text = AnnotatedString(candidateNumberedText(all[index], index, showNumberLabels && index < candidates.size))
                 val primary = textWidths.of(text, candidatePrimaryTextStyle(fontSize, AppFonts.candidateFontFamily,
-                    index == focused))
+                    index == selectedIndex))
                 val others = full - primary
                 val room = constraints.maxWidth - others
                 if (room <= 0 || primary <= 0) return null
@@ -1950,7 +1936,7 @@ internal fun FixedCandidateStrip(
                 var size = kotlin.math.floor(fontSize.value * room / primary * 2f) / 2f
                 while (size >= fontSize.value * CANDIDATE_SHRINK_FLOOR) {
                     val width = textWidths.of(text, candidatePrimaryTextStyle(size.sp, AppFonts.candidateFontFamily,
-                        index == focused))
+                        index == selectedIndex))
                     if (width <= room) return CandidateFit(size.sp, twoLines = false, width, others + width)
                     size -= 0.5f
                 }
@@ -1958,7 +1944,7 @@ internal fun FixedCandidateStrip(
                 val twoLineCap = with(density) { ((twoLineHeight - 4.dp) / (2 * CANDIDATE_TWO_LINE_SPACING)).toSp().value }
                 val twoSize = (kotlin.math.floor(minOf(fontSize.value * CANDIDATE_SHRINK_FLOOR, twoLineCap) * 2f) / 2f).sp
                 val wrapped = measurer.measure(text, candidateTwoLineTextStyle(candidatePrimaryTextStyle(twoSize,
-                    AppFonts.candidateFontFamily, index == focused), twoSize), maxLines = 2,
+                    AppFonts.candidateFontFamily, index == selectedIndex), twoSize), maxLines = 2,
                     constraints = androidx.compose.ui.unit.Constraints(maxWidth = room))
                 return if (wrapped.hasVisualOverflow) null else CandidateFit(twoSize, twoLines = true, room, others + room)
             }
@@ -2048,13 +2034,14 @@ internal fun FixedCandidateStrip(
                     if (index < candidates.size) callbacks.onCandidateSelect(index)
                     else callbacks.onAssociationSelect?.invoke(index - candidates.size)
                 }, visuals.textColor,
-                    comment = shownComments.getOrElse(index) { "" }, isSelected = index == focused,
+                    comment = shownComments.getOrElse(index) { "" }, isSelected = index == selectedIndex,
                     accentColor = visuals.accentColor, selectedTextColor = visuals.selectedTextColor,
                     opaqueComment = visuals.opaqueComments,
                     textShadow = visuals.textShadow,
                     fontSize = fontSize, candidateFontFamily = AppFonts.candidateFontFamily,
                     commentFontFamily = AppFonts.commentFontFamily,
-                    modifier = Modifier.testTag("bar-candidate:$index")
+                    // 纯联想（没有打字候选）沿用联想行原来的标记。
+                    modifier = Modifier.testTag(if (candidates.isEmpty()) "bar-association:$index" else "bar-candidate:$index")
                         // 分体时中缝两边各自从头排，中缝那里不画竖线。
                         .then(if (showDividers && position > 0) Modifier.candidateLeadingDivider(itemDividerColor,
                             itemSpacing, fontSize) else Modifier)

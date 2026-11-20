@@ -1472,7 +1472,8 @@ fun KeyboardView(
                             else cs.highlightedCandidateIndex,
                         hardwareHighlightIndex = hardwareCandidateHighlight,
                         associationHighlightIndex = cs.focusedT9AssociationIndex,
-                        expandAssociations = cs.pendingEnglishText.isEmpty(),
+                        // 英文补全也能往左拉展开（用户 11-20）；展开页接着栏里露出的往下排，栏里第一个是已打的原词。
+                        expandAssociations = true,
                     )
                 }
             }
@@ -1841,12 +1842,15 @@ fun KeyboardView(
                     }
                 }
                 val barAssociationCount = visibleBarAssociations.size
+                // 栏里的联想序号：英文打字时第一个是已打的原词（[associationWordAt] 同一规矩），展开页接着往下排。
+                val barAssociationWords = if (cs.pendingEnglishText.isNotEmpty() && cs.englishReplaceSupported)
+                    listOf(cs.pendingEnglishText) + cs.associationCandidates else cs.associationCandidates
                 CandidatePage(
                     state = CandidatePageState(
                         candidates = sentenceEdit?.let { sentenceWords.mapIndexed { index, word -> CandidateEntry(word.text, globalIndex = index) } }
                             ?: expandedEntries,
                         engineRevision = displayedExpandedRevision,
-                        associationCandidates = if (sentenceEdit != null) emptyList() else cs.associationCandidates.drop(barAssociationCount),
+                        associationCandidates = if (sentenceEdit != null) emptyList() else barAssociationWords.drop(barAssociationCount),
                         backgroundColor = keyboardBgColor,
                         textColor = candidateTextColor,
                         keyBackgroundColor = keyBgColor,
@@ -1864,6 +1868,10 @@ fun KeyboardView(
                         floating = state.isFloatingMode,
                     ),
                     callbacks = CandidatePageCallbacks(
+                        onCollapse = {
+                            toolbarFeedback()
+                            viewModel.setCandidatePageExpanded(false)
+                        },
                         onCandidateSelect = { entry ->
                             if (sentenceEdit != null) {
                                 if (sentenceWordsCode == sentenceCode && sentenceWordsSelection == sentenceSelected) sentenceWords.getOrNull(entry.globalIndex)?.let {
@@ -1898,10 +1906,10 @@ fun KeyboardView(
                         }.takeIf { sentenceEdit == null && (cs.isComposing || cs.candidates.isNotEmpty()) },
                         onAssociationSelect = select@{ index ->
                             val sourceIndex = index + barAssociationCount
-                            val word = cs.associationCandidates.getOrNull(sourceIndex) ?: return@select
+                            val word = barAssociationWords.getOrNull(sourceIndex) ?: return@select
                             val current = candidateState.value
                             if (cs.pendingEnglishText != current.pendingEnglishText ||
-                                current.associationCandidates.getOrNull(sourceIndex) != word) return@select
+                                com.kingzcheung.xime.service.associationWordAt(current, sourceIndex) != word) return@select
                             callbacks.onAssociationSelect?.invoke(sourceIndex)
                             viewModel.setCandidatePageExpanded(false)
                         },
