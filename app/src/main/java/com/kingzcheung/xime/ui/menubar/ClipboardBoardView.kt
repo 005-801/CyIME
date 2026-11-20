@@ -863,8 +863,9 @@ internal fun ClipboardBoardView(
                 })
                 add(CompactActionMenuEntry(Icons.Default.Close, "关闭菜单", tag = "clipboard-close-menu") {})
             }
+            // 「…」菜单固定在按钮下方靠右（#414）：不再绕开当时看得到的记录找空位，记录一变位置就跟着变。
             CompactActionMenu(moreAnchor.bounds, actions, onDismiss = { menu = false },
-                occupiedBounds = moreAnchor.occupied, preferSide = false, tag = "clipboard-more-menu",
+                occupiedBounds = emptyList(), preferSide = false, tag = "clipboard-more-menu",
                 surfaceTag = "clipboard-board-action-card")
         }
         deleting?.let { records ->
