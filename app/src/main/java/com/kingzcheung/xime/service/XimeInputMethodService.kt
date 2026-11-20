@@ -878,6 +878,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      * 幂等：收尾已在进行中时重复调用自动跳过。
      */
     internal fun endVoiceSession() {
+        // 已经要求收尾：收尾期间点了发送也不再接着听（连续语音只接被发送打断的那句）。
+        if (uiState.value.isVoiceMode || voiceRecordingStarted) voiceEnding = true
         voiceRecognitionHandler.cancelPreStart()
         voiceRecognitionHandler.finishRecognition()
     }
@@ -909,13 +911,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             voiceAmplitude = 0f
         )
         voiceStopRequested = false
+        voiceEnding = false
         voiceFieldHadText = false
         voicePillAutoResumed.value = false
-        // 开车连续语音：悬浮条听写因发送停下、输入框焦点还在，收尾完就接着听。
-        if (voicePillRestartInPlace) {
-            voicePillRestartInPlace = false
-            scheduleVoicePillResume()
-        }
+        // 连续语音：听写因发送停下、焦点还在同一个输入框，收尾完就接着听（键盘上、悬浮条上都一样）。
+        if (voiceRelistenField != null) scheduleVoiceRelisten()
         // 悬浮条是因为 App 收起键盘才出现的：听写结束就一起收起，回到 App 原来没有键盘的样子。
         if (voicePillAuto) {
             voicePillAuto = false
@@ -3915,6 +3915,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             attribute?.fieldId == lastEditorIdentity?.second &&
             !EditorInfoClassifier.isSecretEditor(attribute)
         val hostCaretsBeforeRestart = listOf(voiceHostCaret, voiceHostCaretBefore)
+        val pillResumeOnStart = voicePillResumeOnStart(restarting,
+            lastEditorIdentity?.let { (pkg, field, _) -> pkg?.takeIf { it.isNotEmpty() }?.let { VoiceFieldKey(it, field) } },
+            attribute.voiceFieldKey())
         lastEditorIdentity = identity
         // Search belongs to the field it was opened in; another field starts without it.
         if (!sameField) closeClipboardSearch(openBoard = false)
@@ -3962,8 +3965,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             if (detachedComposition == null) attribute?.initialSelStart ?: -1 else -1,
             if (detachedComposition == null) attribute?.initialSelEnd ?: -1 else -1,
             enabled = !editorSecret && !TerminalEditor.active)
-        voicePillResumePending = voicePillResumeEnabled() && voicePillResume.appliesTo(attribute?.packageName) &&
-            voicePillResumeFieldAllowed()
+        voicePillResumePending = pillResumeOnStart && voicePillResumeEnabled() &&
+            voicePillResume.appliesTo(attribute?.packageName) && voicePillResumeFieldAllowed()
         lastClearedText = ""
         if (lastClearedComposition != null) inputCommands.submit { rimeEngine.discardClearUndo() }
         lastClearedComposition = null
@@ -4003,6 +4006,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // 不拿宿主的光标去对键盘里的框。
         if (voiceThroughRestart && (voiceTarget.internal || !voiceRecognitionHandler.continueAfterHostRestart(hostCaretsBeforeRestart))) {
             noteVoicePillInterrupted(VoiceSessionEnd.FOCUS_TO_OTHER_FIELD)
+            // 宿主为发送清空重启了同一个输入框（荣耀等）：重启后框是空的才算发送，收尾完在这里接着听。
+            if (voiceFieldHadText && !voiceStopRequested) voiceRelistenField = relistenFieldAfterSend(voiceFieldText())
             voiceRecognitionHandler.endInputSession()
             if (uiState.value.isVoiceMode || voiceRecordingStarted) restoreAfterVoiceFinish()
         }
@@ -4248,15 +4253,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         }
         if (uiState.value.isVoiceMode && uiState.value.voiceSticky && !voiceStopRequested) {
             // 听写中输入框从有字变成空：多半是点了发送，听写结束。
-            val ic = currentInputConnection
-            val text = runCatching {
-                val before = ic?.getTextBeforeCursor(1, 0)
-                val after = ic?.getTextAfterCursor(1, 0)
-                if (before == null || after == null) null else before.toString() + after.toString()
-            }.getOrNull()
+            val text = voiceFieldText()
             if (voiceFieldCleared(voiceFieldHadText, text)) {
                 noteVoicePillInterrupted(VoiceSessionEnd.FIELD_CLEARED)
-                voicePillRestartInPlace = voicePillResume.armed
+                voiceRelistenField = relistenFieldAfterSend(text)
                 stopVoiceBeforeLeaving()
             }
             else if (!text.isNullOrEmpty()) voiceFieldHadText = true
@@ -4611,7 +4611,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         // 没有输入框焦点时绝不开麦。
         cancelVoicePillResume()
         voicePillResumePending = false
-        voicePillRestartInPlace = false
+        voiceRelistenField = null
         voiceKeptAlive = false
         voicePillSelfShow = false
         debugLog("onFinishInput page=${keyboardViewModel.page.value::class.simpleName}")
@@ -5385,8 +5385,10 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     private val voicePillResume by lazy { VoicePillResume(this) }
     /** 这个输入框符合续听：键盘弹出时直接显示悬浮条并开麦。 */
     private var voicePillResumePending = false
-    /** 悬浮条听写因发送停下、焦点还在：收尾完接着听。 */
-    private var voicePillRestartInPlace = false
+    /** 连续语音：听写因发送停下，收尾完要在这个输入框接着听（键盘上或悬浮条上都算）。 */
+    private var voiceRelistenField: VoiceFieldKey? = null
+    /** 这段听写已经被要求收尾（点麦克风停、松开空格、换框等）：收尾期间发送不再接着听。 */
+    private var voiceEnding = false
     /** 这段听写是自动续上的：悬浮条写明，免得用户不知道麦克风为什么开着。 */
     private val voicePillAutoResumed = androidx.compose.runtime.mutableStateOf(false)
 
@@ -5411,10 +5413,30 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             voicePillResume.arm(voicePillPackage)
     }
 
+    /** 听写时输入框里光标前后各一个字（读不到时 null）：用来看输入框是不是被清空了。 */
+    private fun voiceFieldText(): String? = runCatching {
+        val ic = currentInputConnection
+        val before = ic?.getTextBeforeCursor(1, 0)
+        val after = ic?.getTextAfterCursor(1, 0)
+        if (before == null || after == null) null else before.toString() + after.toString()
+    }.getOrNull()
+
+    private fun android.view.inputmethod.EditorInfo?.voiceFieldKey(): VoiceFieldKey? =
+        this?.packageName?.takeIf { it.isNotEmpty() }?.let { VoiceFieldKey(it, fieldId) }
+
+    /** 发送打断了听写：记下这个输入框，收尾后接着听。连续语音关着、密码框、不许语音的框、熄屏都不记。 */
+    private fun relistenFieldAfterSend(textNow: CharSequence?): VoiceFieldKey? =
+        voiceRelistenArmsAfterSend(
+            enabled = voicePillResumeEnabled() && voicePillResumeFieldAllowed() &&
+                (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive,
+            userEnding = voiceEnding, keyboardOwnField = voiceTarget.internal,
+            secret = EditorInfoClassifier.isSecretEditor(currentInputEditorInfo),
+            field = currentInputEditorInfo.voiceFieldKey(), textNow = textNow)
+
     /** 用户自己停下：不再自动续听。 */
     private fun stopVoicePillResume() {
         voicePillResume.disarm()
-        voicePillRestartInPlace = false
+        voiceRelistenField = null
         voicePillResumePending = false
         cancelVoicePillResume()
     }
@@ -5430,7 +5452,30 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     private fun cancelVoicePillResume() {
         mainHandler.removeCallbacks(resumeVoicePill)
+        mainHandler.removeCallbacks(relistenVoice)
+        voiceRelistenField = null
         voicePillResumeScheduled = false
+    }
+
+    private fun scheduleVoiceRelisten() {
+        mainHandler.removeCallbacks(resumeVoicePill)
+        mainHandler.removeCallbacks(relistenVoice)
+        mainHandler.postDelayed(relistenVoice, VOICE_PILL_RESUME_DELAY_MS)
+        voicePillResumeScheduled = true
+    }
+
+    /** 连续语音发送后接着听：开麦前再查窗口在显示、焦点还在原来那个输入框、这个框允许。 */
+    private val relistenVoice = Runnable {
+        voicePillResumeScheduled = false
+        val target = voiceRelistenField
+        voiceRelistenField = null
+        if (!isInputViewShown || currentInputConnection == null || uiState.value.isVoiceMode) return@Runnable
+        if (!voicePillResumeEnabled() || !voicePillResumeFieldAllowed() ||
+            !voiceRelistenApplies(target, currentInputEditorInfo.voiceFieldKey())) return@Runnable
+        // 接着听了：悬浮条「回到这个应用接着听」的记号用不着了，这段再被打断时重新记。
+        voicePillResume.disarm()
+        keyboardCallbacks?.onVoiceStickyToggle?.invoke()
+        if (uiState.value.isVoiceMode && uiState.value.voiceCollapsed) voicePillAutoResumed.value = true
     }
 
     /** 真正开麦前再查一遍：窗口在显示、有输入框焦点、悬浮条还在、这个框允许。 */
