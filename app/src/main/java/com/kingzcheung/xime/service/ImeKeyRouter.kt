@@ -1372,7 +1372,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     // Japanese 英数 follows 全角／半角, so full-width letters can be typed directly.
                     val fullWidthLetter = service.textCommit.isJapaneseProfile() && service.textCommit.isFullWidthPunctuation()
                     // 西、德、法、意、俄语键盘和英文同一个「首字母大写」开关（以前只有英文会自动大写）；韩文没有大小写。
-                    val autoCaps = hardwareEvent == null && !isShifted && capitalizeEnglishHere()
+                    val autoCaps = hardwareEvent == null && !isShifted && !ExplicitLowercase.consume(key) && capitalizeEnglishHere()
                     // 越南语 Telex：这个字母给光标前的词加声调或变音（vieet → viêt），换掉光标前的词；只是追加字母时照常往下走。
                     if (letterLanguage == com.kingzcheung.xime.settings.LetterLanguage.VIETNAMESE && !afterGlide && !fullWidthLetter) {
                         val typed = if (isShifted || autoCaps) key.uppercase().takeIf { it.length == 1 } ?: key else key.lowercase()
@@ -2000,9 +2000,14 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                             val wordsFirstLetter = isLetter && !mergedKey && typesEnglishWords(state.inputProfile, state.isAsciiMode) &&
                                 service.rimeEngine.readQueuedComposition()?.input.isNullOrEmpty()
                             val wordsSentenceCap = wordsFirstLetter && hardwareEvent == null && !isShifted &&
+                                !ExplicitLowercase.consume(key) &&
                                 SettingsPreferences.getPrefsPublic(service).getBoolean(ENGLISH_SENTENCE_CAPS, false) &&
                                 withEditor { capitalizeEnglishHere() }
-                            if (wordsFirstLetter) wordsAutoCapped = wordsSentenceCap
+                            if (wordsFirstLetter) {
+                                // 告诉 cyime_english_words.lua 这次首字母是自动大写的：首选后给小写的，选过小写的记住（#465）。
+                                service.rimeEngine.setOption("_cyime_autocap", wordsSentenceCap)
+                                wordsAutoCapped = wordsSentenceCap
+                            }
                             val result = if (capitalsInRime || wordsSentenceCap) service.rimeEngine.processQueuedKeyAndGetResult(char.uppercase()[0].code, 0)
                                 else service.rimeEngine.processQueuedKeyAndGetResult(keyCode, mask)
                             if (result.processed) {
