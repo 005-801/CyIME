@@ -606,7 +606,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      */
     private fun updateTopGlass(rect: android.graphics.Rect?, origin: androidx.compose.ui.unit.IntOffset?) {
         val featherPx = (com.kingzcheung.xime.ui.theme.GLASS_TOP_FEATHER_HEIGHT.value * resources.displayMetrics.density).roundToInt()
-        val bands = if (glassTopFeatherOn && rect != null) com.kingzcheung.xime.ui.theme.glassTopFeatherBands(
+        // 拖着悬浮窗时先收起渐隐细条（6 个模糊小窗口），只挪整块那一个；停稳后放回（见 floatingWindowMoving）。
+        val bands = if (glassTopFeatherOn && rect != null && !floatingWindowMoving) com.kingzcheung.xime.ui.theme.glassTopFeatherBands(
             rect.left, rect.top, rect.right, rect.bottom, featherPx) else emptyList()
         glassTopFeatherTop.value = if (bands.isEmpty()) null else rect!!.top.toFloat()
         updateGlassSurface("keyboard", if (bands.isEmpty()) rect
@@ -3078,7 +3079,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                         val bounds = android.graphics.Rect(left, top, right, bottom)
                                         if (floatingCardBounds != bounds) {
                                             floatingCardBounds = bounds
-                                            keyboardContainer.requestLayout()
+                                            // 拖动中不每帧重算触摸区（这一下手势已经归卡片），停稳时 highRefreshVote 补一次。
+                                            if (!floatingWindowMoving) keyboardContainer.requestLayout()
                                         }
                                     }
                                 },
@@ -4535,7 +4537,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         if (toolbar) hardwareToolbarBounds.value = next else hardwareCandidateBounds = next
         updateGlassSurface(if (toolbar) "hardware-toolbar" else "hardware-candidates", next)
         // 语音悬浮条拖动中不必每帧重算触摸区（这一下手势已经归它），停稳时 onMovingChange 再算一次。
-        if (::keyboardContainer.isInitialized && !(toolbar && voicePillMoving)) keyboardContainer.requestLayout()
+        if (::keyboardContainer.isInitialized && !(toolbar && voicePillMoving) && !floatingWindowMoving) keyboardContainer.requestLayout()
     }
 
     private fun keyboardConfigName(value: Int): String = when (value) {
@@ -4546,7 +4548,22 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         else -> "UNKNOWN($value)"
     }
 
-    private val highRefreshVote: (Boolean) -> Unit = { on -> setHighRefresh(on) }
+    /**
+     * 正在拖悬浮键盘、语音悬浮条或实体键盘浮条（[com.kingzcheung.xime.ui.keyboard.ImeHighRefresh] 有票）。
+     * 原来每动一帧都要：重算触摸区（整个窗口重新排版、跨进程报给系统），再把 7 个模糊小窗口（整块 + 顶边 6 条渐隐）
+     * 各挪一次（每个都是一次窗口重排）。开着玻璃拖动时主线程一帧就超时，看着一顿一顿（用户 11-20）。
+     * 拖动中只挪整块模糊、触摸区不动（这一下手势已经归浮窗），停稳后按最终位置补一次。
+     */
+    private var floatingWindowMoving = false
+
+    private val highRefreshVote: (Boolean) -> Unit = { on ->
+        setHighRefresh(on)
+        if (floatingWindowMoving != on) {
+            floatingWindowMoving = on
+            updateKeyboardGlass()
+            if (!on && ::keyboardContainer.isInitialized) keyboardContainer.requestLayout()
+        }
+    }
 
     /**
      * 拖动期间给输入法窗口投「同分辨率最高刷新率」的票，松手撤票（见 [com.kingzcheung.xime.ui.keyboard.ImeHighRefresh]）。
