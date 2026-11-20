@@ -33,8 +33,10 @@ internal class ImePreeditEditor(private val service: XimeInputMethodService) {
             val confirmed = snapshot.getOrNull(2)?.toIntOrNull()?.coerceIn(0, input.length) ?: 0
             val t9 = isT9Schema(state.currentSchemaId)
             val rawText = if (t9) snapshot.getOrNull(4).orEmpty() else input.drop(confirmed)
-            val normalized = PinyinEditBuffer.normalized(rawText, PinyinEditBuffer.keepsCase(state.currentSchemaId))
-            val unsupportedCode = rawText.any { it !in 'a'..'z' && it !in 'A'..'Z' && it != '\'' && !it.isWhitespace() && it != 'ü' }
+            val semicolon = !t9 && PinyinEditBuffer.keepsSemicolon(state.currentSchemaId)
+            val normalized = PinyinEditBuffer.normalized(rawText, PinyinEditBuffer.keepsCase(state.currentSchemaId), semicolon)
+            val unsupportedCode = rawText.any { it !in 'a'..'z' && it !in 'A'..'Z' && it != '\'' && !it.isWhitespace() && it != 'ü' &&
+                !(semicolon && it == ';') }
             val prefix = if (t9) service.t9PartialSegments.joinToString("") { it.text }
                 else snapshot.getOrNull(3).orEmpty()
             val display = PinyinEditDisplay(normalized, snapshot.getOrNull(4).orEmpty().removePrefix(prefix).trim(), t9, isMerged14 = com.kingzcheung.xime.settings.InputProfiles.describe(state.currentSchemaId).layout == com.kingzcheung.xime.settings.InputLayout.MERGED14, groups = com.kingzcheung.xime.settings.CustomKeyboardLayouts.forSchema(state.currentSchemaId)?.rows?.flatten() ?: if (com.kingzcheung.xime.settings.InputProfiles.describe(state.currentSchemaId).layout == com.kingzcheung.xime.settings.InputLayout.MERGED14) com.kingzcheung.xime.rime.merged14Groups else emptyList())
@@ -103,7 +105,8 @@ internal class ImePreeditEditor(private val service: XimeInputMethodService) {
                 text = edited.first; caret = edited.second
             } else if (replacement != null) {
                 text = if (session.isT9) PinyinEditBuffer.normalizedT9(replacement)
-                    else PinyinEditBuffer.normalized(replacement, PinyinEditBuffer.keepsCase(session.schemaId))
+                    else PinyinEditBuffer.normalized(replacement, PinyinEditBuffer.keepsCase(session.schemaId),
+                        PinyinEditBuffer.keepsSemicolon(session.schemaId))
                 keys = keys?.let { text }
                 caret = text.length
             } else if (key?.startsWith("preedit_cursor:") == true) {

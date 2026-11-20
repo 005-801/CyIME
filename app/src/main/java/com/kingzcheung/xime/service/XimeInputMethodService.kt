@@ -5091,7 +5091,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val confirmed = snapshot[2].toIntOrNull()?.coerceIn(0, input.length) ?: return
         if (caret !in confirmed until input.length) return
         val raw = com.kingzcheung.xime.rime.PinyinEditBuffer.normalized(input.drop(confirmed),
-            com.kingzcheung.xime.rime.PinyinEditBuffer.keepsCase(schema))
+            com.kingzcheung.xime.rime.PinyinEditBuffer.keepsCase(schema),
+            com.kingzcheung.xime.rime.PinyinEditBuffer.keepsSemicolon(schema))
         val prefix = snapshot[3]
         val groups = if (uiState.value.inputProfile.layout == com.kingzcheung.xime.settings.InputLayout.MERGED14)
             com.kingzcheung.xime.rime.merged14Groups else com.kingzcheung.xime.settings.CustomKeyboardLayouts.forSchema(schema)?.mergedGroups.orEmpty()
