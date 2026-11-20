@@ -263,11 +263,6 @@ data class KeyboardInputPreferences(
 ) {
     internal val showCodeInCandidateBar: Boolean get() = showPreeditPreview &&
         com.kingzcheung.xime.service.TerminalEditor.inputTextLocation { inputTextLocation } == SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR
-    /** 拼音放在候选栏左侧。 */
-    val inlinePreeditPreview: Boolean get() = preeditStyle == SettingsPreferences.PREEDIT_STYLE_LEFT
-    /** 拼音放在键盘里（候选栏左侧），编辑条也在候选栏里：只在「显示在候选栏」下生效；切到输入框后留着的旧值不把气泡挤进栏里。
-     *  「紧贴候选上方」的小签在键盘边框外，编辑条也浮在键盘上方同一处（11-20），不算在键盘里。 */
-    internal val preeditInsideKeyboard: Boolean get() = showCodeInCandidateBar && preeditStyle == SettingsPreferences.PREEDIT_STYLE_LEFT
     /** 拼音是贴在键盘边框正上方的小签（「紧贴候选上方」）。 */
     internal val preeditOnTopLine: Boolean get() = showCodeInCandidateBar && preeditStyle == SettingsPreferences.PREEDIT_STYLE_LINE
     /** 删除键实际是否「上滑清空、下滑撤回」：跟「反转上下滑方向」走，「删除键单独反向」打开再对调一次。 */

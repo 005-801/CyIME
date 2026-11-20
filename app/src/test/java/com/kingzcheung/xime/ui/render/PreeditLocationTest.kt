@@ -133,7 +133,9 @@ class PreeditLocationTest {
         rule.onNodeWithTag("candidate-preedit", true).assertDoesNotExist()
         rule.onNodeWithTag("inline-preedit", true).assertDoesNotExist()
         run {
-            val tab = rule.onNodeWithTag("preedit-tab", true).fetchSemanticsNode().boundsInWindow
+            // 小签、编辑条都是单独的弹窗：自己的 boundsInWindow 是弹窗里的坐标，用它们在键盘窗口里的位置比。
+            val tab = rule.onNodeWithTag("preedit-tab", true).fetchSemanticsNode()
+                .config[com.kingzcheung.xime.ui.keyboard.PreeditPopupBoundsKey].let { androidx.compose.ui.geometry.Rect(it.left.toFloat(), it.top.toFloat(), it.right.toFloat(), it.bottom.toFloat()) }
             val keyboard = rule.onNodeWithTag("keyboard", true).fetchSemanticsNode().boundsInWindow
             val slack = with(rule.density) { 8.dp.toPx() }
             org.junit.Assert.assertTrue("小签在键盘外面（上方）", tab.top < keyboard.top)
@@ -144,23 +146,29 @@ class PreeditLocationTest {
         // 点开编辑：编辑条出在小签同一处（键盘上方），不跑进候选栏。
         rule.onNodeWithTag("preedit-tab", true).performClick()
         run {
-            val code = rule.onNodeWithTag("preedit-editor-code", true).fetchSemanticsNode().boundsInWindow
+            val code = rule.onNodeWithTag("preedit-editor", true).fetchSemanticsNode()
+                .config[com.kingzcheung.xime.ui.keyboard.PreeditPopupBoundsKey]
             val keyboard = rule.onNodeWithTag("keyboard", true).fetchSemanticsNode().boundsInWindow
-            org.junit.Assert.assertTrue("编辑条在键盘上方小签处", code.bottom <= keyboard.top + 1f)
+            val slack = with(rule.density) { 8.dp.toPx() }
+            org.junit.Assert.assertTrue("编辑条在键盘上方小签处（底边贴着键盘顶）",
+                code.bottom <= keyboard.top + slack && code.bottom >= keyboard.top - slack)
         }
         shot("candidate-tab-edit")
         rule.onNodeWithTag("preedit-editor-close", true).performClick()
         rule.runOnIdle { edits = 0 }
         rule.runOnIdle { SettingsPreferences.setPreeditStyle(app, SettingsPreferences.PREEDIT_STYLE_BUBBLE) }
         rule.onNodeWithTag("candidate-preedit", true).assertExists()
-        rule.onNodeWithTag("preedit-line", true).assertDoesNotExist()
-        rule.runOnIdle { assertEquals("正文", editor.text.toString()); SettingsPreferences.setInlinePreeditPreview(app, true) }
-        rule.onNodeWithTag("inline-preedit", true).performClick()
+        rule.onNodeWithTag("preedit-tab", true).assertDoesNotExist()
+        rule.runOnIdle { assertEquals("正文", editor.text.toString()) }
+        // 「候选栏左侧」去掉了（11-20）：气泡点开编辑，编辑条浮在键盘上方原处。
+        rule.onNodeWithTag("candidate-preedit", true).performClick()
         assertEquals(1, edits)
         rule.onNodeWithTag("candidate-preedit", true).assertDoesNotExist()
-        val bounds = rule.onNodeWithTag("preedit-editor-code", true).fetchSemanticsNode().boundsInWindow
+        rule.onNodeWithTag("inline-preedit", true).assertDoesNotExist()
+        val bounds = rule.onNodeWithTag("preedit-editor", true).fetchSemanticsNode()
+            .config[com.kingzcheung.xime.ui.keyboard.PreeditPopupBoundsKey]
         val keyboard = rule.onNodeWithTag("keyboard", true).fetchSemanticsNode().boundsInWindow
-        org.junit.Assert.assertTrue("编辑条必须留在键盘内", keyboard.contains(bounds.center))
+        org.junit.Assert.assertTrue("气泡的编辑条浮在键盘上方", bounds.bottom <= keyboard.top + 1f)
         shot("candidate")
         location(SettingsPreferences.INPUT_TEXT_INPUT_BOX)
         assertCodeInEditor()

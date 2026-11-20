@@ -1348,11 +1348,11 @@ fun KeyboardView(
                     onClose = { closePreeditEditor() },
                     onCaret = { editPreedit(caret = it) },
                     onReplace = { editPreedit(text = it) },
-                    preedit = candidateState.value.preeditText, inline = inputPreferences.preeditInsideKeyboard,
+                    preedit = candidateState.value.preeditText,
                     tab = inputPreferences.preeditOnTopLine)
             })
-            // 拼音在候选栏左侧时，点开的编辑条也放在候选栏里；气泡和「紧贴候选上方」的小签点开后编辑条浮在键盘上方原处。
-            if (!inputPreferences.preeditInsideKeyboard) drawPreeditEditor?.invoke()
+            // 气泡和「紧贴候选上方」的小签点开后，编辑条都浮在键盘上方原处（「候选栏左侧」11-20 已去掉）。
+            drawPreeditEditor?.invoke()
 
             // 候选栏与展开页共用：展开页从同一版本中实际显示的候选之后接着排。
             var visibleBarAssociations by remember(singleCharFilter) { mutableStateOf(emptyList<String>()) }

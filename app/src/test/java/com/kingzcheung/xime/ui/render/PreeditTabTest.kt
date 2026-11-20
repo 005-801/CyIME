@@ -29,6 +29,8 @@ import com.kingzcheung.xime.ui.keyboard.CandidateBarVisuals
 import com.kingzcheung.xime.ui.keyboard.KeyboardInputPreferences
 import com.kingzcheung.xime.ui.keyboard.LocalKeyboardInputPreferences
 import com.kingzcheung.xime.ui.keyboard.LocalPreeditLineCorrections
+import com.kingzcheung.xime.ui.keyboard.PreeditPopupBoundsKey
+import androidx.compose.ui.unit.toRect
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
 import com.kingzcheung.xime.ui.theme.LocalKeyboardPalette
 import com.kingzcheung.xime.ui.theme.resolveKeyboardPalette
@@ -77,7 +79,8 @@ class PreeditTabTest {
             }
         }
         val bar = rule.onNodeWithTag("bar").fetchSemanticsNode().boundsInWindow
-        val tab = rule.onNodeWithTag("preedit-tab", true).fetchSemanticsNode().boundsInWindow
+        // 小签是单独的弹窗：它自己的 boundsInWindow 是弹窗里的坐标，用它在键盘窗口里的位置比。
+        val tab = rule.onNodeWithTag("preedit-tab", true).fetchSemanticsNode().config[PreeditPopupBoundsKey].toRect()
         val word = rule.onNodeWithText("我们是好朋友", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
         assertEquals("小签底边贴着栏顶", bar.top, tab.bottom, 2f)
         assertTrue("小签高 26dp，点得到", tab.height >= with(rule.density) { 26.dp.toPx() } - 1f)

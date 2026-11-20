@@ -92,7 +92,9 @@ internal fun PreeditEditorBar(
             // 光晕的图层要在浮窗自己的组合里建，不能从外面带进来。
             val rowSurface = if (floatingColor == null) Modifier
                 else Modifier.clip(surfaceShape).background(floatingColor).glassTextHalo(halo)
+            val placed = editorBounds.value.takeIf { !inline }
             Row(Modifier.width(width).height(if (tab) PREEDIT_TAB_HEIGHT else 44.dp).testTag("preedit-editor")
+                .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier)
                 .then(if (tab) Modifier.padding(start = tabInset, end = tabInset)
                     else Modifier.padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp)),
                 verticalAlignment = Alignment.CenterVertically) {

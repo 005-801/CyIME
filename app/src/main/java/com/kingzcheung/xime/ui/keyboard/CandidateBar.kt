@@ -458,7 +458,7 @@ fun CandidateBar(
     DisposableEffect(splitGap) { onDispose { splitGap?.reportBarTop(null) } }
 
     // 「紧贴候选上方」（11-20 他按微信那张图定的）：拼音是贴在键盘边框正上方的一张同色小签，键盘边框、候选栏、
-    // 按键都不动；和原来的气泡一样浮在应用上，但不隔开、不挡太多。转过角度的悬浮键盘照旧放候选栏左侧。
+    // 按键都不动；和原来的气泡一样浮在应用上，但不隔开、不挡太多。转过角度的悬浮键盘改用气泡。
     // 点开编辑时小签收起，由浮在同一处的编辑条接替（KeyboardView 画）。
     val tabRotated = isFloatingRotated(LocalFloatingKeyboardRotation.current)
     val pinyinTabMode = showPreedit && previewPrefs.preeditOnTopLine && inlinePreeditEditor == null && !tabRotated
@@ -488,7 +488,8 @@ fun CandidateBar(
             .glassTextHalo(textSurface?.halo),
         verticalArrangement = Arrangement.Center,
     ) {
-        PreeditBubbleHost(showPreedit && !previewPrefs.preeditInsideKeyboard && !previewPrefs.preeditOnTopLine) { hidden ->
+        // 气泡：默认；选了小签但悬浮键盘转了角度时也用气泡（「候选栏左侧」11-20 他要求去掉）。
+        PreeditBubbleHost(showPreedit && (!previewPrefs.preeditOnTopLine || tabRotated)) { hidden ->
             PreeditPreview(preeditText, protectedVisuals, onEditPreedit,
                 floatingPreeditColor(themeSurface, visuals.preeditBackgroundColor), hidden)
         }
@@ -569,17 +570,6 @@ fun CandidateBar(
                     restingFill = edgeButtonFill, slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true)
                 // 同上：点在「<」和第一个候选之间算点候选，不算取消输入（#274）。
                 Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
-            }
-            if (inlinePreeditEditor != null && previewPrefs.preeditInsideKeyboard) {
-                Box(Modifier.width(minOf(240.dp, toolbarRowWidth * 0.42f))) { inlinePreeditEditor() }
-            } else if (showPreedit && (previewPrefs.inlinePreeditPreview || previewPrefs.preeditOnTopLine && tabRotated)) {
-                // 选了「紧贴候选上方」但键盘转了角度：拼音放到候选栏左侧，照样在键盘里。
-                Box(Modifier.widthIn(max = minOf(108.dp, toolbarRowWidth * 0.32f)).height(44.dp)
-                    .then(if (onEditPreedit == null) Modifier else Modifier.clickable(onClickLabel = "编辑拼音", onClick = onEditPreedit))
-                    .padding(horizontal = 4.dp).testTag("inline-preedit"), contentAlignment = Alignment.CenterStart) {
-                    Text(sentenceSelectionText(preeditText, LocalSentenceSelection.current.value, protectedVisuals.accentColor),
-                        color = protectedVisuals.textColor, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
             }
             if (showLeftIcon) {
                 when (state) {
@@ -1562,9 +1552,12 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
     Popup(popupPositionProvider = positionProvider,
         properties = PopupProperties(focusable = false, dismissOnBackPress = false,
             dismissOnClickOutside = false, clippingEnabled = true)) {
+        val placed = tabBounds.value
         Box(Modifier.widthIn(max = screenWidth - leftInset).heightIn(min = PREEDIT_TAB_HEIGHT).clip(shape).background(color)
             .then(if (onEdit != null && !hidden) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = onEdit) else Modifier)
-            .padding(horizontal = 8.dp).testTag("preedit-tab").then(if (hidden) HiddenPreeditBubble else Modifier),
+            .padding(horizontal = 8.dp).testTag("preedit-tab")
+            .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier)
+            .then(if (hidden) HiddenPreeditBubble else Modifier),
             contentAlignment = Alignment.CenterStart) {
             Text(text, color = textColor, fontSize = size, maxLines = 1, softWrap = false,
                 // 长句只露出正在打的结尾。
@@ -1573,6 +1566,12 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
         }
     }
 }
+
+/**
+ * 小签和拼音编辑条在键盘窗口里的位置（像素，和候选栏、键盘节点的 boundsInWindow 同一坐标）。
+ * 它们是单独的弹窗，节点自己的 boundsInWindow 是弹窗里的坐标，测试要用这个和候选栏、键盘比位置。
+ */
+internal val PreeditPopupBoundsKey = androidx.compose.ui.semantics.SemanticsPropertyKey<IntRect>("PreeditPopupBounds")
 
 /** 小签的底色：键盘面板的底色、不透明，看上去是键盘往上长出来的一块；开玻璃时和气泡一样半透明并垫模糊。 */
 @Composable

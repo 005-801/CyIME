@@ -484,17 +484,19 @@ object SettingsPreferences {
         getPrefs(context).edit().putBoolean(KEY_SHOW_PREEDIT_PREVIEW, show).apply()
     /**
      * 「显示在候选栏」时拼音放哪：默认跟原来一样是浮在应用上的气泡（用户 11-19：「默认和原来一致」）；
-     * [PREEDIT_STYLE_LINE] 键盘内紧贴候选上方一行小字（参照微信），纠错读音也在这一行；候选栏左侧照样可选。
-     * 新键；没存过时看旧开关「拼音放在键盘内」：亲手开过的算候选栏左侧，别的都是气泡。
+     * [PREEDIT_STYLE_LINE]「紧贴候选上方」：贴在键盘边框上的拼音小签（11-20 他按微信那张图定的），纠错读音也在上面。
+     * 新键；没存过时看旧开关「拼音放在键盘内」：亲手开过的算小签，别的都是气泡。
      */
     const val KEY_PREEDIT_STYLE = "preedit_style"
     const val PREEDIT_STYLE_LINE = "line"
     const val PREEDIT_STYLE_BUBBLE = "bubble"
     const val PREEDIT_STYLE_LEFT = "left"
-    private val PREEDIT_STYLES = setOf(PREEDIT_STYLE_LINE, PREEDIT_STYLE_BUBBLE, PREEDIT_STYLE_LEFT)
+    private val PREEDIT_STYLES = setOf(PREEDIT_STYLE_LINE, PREEDIT_STYLE_BUBBLE)
+    /** 「候选栏左侧」（和老开关「拼音放在键盘内」）11-20 他要求去掉：存过的按「紧贴候选上方」读，同样不浮气泡。只在读的时候换，不改存的值。 */
     fun resolvePreeditStyle(saved: String?, legacyInline: Boolean?): String = when {
         saved in PREEDIT_STYLES -> saved!!
-        legacyInline == true -> PREEDIT_STYLE_LEFT
+        saved == PREEDIT_STYLE_LEFT -> PREEDIT_STYLE_LINE
+        legacyInline == true -> PREEDIT_STYLE_LINE
         else -> PREEDIT_STYLE_BUBBLE
     }
     fun preeditStyle(context: Context): String {
@@ -505,9 +507,6 @@ object SettingsPreferences {
     fun setPreeditStyle(context: Context, style: String) {
         if (style in PREEDIT_STYLES) getPrefs(context).edit().putString(KEY_PREEDIT_STYLE, style).apply()
     }
-    fun inlinePreeditPreview(context: Context) = preeditStyle(context) == PREEDIT_STYLE_LEFT
-    fun setInlinePreeditPreview(context: Context, inline: Boolean) =
-        setPreeditStyle(context, if (inline) PREEDIT_STYLE_LEFT else PREEDIT_STYLE_BUBBLE)
     /**
      * 浮在应用上面的拼音气泡和点开后的拼音编辑条共用这一个底色不透明度：20%~100%，按 5% 一档。
      * 默认 80%：能隐约看到下面的应用，拼音照样清楚（用户 11-16：实底挡住下面，点拼音编辑又变透明，两样不统一）。

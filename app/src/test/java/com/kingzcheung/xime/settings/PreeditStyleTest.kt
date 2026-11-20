@@ -27,7 +27,7 @@ class PreeditStyleTest {
 
     @Test fun oldInsideKeyboardSwitchIsKept() {
         prefs.edit().putBoolean(SettingsPreferences.KEY_INLINE_PREEDIT_PREVIEW, true).commit()
-        assertEquals(SettingsPreferences.PREEDIT_STYLE_LEFT, SettingsPreferences.preeditStyle(app))
+        assertEquals("「候选栏左侧」去掉了（11-20），开过老开关的按小签读", SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.preeditStyle(app))
         prefs.edit().putBoolean(SettingsPreferences.KEY_INLINE_PREEDIT_PREVIEW, false).commit()
         assertEquals("亲手关过的是气泡", SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.preeditStyle(app))
     }
@@ -42,7 +42,8 @@ class PreeditStyleTest {
 
     @Test fun resolveTable() {
         assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.resolvePreeditStyle(null, null))
-        assertEquals(SettingsPreferences.PREEDIT_STYLE_LEFT, SettingsPreferences.resolvePreeditStyle(null, true))
+        assertEquals(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.resolvePreeditStyle(null, true))
+        assertEquals("存过「候选栏左侧」的按小签读", SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.resolvePreeditStyle("left", null))
         assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.resolvePreeditStyle(null, false))
         assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.resolvePreeditStyle("bubble", true))
         assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.resolvePreeditStyle("x", null))
