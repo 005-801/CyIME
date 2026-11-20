@@ -3104,6 +3104,34 @@ CPU 实测 	CPU benchmark
 已就绪	Ready
 待准备	To prepare
 正在准备词库，首次使用可能需要几分钟…	Preparing the dictionary; the first time may take a few minutes…
+第 {0}/{1} 步：{2}（{3} 秒）	Step {0}/{1}: {2} ({3} s)
+复制安装包里的词库文件	Copying dictionary files from the app
+启动输入引擎	Starting the input engine
+编译词库	Compiling dictionaries
+已编译词典 {0}/{1}	Dictionaries compiled: {0}/{1}
+正在检查哪些词库要重新编译	Checking which dictionaries need recompiling
+正在写 {0}（{1}）	Writing {0} ({1})
+复制 {0}	Copying {0}
+检查安装包里的方案文件	Checking the schema files in the app
+核对内置词库和模型	Checking built-in dictionaries and models
+安装日语词典	Installing the Japanese dictionary
+安装候选模型	Installing candidate models
+写入方案设置和个人词库补丁	Writing schema settings and personal dictionary patches
+合并分类词库	Merging category dictionaries
+超时了：已经 {0} 分钟没有新进展	Timed out: no progress for {0} min
+超时了：已经 {0} 秒没有新进展	Timed out: no progress for {0} s
+停在：{0}	Stopped at: {0}
+还没开始（在等另一项准备结束）	Not started yet (waiting for another preparation to finish)
+最近的日志：	Recent log:
+可以这样做：	What you can do:
+导出日志	Export log
+别切到别的应用，留在这一页等：切到后台时系统可能会暂停 CyIME，准备就停在那里。	Stay on this page instead of switching apps: the system may pause CyIME in the background and preparation stops there.
+看看手机剩余空间：少于 300 MB 时词库可能写不下，复制、编译都会停住，先清理空间。	Check free storage: with less than 300 MB the dictionaries may not fit and copying or compiling stops. Free up space first.
+小米 / 红米（HyperOS、MIUI）：在系统设置 › 应用 › CyIME › 省电策略里选「无限制」，并允许自启动。	Xiaomi / Redmi (HyperOS, MIUI): in Settings › Apps › CyIME › Battery saver choose "No restrictions" and allow autostart.
+在系统设置 › 应用 › CyIME 里把电池 / 耗电管理设为「允许后台运行」或「不限制」。	In Settings › Apps › CyIME set battery management to "Allow background activity" or "Unrestricted".
+在系统设置 › 应用 › CyIME › 电池里选「不限制」。	In Settings › Apps › CyIME › Battery choose "Unrestricted".
+然后从最近任务里划掉 CyIME 再打开，会重新开始准备。	Then swipe CyIME away from recent apps and open it again; preparation starts over.
+还是不动，点「导出日志」发给我们，日志里有停在哪一步。	If it still doesn't move, tap "Export log" and send it to us; the log shows which step it stopped at.
 重试准备	Retry preparation
 用全拼、双拼还是五笔，26 键、14 键还是九键，完成后下一页会问你。	Full pinyin, Shuangpin or Wubi, QWERTY, 14-key or 9-key: the next page asks once this is done.
 选择其他方案(可选)	Choose other schemes (optional)
