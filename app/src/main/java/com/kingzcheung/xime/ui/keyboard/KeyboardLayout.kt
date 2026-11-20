@@ -913,6 +913,9 @@ fun KeyboardLayout(
                                 shadowShapeRadius = shadowShapeRadius,
                                 composingSplit = shiftComposingSplit,
                                 composingSplitLabel = if (shiftSplit) "分词" else SYLLABLE_SEPARATOR,
+                                splitRedundant = if (shiftSplit && candidateState != null) {
+                                    { candidateState.value.inputText.endsWith(SYLLABLE_SEPARATOR) }
+                                } else null,
                                 tapKey = CHOONPU_INPUT.takeIf { choonpuOnShift },
                                 tapLabel = CHOONPU_KEY.takeIf { choonpuOnShift },
                             )
@@ -1835,6 +1838,8 @@ internal fun ShiftCapsKeyButton(
     composingSplit: (() -> Boolean)? = null,
     /** 中文打拼音时写「分词」；英文等打单词时写 '（打的就是撇号）。 */
     composingSplitLabel: String = "分词",
+    /** 返回 true 时点「分词」不再送 '（拼音末尾已经是分词符，#464）。 */
+    splitRedundant: (() -> Boolean)? = null,
     /**
      * 点按送出的键（日语长音键「代替 Shift」：ー）；非 null 时键面写 [tapLabel]，按住满 [SHIFT_TAP_KEY_HOLD_MS] 才是按住 Shift，
      * 松手前没打别的键就照 Shift 的点按切换大小写（[shiftTapKeyLongPressAction]）。null 为普通 Shift。
@@ -1849,6 +1854,7 @@ internal fun ShiftCapsKeyButton(
     // 在这里读「是否在打拼音」，变化时只重组 Shift 键。
     val splitLabel = composingSplit?.invoke() == true
     val currentSplit by rememberUpdatedState(composingSplit)
+    val currentSplitRedundant by rememberUpdatedState(splitRedundant)
     val suppressCursorMove = LocalSuppressCursorMove.current
     val currentPress by rememberUpdatedState(onKeyPressDown)
     val currentKey by rememberUpdatedState(onKeyPress)
@@ -1916,7 +1922,10 @@ internal fun ShiftCapsKeyButton(
                     if (viewModel.shiftMode.value != ShiftMode.SINGLE) lastTap = Long.MIN_VALUE
                     // 点按另有用途时（长音键）不一按下就亮 Shift：按满时限才算按住，点按时整块键帽不闪大写。
                     val tapOutput = currentTapKey
-                    var holding = tapOutput == null
+                    // 键面已是「分词」（打拼音中）：这一按只管分词，不按住 Shift、不拖出大写，键盘不闪大写，
+                    // 也不会按住打出大写字母把拼音打断（#464）。
+                    val splitTap = tapOutput == null && currentSplit?.invoke() == true
+                    var holding = tapOutput == null && !splitTap
                     if (holding) viewModel.beginShiftHold()
                     var released = false
                     var dragged = false
@@ -1924,7 +1933,7 @@ internal fun ShiftCapsKeyButton(
                     try {
                         while (true) {
                             // 拖出去以后不再计时（交给滑到字母上的大写），只等松手。
-                            val event = if (holding || dragged) awaitPointerEvent()
+                            val event = if (holding || dragged || splitTap) awaitPointerEvent()
                                 else withTimeoutOrNull((down.uptimeMillis + SHIFT_TAP_KEY_HOLD_MS - upTime).coerceAtLeast(1L)) { awaitPointerEvent() }
                             if (event == null) {
                                 viewModel.beginShiftHold()
@@ -1937,7 +1946,7 @@ internal fun ShiftCapsKeyButton(
                             val pointer = bounds.topLeft + change.position
                             dragged = dragged || !bounds.contains(pointer) ||
                                 (change.position - down.position).getDistance() > viewConfiguration.touchSlop
-                            val target = if (dragged) targets?.move(bounds, pointer) else null
+                            val target = if (dragged && !splitTap) targets?.move(bounds, pointer) else null
                             change.consume()
                             if (!change.pressed) {
                                 released = true
@@ -1962,6 +1971,11 @@ internal fun ShiftCapsKeyButton(
                                 if (!holding && upTime - down.uptimeMillis < SHIFT_TAP_KEY_HOLD_MS) currentKey(tapOutput)
                                 else currentKey(shiftTapKeyLongPressAction(viewModel.shiftMode.value))
                             }
+                            lastTap = Long.MIN_VALUE
+                        } else if (splitTap) {
+                            // 只有短按插入分词；长按、拖走无效果；末尾已经是分词符就不再连着加。
+                            if (released && !dragged && upTime - down.uptimeMillis < 350L &&
+                                currentSplitRedundant?.invoke() != true) currentKey(SYLLABLE_SEPARATOR)
                             lastTap = Long.MIN_VALUE
                         } else if (released && !dragged && !used && upTime - down.uptimeMillis < 350L) {
                             // 打拼音时点按插入分词；不算进双击，连点两下不会锁成大写。
