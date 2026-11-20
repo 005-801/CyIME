@@ -143,8 +143,10 @@ fun SettingsScreen(
         composable(SettingsRoutes.Schema) {
             val leaveSchema = {
                 if (initialRoute == "schema") {
+                    // 从键盘「方案管理」直接进来时起始页就是方案页，首页不在栈里：换成首页，不压在方案页上面。
+                    // 以前 popUpTo(首页) 找不到首页，栈成了「方案 → 首页」，首页按返回又回到方案页，来回跳出不去（#491）。
                     navController.navigate(SettingsRoutes.Main) {
-                        popUpTo(SettingsRoutes.Main) { inclusive = true }
+                        popUpTo(navController.graph.id) { inclusive = true }
                     }
                 } else navController.popBackStack()
                 onWizardBack()
