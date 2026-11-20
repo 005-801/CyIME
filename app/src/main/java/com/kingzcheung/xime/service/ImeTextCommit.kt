@@ -179,10 +179,13 @@ internal class ImeTextCommit(private val service: XimeInputMethodService) {
         return punctuationWidthChoice()
     }
 
-    /** 用户的全角/半角选择本身，与当前是否在英文态无关；菜单与键面角标都按它显示。 */
+    /**
+     * 用户的全角/半角选择本身，与当前是否在英文态无关；菜单与键面角标都按它显示。没选过就是全角（中文默认）。
+     * 以前没选过时读引擎的 ascii_punct，但英文态下它是开的：在英文态刷新过菜单开关，切回中文后空格旁的逗号句号
+     * 就一直是半角，菜单也显示半角（#460，三个人报）。
+     */
     internal fun punctuationWidthChoice(): Boolean =
-        com.kingzcheung.xime.settings.SettingsPreferences.punctuationFullWidth(service,
-            !service.rimeEngine.getOption("ascii_punct"))
+        com.kingzcheung.xime.settings.SettingsPreferences.punctuationFullWidth(service, true)
 
     internal fun isJapaneseProfile(): Boolean =
         service.uiState.value.inputProfile.language == com.kingzcheung.xime.settings.InputLanguage.JAPANESE

@@ -94,7 +94,7 @@ object SettingsPreferences {
     /**
      * 用户是否显式选择过标点宽度。
      *
-     * 未选择时界面回退到方案自身的 ascii_punct，显示与引擎同源，无需回写引擎；
+     * 未选择时按全角（中文默认），引擎只清掉 ascii_punct 与之对齐（#460）；
      * 只有用户显式选择过，全角/半角才是唯一权威状态，切换方案/中英时必须回写。
      */
     fun hasPunctuationFullWidth(context: Context): Boolean =

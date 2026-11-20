@@ -582,7 +582,8 @@ internal class ImeSessionController(private val service: XimeInputMethodService)
      *
      * 全角/半角只作用于中文与日文：英文（ASCII）模式固定半角，只清掉全角字符输出
      * （ascii_punct 在英文态由 ascii_composer 接管，不动它，退出英文后中文标点不会被改写）。
-     * 用户从未选择过宽度时同样不动引擎——此时界面显示值取自方案自身的 ascii_punct，两者本来一致。
+     * 用户从未选择过宽度时界面按全角显示，引擎也清掉 ascii_punct 和它对齐：雾凇的 ascii_punct 会存进用户目录，
+     * 笔画等方案不在开方案时复位，英文态留下的半角会一直带到中文里（#460）。
      *
      * @param asciiMode 权威的中英状态，由调用方给出；不要读 uiState，切换方案/退出英文时
      *   uiState 尚未同步，会误判成英文而把中文键盘按半角处理。
@@ -598,7 +599,10 @@ internal class ImeSessionController(private val service: XimeInputMethodService)
             service.rimeEngine.setOption("full_shape", false)
             return
         }
-        if (!SettingsPreferences.hasPunctuationFullWidth(service)) return
+        if (!SettingsPreferences.hasPunctuationFullWidth(service)) {
+            service.rimeEngine.setOption("ascii_punct", false)
+            return
+        }
         val full = SettingsPreferences.punctuationFullWidth(service, true)
         service.rimeEngine.setOption("ascii_punct", !full)
         service.rimeEngine.setOption("full_shape", full)
