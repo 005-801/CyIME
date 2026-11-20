@@ -3955,3 +3955,12 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 未获得短信权限。请在系统设置 → 应用 → CyIME → 权限里允许接收短信，再回到这里。	SMS permission not granted. Allow receiving SMS in System settings → Apps → CyIME → Permissions, then come back.
 需要通讯录权限，请在系统设置里允许	Contacts permission is needed; allow it in system settings
 高度、宽度、悬浮、透明度	Height, width, floating, transparency
+浮窗位置	Floating bar position
+固定后浮窗不再跟着光标走，候选贴着工具条出现。输入框在下面时选顶部，在上面时选底部。	When fixed, the bar no longer follows the cursor and candidates appear next to it. Pick Top when the input box is low on the screen, Bottom when it is high.
+自由拖动	Drag freely
+固定在{0}	Fixed at {0}
+顶部	Top
+底部	Bottom
+左侧	Left
+右侧	Right
+浮窗固定在{0}，这项不起作用	Has no effect while the bar is fixed at {0}

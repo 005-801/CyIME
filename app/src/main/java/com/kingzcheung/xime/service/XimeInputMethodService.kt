@@ -139,6 +139,7 @@ import com.kingzcheung.xime.ui.theme.keyboardBackgroundBesideCard
 import com.kingzcheung.xime.ui.theme.keyboardBackgroundBelowCard
 import com.kingzcheung.xime.ui.theme.visualMaterial
 import com.kingzcheung.xime.ui.keyboard.isBottomDocked
+import com.kingzcheung.xime.ui.keyboard.toolbarPosition
 import com.kingzcheung.xime.ui.keyboard.HardwareCandidateRow
 import com.kingzcheung.xime.ui.keyboard.CandidateBarVisuals
 import com.kingzcheung.xime.ui.keyboard.NavigationStripBelowCard
@@ -468,13 +469,19 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         hardwareKeyboardDisplay = hardwareKeyboardDisplay.withConnection(hasPhysicalTextKeyboard(devices))
     }
     private val hardwareToolbarPosition = mutableStateOf(HardwareToolbarPosition())
+    /** 设置里固定了某一边就用那一边，否则用拖到的位置；拖到的位置照旧记着，改回自由拖动时还在原处。 */
+    private fun hardwareToolbarPositionFor(options: com.kingzcheung.xime.settings.HardwareKeyboardOptions) =
+        options.fixedEdge?.toolbarPosition() ?: hardwareToolbarPosition.value
+    /** 固定在某一边时按「靠边停靠」开着算：左右竖条、贴底都靠它。 */
+    private fun hardwareDocksAtEdge(options: com.kingzcheung.xime.settings.HardwareKeyboardOptions) =
+        options.dockAtEdge || options.fixedEdge != null
     private var hardwareViewportWidthDp = 0f
     private var hardwareViewportHeightDp = 0f
     internal fun hardwareAssociationLimit(): Int {
         if (!uiState.value.isCompact) return PredictionManager.MAX_ASSOCIATION_COUNT + 1
         return if (com.kingzcheung.xime.ui.keyboard.hardwareToolbarCanShowCandidates(
-                hardwareViewportWidthDp, hardwareViewportHeightDp, hardwareToolbarPosition.value,
-                uiState.value.hardwareOptions.dockAtEdge)) 10 else 0
+                hardwareViewportWidthDp, hardwareViewportHeightDp, hardwareToolbarPositionFor(uiState.value.hardwareOptions),
+                hardwareDocksAtEdge(uiState.value.hardwareOptions))) 10 else 0
     }
     private val hardwareToolbarBounds = mutableStateOf<android.graphics.Rect?>(null)
     /** 语音悬浮条正在拖动或归位：这期间 App 的留空停在拖动前，停稳后再按新位置改一次。 */
@@ -2445,8 +2452,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                 hardwareViewportHeightDp = maxHeight.value
                             }
                             val hardwareExample = settingsPreviewEditor && settingsExample == KeyboardPanelLaunch.Example.Hardware
-                            val position = if (hardwareExample) HardwareToolbarPosition(0.5f, 1f) else hardwareToolbarPosition.value
-                            val bottomDocked = position.isBottomDocked(state.hardwareOptions.dockAtEdge) && maxWidth >= 336.dp
+                            val position = if (hardwareExample) HardwareToolbarPosition(0.5f, 1f) else hardwareToolbarPositionFor(state.hardwareOptions)
+                            // 固定在某一边：不跟光标、不避让、不能拖，靠边按开着算（设置「浮窗位置」，默认自由拖动不变）。
+                            val fixedEdge = state.hardwareOptions.fixedEdge.takeUnless { hardwareExample }
+                            val docksAtEdge = if (hardwareExample) state.hardwareOptions.dockAtEdge else hardwareDocksAtEdge(state.hardwareOptions)
+                            val bottomDocked = position.isBottomDocked(docksAtEdge) && maxWidth >= 336.dp
                             val glass = com.kingzcheung.xime.ui.keyboard.rememberKeyboardInputPreferences(isDark).frostedGlass
                             // The keyboard backdrop supplies theme/glass color and opacity. Do not
                             // add visualMaterial here: its rim redraws an unwanted outline around
@@ -2532,7 +2542,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     candidates = hardwareCandidates.windowWords(state.hardwareOptions.associationInWindow),
                                     hasNextPage = hardwareCandidates.hasNextPage,
                                     hasPrevPage = hardwareCandidates.hasPreviousPage,
-                                    cursorAnchor = state.cursorAnchor.takeIf { state.hardwareOptions.followCursor },
+                                    cursorAnchor = state.cursorAnchor.takeIf { state.hardwareOptions.followCursor && fixedEdge == null },
                                     highlightIndex = hardwareHighlight,
                                     cardBackgroundColor = cardBg,
                                     candidateTextColor = hardwarePalette.candidateText,
@@ -2550,8 +2560,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     onPreeditBoundsChanged = { updateHardwarePreeditBounds(it) },
                                     onBoundsChanged = { updateHardwareSurfaceBounds(toolbar = false, it) },
                                     avoidBoundsInWindow = hardwareToolbarBounds.value,
-                                    avoidCaret = state.cursorAnchor.takeIf { state.hardwareOptions.avoidEditor },
+                                    avoidCaret = state.cursorAnchor.takeIf { state.hardwareOptions.avoidEditor && fixedEdge == null },
                                     onShown = { words, count -> keyRouter.reportHardwareShown(words, count) },
+                                    fixedEdge = fixedEdge,
                                 )
                             }
                             HardwareKeyboardToolbar(
@@ -2576,9 +2587,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                 ),
                                 cursorAnchor = state.cursorAnchor,
                                 editorBounds = state.editorBounds,
-                                avoidEditor = state.hardwareOptions.avoidEditor,
-                                dockAtEdge = state.hardwareOptions.dockAtEdge,
-                                positionLocked = state.hardwareOptions.lockPosition,
+                                avoidEditor = state.hardwareOptions.avoidEditor && fixedEdge == null,
+                                dockAtEdge = docksAtEdge,
+                                positionLocked = state.hardwareOptions.lockPosition || fixedEdge != null,
                                 // 吸附底边时的样式：默认为现在的长条，可选三星式贴底通栏。
                                 samsungBottomBar = state.hardwareOptions.bottomBar,
                                 onHideKeyboard = { requestHideSelf(0) },

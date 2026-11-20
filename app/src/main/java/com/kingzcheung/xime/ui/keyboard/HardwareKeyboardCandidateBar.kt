@@ -93,6 +93,8 @@ fun HardwareKeyboardCandidateBar(
     commentsAreGlosses: Boolean = false,
     /** 候选行画了哪些、完整显示了几个（翻页按这个数走）。 */
     onShown: ((List<String>, Int) -> Unit)? = null,
+    /** 浮窗固定在这一边时，卡片贴着工具条放，不跟光标、不躲输入行（见 [fixedHardwareCandidatePosition]）。 */
+    fixedEdge: com.kingzcheung.xime.settings.HardwareToolbarEdge? = null,
 ) {
     val reportBounds by rememberUpdatedState(onBoundsChanged)
     val reportPreeditBounds by rememberUpdatedState(onPreeditBoundsChanged)
@@ -185,7 +187,10 @@ fun HardwareKeyboardCandidateBar(
         // 光标所在行按整行宽避让：只要浮卡压住这一行的任何位置，正在打的字就被挡住。
         val caretLine = avoidCaret?.takeIf { hostPositionInRoot != null && it.top.isFinite() && it.bottom.isFinite() }
             ?.let { HardwareCandidateExclusion(0, (it.top - origin.y).roundToInt(), constraints.maxWidth, (it.bottom - origin.y).roundToInt()) }
-        val (x, y) = avoidHardwareCaretLine(HardwareCandidatePosition(
+        val fixedToolbar = toolbarExclusion?.takeIf { fixedEdge != null && dockBounds == null }
+        val (x, y) = if (fixedEdge != null && fixedToolbar != null) fixedHardwareCandidatePosition(fixedEdge, fixedToolbar,
+            cardSize.width, cardSize.height, constraints.maxWidth, constraints.maxHeight, marginPx)
+        else avoidHardwareCaretLine(HardwareCandidatePosition(
             dockBounds?.x?.coerceIn(marginPx, maxOf(marginPx, constraints.maxWidth - cardSize.width - marginPx)) ?: placement.x,
             dockBounds?.let { (it.y - cardSize.height - marginPx).coerceAtLeast(marginPx) } ?: placement.y),
             cardSize.width, cardSize.height, constraints.maxHeight, caretLine, toolbarExclusion,
