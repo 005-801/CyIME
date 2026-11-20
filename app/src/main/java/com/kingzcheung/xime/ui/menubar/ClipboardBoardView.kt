@@ -771,6 +771,10 @@ internal fun ClipboardBoardView(
                 add(LongPressMenuEntry(Icons.Default.PushPin, if (card.key in pins) "取消固定" else "固定") {
                     onPinsChange(if (card.key in pins) pins - card.key else pins + card.key)
                 })
+                // 删除放在第二个（#414：最常用，放最底下要滑才看得到；点了还有确认）。
+                add(LongPressMenuEntry(Icons.Default.DeleteOutline, "删除", colors.error) {
+                    deleteAnchor = anchor.position; deleting = listOf(card)
+                })
                 if (groups.groups.isNotEmpty() || onManageGroups != null) {
                     add(LongPressMenuEntry(Icons.Default.Folder, groups.groupOf(card.key)?.let { "分组：${it.name}" } ?: "分组",
                         tag = "clipboard-item-group") { menuFocus = 0; groupMenu = anchor })
@@ -797,9 +801,6 @@ internal fun ClipboardBoardView(
                 }
                 add(LongPressMenuEntry(Icons.Default.DoneAll, "多选") {
                     selecting = true; selected = setOf(card.key)
-                })
-                add(LongPressMenuEntry(Icons.Default.DeleteOutline, "删除", colors.error) {
-                    deleteAnchor = anchor.position; deleting = listOf(card)
                 })
             }
             keyboardMenuEntries[0] = actions
