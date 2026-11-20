@@ -423,6 +423,11 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
             service.t9PartialSegments.isNotEmpty()
     }
 
+    /** 注音（大千）中文输入：实体键盘上 , . / ; - 和数字行是注音键，标点在 Shift 上。 */
+    internal fun zhuyinHardwareActive(): Boolean = service.uiState.value.let {
+        !it.isAsciiMode && it.inputProfile.scheme == com.kingzcheung.xime.settings.InputScheme.ZHUYIN
+    }
+
     internal fun handleHardwareCandidateKey(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_ESCAPE && hasPendingCandidateCommit) {
             cancelRejectedCommit()
@@ -1305,6 +1310,16 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     hardwareNavigation.releasePress(if (hardwareEvent.isShiftPressed) HardwareCandidateKey.LEFT else HardwareCandidateKey.RIGHT)
                     return@command
                 }
+                if (hardwareEvent.keyCode in listOf(KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER) &&
+                    zhuyinHardwareActive() && !hardwareEvent.isShiftPressed && !hardwareEvent.isCtrlPressed &&
+                    !hardwareEvent.isAltPressed && !hardwareEvent.isMetaPressed &&
+                    service.rimeEngine.readQueuedComposition()?.input?.isNotEmpty() == true) {
+                    // 注音（大千）打字中按回车：上屏转好的字，和空格选词同一条（Rime 注音、微软注音都这样）；
+                    // 以前回车上屏的是注音符号本身（注音用户 11-20：ㄅㄨˋㄓˉㄉㄠˋ… 回车发不出去）。没在打字时回车照旧发送、换行。
+                    processHardwareCandidateKey(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SPACE))
+                    hardwareNavigation.releasePress(HardwareCandidateKey.SPACE)
+                    return@command
+                }
                 if (processHardwareCandidateKey(hardwareEvent)) return@command
                 if (hardwareCandidateDigitIndex(hardwareEvent.keyCode, hardwareEvent.isShiftPressed) != null) {
                     // DefaultInput here means no numbered candidate owns this digit.
@@ -1312,6 +1327,11 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     commitHardwareLiteral(key)
                     return@command
                 }
+                // 注音（大千）的标点按 Shift 打，交给方案的标点表（同 Rime 注音）：打字中先上屏转好的字再接标点
+                // （ㄅㄨˋㄓˉㄉㄠˋ + Shift+, = 不知道，），不把注音符号原样上屏；没在打字时直接出标点（注音用户 11-20：打不出标点）。
+                if (zhuyinHardwareActive() && isZhuyinHardwarePunctuation(key, hardwareEvent.keyCode, hardwareEvent.isShiftPressed,
+                        hardwareEvent.isCtrlPressed, hardwareEvent.isAltPressed, hardwareEvent.isMetaPressed) &&
+                    routeZhuyinPunctuation(key)) return@command
                 if (hardwareSymbolIsLiteral(key, hardwareEvent.isShiftPressed,
                         numpad = hardwareEvent.keyCode in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_EQUALS,
                         chinesePunctuation = !service.uiState.value.isAsciiMode &&
@@ -2399,6 +2419,15 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         val input = service.rimeEngine.readQueuedComposition()?.input.orEmpty()
         if (ZhuyinKeys.isTone(code) && !ZhuyinKeys.takesTone(input)) return false
         val result = service.rimeEngine.processQueuedKeyAndGetResult(code.code, 0)
+        if (!result.processed) return false
+        if (result.committedText.isNotEmpty()) withEditor { service.commitText(result.committedText) }
+        sendTransformedResult(result)
+        return true
+    }
+
+    /** 注音实体键盘的 Shift 标点交给 Rime 的标点表（见 [isZhuyinHardwarePunctuation]）；Rime 不收时返回 false 照原来的路走。 */
+    private suspend fun routeZhuyinPunctuation(key: String): Boolean {
+        val result = service.rimeEngine.processQueuedKeyAndGetResult(key[0].code, 0)
         if (!result.processed) return false
         if (result.committedText.isNotEmpty()) withEditor { service.commitText(result.committedText) }
         sendTransformedResult(result)

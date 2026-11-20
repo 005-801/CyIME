@@ -157,6 +157,13 @@ menu:
 punctuator:
   import_preset: default
   __include: cyime_punctuator:/punctuator
+  # 大千的 , . 是 ㄝ ㄡ，标点在 Shift 上：Shift+, 出「，」、Shift+. 出「。」（同 Rime 注音 bopomofo 方案、微软注音），
+  # 不是表里的《》菜单。打字中按下去先上屏转好的字再接标点（ㄅㄨˋㄓˉㄉㄠˋ + Shift+, = 不知道，）。只有实体键盘会送 < >。
+  __patch:
+    half_shape/<: { commit: "，" }
+    half_shape/>: { commit: "。" }
+    full_shape/<: { commit: "，" }
+    full_shape/>: { commit: "。" }
 
 # 不引默认的 key_binder：它把有候选时的数字键、空格当选词键，而大千的数字键是 ㄅㄉ…，空格是第一声。
 key_binder:

@@ -3426,8 +3426,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 } else if (!uiState.value.isSttEnabled) {
                     android.widget.Toast.makeText(this, "请先在设置中启用语音输入", android.widget.Toast.LENGTH_SHORT).show()
                 } else {
-                    microphoneRestoreCompact = uiState.value.isCompact
-                    if (microphoneRestoreCompact) showScreenKeyboardFromHardware()
+                    // 实体键盘：就在浮条上听写（浮条的麦克风亮着，说的字直接进输入框），不再弹出整个屏幕键盘挡住应用
+                    // （注音用户 11-20：Alt+H 弹出虚拟键盘、实体键盘没适配语音）。屏幕键盘开着时照旧在键盘上听写。
+                    microphoneRestoreCompact = false
                     keyboardCallbacks?.onVoiceStickyToggle?.invoke()
                 }
             }
@@ -3616,7 +3617,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             }
         }
         val pagingKey = hardwareCandidatePageDirection(keyCode, hasInput = true,
-            modified = e.isCtrlPressed || e.isAltPressed || e.isMetaPressed) != 0
+            modified = e.isCtrlPressed || e.isAltPressed || e.isMetaPressed) != 0 &&
+            (!keyRouter.zhuyinHardwareActive() || zhuyinKeepsPagingKey(keyCode))
         if (hasHardwareKeyboard && pagingKey) {
             val symbol = keyCodeToKey(keyCode, e.isShiftPressed)
             if (symbol != null) {
