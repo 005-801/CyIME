@@ -265,11 +265,7 @@ local function static_words(env, head)
   return { exact = exact, partial = partial }
 end
 
-local function emit_char_heads(env, parts, seg)
-  if not env.chars then return end
-  local head = parts[1]
-  -- 第一段空着（先打了分词号）：不知道第一个字，不补单字。
-  if head == "" then return end
+local function cached_static(env, head)
   local static = env.cache[head]
   if not static then
     static = static_words(env, head)
@@ -277,7 +273,42 @@ local function emit_char_heads(env, parts, seg)
     if env.cache_n > CACHE_MAX then env.cache, env.cache_n = {}, 0 end
     env.cache[head] = static
   end
+  return static
+end
+
+-- 笔画打得比哪个字都长时（#445：连打 nzhspnph 没有一个字的笔画是这样开头的），往前退到还有字的那几笔，
+-- 出这几笔的字，选了上屏，后面多打的笔画留着接着打。不然候选清空，编码也变回字母。
+-- 返回能对上字的笔数，一个都对不上返回 nil。
+-- 只看有没有字以这几笔开头，取到一个就停（短编码开头的字成千上万，不能全取出来排序）。
+local function has_char(env, code)
+  if not env.chars:dict_lookup(code, true, 1) then return false end
+  for _ in env.chars:iter_dict() do return true end
+  return false
+end
+
+local function longest_head(env, head)
+  for k = #head - 1, 1, -1 do
+    local code = head:sub(1, k)
+    if has_char(env, code) then return k, cached_static(env, code) end
+  end
+  return nil
+end
+
+local function emit_char_heads(env, parts, seg)
+  if not env.chars then return end
+  local head = parts[1]
+  -- 第一段空着（先打了分词号）：不知道第一个字，不补单字。
+  if head == "" then return end
+  local static = cached_static(env, head)
   local stop = seg.start + #head + 1
+  local shown = head .. "'"
+  if #static.exact == 0 and #static.partial == 0 then
+    -- 第一段打多了，补的字只盖住对得上的那几笔。
+    local k, prefix = longest_head(env, head)
+    if not k then return end
+    head, static = head:sub(1, k), prefix
+    stop, shown = seg.start + k, head
+  end
   local seen = {}
   local function out(list)
     for _, t in ipairs(list) do
@@ -285,7 +316,7 @@ local function emit_char_heads(env, parts, seg)
         seen[t] = true
         local cand = Candidate("stroke", seg.start, stop, t, "")
         cand.quality = HEAD_QUALITY
-        cand.preedit = stroke_preedit(head .. "'")
+        cand.preedit = stroke_preedit(shown)
         yield(cand)
       end
     end
@@ -548,9 +579,18 @@ function M.fini(env)
   collectgarbage()
 end
 
+-- 没打分词号、整串笔画又没有一个字对得上（#445）：内置的整字查询什么都不出，这里补上前面对得上的那几笔的字。
+local function emit_overlong(env, input, seg)
+  if not env.chars or input:find("[^hspnz]") or has_char(env, input) then return end
+  emit_char_heads(env, { input }, seg)
+end
+
 function M.func(input, seg, env)
   local parts = split(input)
-  if not parts then return end
+  if not parts then
+    emit_overlong(env, input, seg)
+    return
+  end
 
   -- 记下这次组词打的整串（上屏时按它记词的首笔）。逐字选词时剩下的编码是整串的后半截，不覆盖。
   local pending = env.pending_code
