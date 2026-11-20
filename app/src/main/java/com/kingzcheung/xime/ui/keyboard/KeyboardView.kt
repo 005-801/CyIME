@@ -139,13 +139,16 @@ internal const val DEPLOY_NOTICE_DELAY_MS = 600L
 /**
  * 首选上拖选改局部（PR #363）：26 键全拼和双拼都有（11-18 全拼也接上，原来只有双拼，全拼上找不到）；
  * 内置 14 键全拼、双拼也有（11-20：引擎按合并键编码对字，已能换词；按键换成合并键的大写代表字母，见 [sentenceEditKey]）。
- * 九键、自建合并键布局等其它方案照旧用长按首选里的拆词重选，两种入口不同时出现。
+ * 自建布局里每个键都只出一个字母的（没有双字母合并键，如乱序十七）也有，和 26 键一样（PR #516）。
+ * 九键、自建双字母合并键布局等其它方案照旧用长按首选里的拆词重选，两种入口不同时出现。
  */
 internal fun usesSentenceDragEdit(profile: com.kingzcheung.xime.settings.InputProfile): Boolean =
     (profile.scheme == com.kingzcheung.xime.settings.InputScheme.DOUBLE_PINYIN ||
         profile.scheme == com.kingzcheung.xime.settings.InputScheme.PINYIN) &&
         (profile.layout.kind == com.kingzcheung.xime.settings.LayoutKind.ALPHABETIC ||
-            profile.layout == com.kingzcheung.xime.settings.InputLayout.MERGED14)
+            profile.layout == com.kingzcheung.xime.settings.InputLayout.MERGED14 ||
+            (profile.layout.kind == com.kingzcheung.xime.settings.LayoutKind.MERGED &&
+                com.kingzcheung.xime.settings.KeysConfigHelper.isSingleLetterSection(profile.layout.id)))
 
 /**
  * 九键全拼首选上的拖选（11-20）：九键的引擎处理器全进程只有一个，开不了隔离会话列词，所以不开改局部的面板，
