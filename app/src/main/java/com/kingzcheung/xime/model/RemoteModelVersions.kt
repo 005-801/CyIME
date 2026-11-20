@@ -19,13 +19,18 @@ internal object RemoteModelVersions {
     private const val MIN_INTERVAL_MS = 10 * 60 * 1000L
     @Volatile private var lastFetch = 0L
 
-    /** [remote] 里 [builtin] 没有的版本放到最前面（目录里越靠前越新）；不认识的模型、没写全校验值的版本不要。 */
+    /**
+     * [remote] 里 [builtin] 没有的版本放到最前面（目录里越靠前越新）；不认识的模型、没写全校验值的版本不要。
+     * 网上目录只给数据（#498）：带程序库的模型（拍照识别引擎、日语引擎）只用 App 里写死的版本，
+     * 网上的版本里有程序文件的也不要。下载哪份原生代码不能由服务器决定。
+     */
     fun merge(builtin: List<ModelInfo>, remote: List<ModelInfo>): List<ModelInfo> {
         val byId = remote.groupBy { it.id }
         return builtin.map { model ->
+            if (model.versions.any(::carriesCode)) return@map model
             val known = model.versions.mapTo(HashSet()) { it.version }
             val extra = byId[model.id].orEmpty().flatMap { it.versions }
-                .filter { it.version.isNotBlank() && it.version !in known && pinned(it) }
+                .filter { it.version.isNotBlank() && it.version !in known && pinned(it) && !carriesCode(it) }
                 .distinctBy { it.version }
             if (extra.isEmpty()) model else model.copy(versions = extra + model.versions)
         }
@@ -39,6 +44,11 @@ internal object RemoteModelVersions {
             sha(file.sha256) && file.sizeBytes > 0 && (archive != null || https(file.downloadUrl)) && file.mirrors.all(::https)
         }
     }
+
+    private val CODE = Regex("""\.(so|dex|jar|apk|odex|vdex|oat)$""", RegexOption.IGNORE_CASE)
+
+    /** 这个版本里有程序文件（原生库、dex、jar、安装包）。 */
+    internal fun carriesCode(version: ModelVersion): Boolean = version.files.any { CODE.containsMatchIn(it.name) }
 
     private fun sha(value: String) = value.length == 64 && value.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
     private fun https(url: String) = url.startsWith("https://")

@@ -112,6 +112,25 @@ class RemoteModelVersionsTest {
         for (model in published) assertEquals(model.versions.first().version, all.first { it.id == model.id }.versions.first().version)
     }
 
+    /** #498：网上目录不能换、不能加程序库，带原生库的模型只用 App 里写死的版本。 */
+    @Test fun serverCannotSendNativeCode() {
+        val lib = ModelFile("libopencv_java4.so", "https://example.com/libopencv_java4.so", sha, 1)
+        val data = ModelFile("a.bin", "https://example.com/a.bin", sha, 1)
+        assertTrue(RemoteModelVersions.carriesCode(ModelVersion("1", files = listOf(data, lib))))
+        assertTrue(RemoteModelVersions.carriesCode(ModelVersion("1", files = listOf(data.copy(name = "x.DEX")))))
+        assertFalse(RemoteModelVersions.carriesCode(ModelVersion("1", files = listOf(data))))
+        val remote = listOf(
+            ModelInfo(BuiltinModelCatalog.OCR_ENGINE, "", "", ModelCategory.OTHER, versions = listOf(ModelVersion("new", files = listOf(lib)))),
+            ModelInfo(BuiltinModelCatalog.JAPANESE_ENGINE, "", "", ModelCategory.OTHER, versions = listOf(ModelVersion("new", files = listOf(data)))),
+            ModelInfo("ochwpro", "", "", ModelCategory.HANDWRITING, versions = listOf(ModelVersion("evil", files = listOf(data, lib)))),
+        )
+        val out = RemoteModelVersions.merge(BuiltinModelCatalog.models, remote)
+        for (id in listOf(BuiltinModelCatalog.OCR_ENGINE, BuiltinModelCatalog.JAPANESE_ENGINE, "ochwpro"))
+            assertSame(id, BuiltinModelCatalog.models.first { it.id == id }, out.first { it.id == id })
+        // App 里没有一个模型是从网上目录拿程序库的
+        assertFalse(BuiltinModelCatalog.models.any { it.id == "speech-engine" })
+    }
+
     @Test fun pinnedNeedsHttpsAndChecksums() {
         val file = ModelFile("a.bin", "https://example.com/a.bin", sha, 1)
         assertTrue(RemoteModelVersions.pinned(ModelVersion("1", files = listOf(file))))
