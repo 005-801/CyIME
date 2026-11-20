@@ -210,7 +210,8 @@ class AsrInferenceService : Service() {
                     "totalMs=${readyAt - startedAt} mode=${selection.mode}")
                 FileLogger.i("AsrInferenceService", "start ready=$ready model=$modelState " +
                     "selectionMs=${selectedAt - startedAt} modelMs=$modelLoadMs " +
-                    "sessionWaitMs=${readyAt - selectedAt - modelLoadMs} totalMs=${readyAt - startedAt}")
+                    "sessionWaitMs=${readyAt - selectedAt - modelLoadMs} totalMs=${readyAt - startedAt} " +
+                    "whole=$wholeSentence xasr=${selection.finalizerDir != null} lang=${selection.recognitionLanguage}")
                 if (!ready) { scheduleRelease(); recorders.remove(callback.asBinder())?.close("not_started", "") }
                 else lastDictation = selection
                 ready
