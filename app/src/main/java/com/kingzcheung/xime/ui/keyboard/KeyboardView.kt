@@ -1348,9 +1348,10 @@ fun KeyboardView(
                     onClose = { closePreeditEditor() },
                     onCaret = { editPreedit(caret = it) },
                     onReplace = { editPreedit(text = it) },
-                    preedit = candidateState.value.preeditText, inline = inputPreferences.preeditInsideKeyboard)
+                    preedit = candidateState.value.preeditText, inline = inputPreferences.preeditInsideKeyboard,
+                    tab = inputPreferences.preeditOnTopLine)
             })
-            // 拼音在键盘内（候选上方一行或候选栏左侧）时，点开的编辑条也放在候选栏里，不浮到应用上。
+            // 拼音在候选栏左侧时，点开的编辑条也放在候选栏里；气泡和「紧贴候选上方」的小签点开后编辑条浮在键盘上方原处。
             if (!inputPreferences.preeditInsideKeyboard) drawPreeditEditor?.invoke()
 
             // 候选栏与展开页共用：展开页从同一版本中实际显示的候选之后接着排。

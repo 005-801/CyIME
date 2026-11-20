@@ -842,6 +842,80 @@ fun CodeDisplayCard(
     }
 }
 
+/**
+ * 「拼音位置」的图例卡（11-20 他要的「同样需要设置图例」，和上面「编码显示」两张卡同一种样子）：
+ * 上面是应用的输入框，下面是键盘顶（候选栏和一排键），拼音画在各自的位置。
+ * [style] 取 SettingsPreferences.PREEDIT_STYLE_BUBBLE / LINE / LEFT。
+ */
+@Composable
+fun PreeditStyleCard(
+    title: String,
+    style: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    // 键盘画深一档，和后面的「应用」底色分得开，小签贴在它上面才看得出是键盘长出来的。
+    val keyboard = MaterialTheme.colorScheme.outlineVariant
+    val key = MaterialTheme.colorScheme.surface
+    val bubble = style == com.kingzcheung.xime.settings.SettingsPreferences.PREEDIT_STYLE_BUBBLE
+    val tab = style == com.kingzcheung.xime.settings.SettingsPreferences.PREEDIT_STYLE_LINE
+    Column(modifier = modifier.testTag("preedit-style:$style")) {
+        Box(Modifier.fillMaxWidth().weight(1f)
+            .then(if (isSelected) Modifier.border(2.dp, primary, RoundedCornerShape(12.dp)) else Modifier)) {
+            Surface(onClick = onClick, modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 0.dp) {
+                Column(Modifier.fillMaxSize().padding(8.dp).clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)) {
+                    // 应用的输入框
+                    Box(Modifier.padding(5.dp).fillMaxWidth().height(18.dp).clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)))
+                    Spacer(Modifier.weight(1f))
+                    // 键盘上方：气泡隔开一点、圆角、按键色；小签贴着键盘、键盘同色、只圆上两角。
+                    if (bubble || tab) {
+                        Box(Modifier.padding(start = 4.dp, bottom = if (bubble) 4.dp else 0.dp)
+                            .clip(if (bubble) RoundedCornerShape(4.dp) else RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                            .background(if (bubble) key else keyboard)
+                            .then(if (bubble) Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)) else Modifier)
+                            .padding(horizontal = 4.dp, vertical = if (bubble) 2.dp else 1.dp)) {
+                            Text("shu'ru'fa", fontSize = if (bubble) 10.sp else 9.sp, lineHeight = 11.sp, color = onSurface, maxLines = 1)
+                        }
+                    }
+                    // 键盘：候选栏 + 一排键
+                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)).background(keyboard)
+                        .padding(horizontal = 4.dp, vertical = 3.dp)) {
+                        Row(Modifier.fillMaxWidth().height(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (!bubble && !tab) {
+                                Text("shu'ru'fa", fontSize = 8.sp, color = onSurface.copy(alpha = 0.7f), maxLines = 1)
+                                Spacer(Modifier.width(3.dp))
+                            }
+                            Box(Modifier.clip(RoundedCornerShape(4.dp)).background(primary.copy(alpha = 0.15f))
+                                .padding(horizontal = 3.dp)) {
+                                Text("输入法", fontSize = 11.sp, color = primary, fontWeight = FontWeight.Medium, maxLines = 1)
+                            }
+                            if (bubble || tab) {
+                                Spacer(Modifier.width(4.dp))
+                                Text("力学", fontSize = 11.sp, color = onSurface, maxLines = 1)
+                            }
+                        }
+                        Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            repeat(6) { Box(Modifier.weight(1f).height(12.dp).clip(RoundedCornerShape(2.dp)).background(key)) }
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) primary else onSurface, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 1)
+    }
+}
+
 // ========== Previews ==========
 
 @Preview(name = "CodeDisplayCard - 选中+显示码")

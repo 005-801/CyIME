@@ -457,13 +457,12 @@ fun CandidateBar(
     SideEffect { splitGap?.reportBarTop(if (splitGapX != null) barTopInWindow else null) }
     DisposableEffect(splitGap) { onDispose { splitGap?.reportBarTop(null) } }
 
-    // 拼音放在候选上方一行小字（默认，11-19 参照微信）：栏高 44dp 不变，上面让出一条细行，候选行压到剩下的高度。
-    // 候选字太大放不下这一行时（大字号或系统字体放大），退回候选栏左侧显示，拼音照样在键盘里。
-    val topLineHeight = (44.dp - maxOf(candidateItemHeight(candidateTextSize.sp), TOP_LINE_MIN_ROW)).coerceAtMost(TOP_LINE_MAX)
-    val topLineFits = topLineHeight >= TOP_LINE_MIN
-    val topLineMode = showPreeditPreview && previewPrefs.preeditOnTopLine && topLineFits && showInputTextRow && inlinePreeditEditor == null &&
-        (state is CandidateBarState.ChineseCandidates || state is CandidateBarState.AssociationOnly)
-    val candidateRowHeight = if (topLineMode) 44.dp - topLineHeight else 44.dp
+    // 「紧贴候选上方」（11-20 他按微信那张图定的）：拼音是贴在键盘边框正上方的一张同色小签，键盘边框、候选栏、
+    // 按键都不动；和原来的气泡一样浮在应用上，但不隔开、不挡太多。转过角度的悬浮键盘照旧放候选栏左侧。
+    // 点开编辑时小签收起，由浮在同一处的编辑条接替（KeyboardView 画）。
+    val tabRotated = isFloatingRotated(LocalFloatingKeyboardRotation.current)
+    val pinyinTabMode = showPreedit && previewPrefs.preeditOnTopLine && inlinePreeditEditor == null && !tabRotated
+    val candidateRowHeight = 44.dp
     val cardTopCorner = LocalKeyboardCardTopCorner.current
     Column(
         modifier = modifier
@@ -487,30 +486,22 @@ fun CandidateBar(
             .padding(horizontal = horizontalPadding)
             // 玻璃太薄时字和图标垫反色光晕，宿主是黑是白都看得清（用户 10-31 黑色背景截图）。
             .glassTextHalo(textSurface?.halo),
-        verticalArrangement = if (topLineMode) Arrangement.Top else Arrangement.Center,
+        verticalArrangement = Arrangement.Center,
     ) {
-        PreeditBubbleHost(showPreedit && !previewPrefs.preeditInsideKeyboard) { hidden ->
+        PreeditBubbleHost(showPreedit && !previewPrefs.preeditInsideKeyboard && !previewPrefs.preeditOnTopLine) { hidden ->
             PreeditPreview(preeditText, protectedVisuals, onEditPreedit,
                 floatingPreeditColor(themeSurface, visuals.preeditBackgroundColor), hidden)
         }
-        if (topLineMode) {
-            // 联想态（已上屏）这一行留空，候选行不跟着上下跳。
+        PreeditBubbleHost(pinyinTabMode) { hidden ->
+            // 首选是纠错来的：小签显示纠正后的读音，改动的字母标红。
             val highlighted = (state as? CandidateBarState.ChineseCandidates)?.let { it.candidates.getOrNull(it.highlightIndex) }
             val corrected = highlighted?.let { LocalPreeditLineCorrections.current[it] }.orEmpty()
-            val lineColor = protectedVisuals.textColor.copy(alpha = 0.75f)
-            val lineSize = with(LocalDensity.current) { minOf((topLineHeight * 0.8f).toSp().value, 11f * LocalCandidateSizeFactor.current) }.sp
-            Box(Modifier.fillMaxWidth().height(topLineHeight)
-                .then(if (showPreedit && onEditPreedit != null) Modifier.clickable(onClickLabel = "编辑拼音", onClick = onEditPreedit) else Modifier)
-                .padding(horizontal = 4.dp).testTag("preedit-line"), contentAlignment = Alignment.BottomStart) {
-                if (showPreedit) Text(
-                    // 首选是纠错来的：这一行显示纠正后的读音，改动的字母标红（候选旁不再另标）。
-                    if (corrected.isNotEmpty()) correctionAnnotatedString(corrected, lineColor, LocalCorrectionFullScheme.current)
-                        else sentenceSelectionText(preeditText, LocalSentenceSelection.current.value, protectedVisuals.accentColor),
-                    color = lineColor, fontSize = lineSize, lineHeight = lineSize, maxLines = 1,
-                    // 长句只露出正在打的结尾。
-                    overflow = TextOverflow.StartEllipsis, softWrap = false,
-                    modifier = Modifier.testTag(if (corrected.isNotEmpty()) "preedit-line-correction" else "preedit-line-text"))
-            }
+            val tabColor = preeditTabColor(themeSurface)
+            val tabText = readableThemeText(protectedVisuals.textColor, tabColor.copy(alpha = 1f))
+            PreeditTab(
+                if (corrected.isNotEmpty()) correctionAnnotatedString(corrected, tabText, LocalCorrectionFullScheme.current)
+                    else sentenceSelectionText(preeditText, LocalSentenceSelection.current.value, protectedVisuals.accentColor),
+                tabText, tabColor, cardTopCorner, onEditPreedit, hidden, corrected.isNotEmpty())
         }
 
         if (state is CandidateBarState.ClipboardDisplay) {
@@ -556,7 +547,6 @@ fun CandidateBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (topLineMode) Modifier.height(candidateRowHeight) else Modifier)
                 .onSizeChanged { toolbarRowWidth = with(rowDensity) { it.width.toDp() } }
                 // 工具栏和候选互换（开始打字、上屏回到空闲）时新内容快速淡入，和键盘换页同一套；
                 // 只淡这一行的图标和字，不淡栏底色，候选从第一帧起就能点。
@@ -582,8 +572,8 @@ fun CandidateBar(
             }
             if (inlinePreeditEditor != null && previewPrefs.preeditInsideKeyboard) {
                 Box(Modifier.width(minOf(240.dp, toolbarRowWidth * 0.42f))) { inlinePreeditEditor() }
-            } else if (showPreedit && (previewPrefs.inlinePreeditPreview || previewPrefs.preeditOnTopLine && !topLineMode)) {
-                // 候选上方放不下（大字号）或空闲时的滑行预览：拼音放到候选栏左侧，照样在键盘里。
+            } else if (showPreedit && (previewPrefs.inlinePreeditPreview || previewPrefs.preeditOnTopLine && tabRotated)) {
+                // 选了「紧贴候选上方」但键盘转了角度：拼音放到候选栏左侧，照样在键盘里。
                 Box(Modifier.widthIn(max = minOf(108.dp, toolbarRowWidth * 0.32f)).height(44.dp)
                     .then(if (onEditPreedit == null) Modifier else Modifier.clickable(onClickLabel = "编辑拼音", onClick = onEditPreedit))
                     .padding(horizontal = 4.dp).testTag("inline-preedit"), contentAlignment = Alignment.CenterStart) {
@@ -1156,14 +1146,13 @@ internal fun candidateTwoLineTextStyle(primary: TextStyle, fontSize: androidx.co
 internal val LocalLearnedCandidates = androidx.compose.runtime.compositionLocalOf<Set<String>> { emptySet() }
 internal val LocalCorrectedCandidates = androidx.compose.runtime.compositionLocalOf<Map<String, String>> { emptyMap() }
 internal val LocalCorrectionFullScheme = androidx.compose.runtime.compositionLocalOf<com.kingzcheung.xime.settings.DoublePinyinScheme?> { null }
-/** 候选上方那行拼音用的纠错读音：不受「显示纠错标记」影响，由键盘根部提供。 */
+/** 「紧贴候选上方」小签用的纠错读音：不受「显示纠错标记」影响，由键盘根部提供。 */
 internal val LocalPreeditLineCorrections = androidx.compose.runtime.compositionLocalOf<Map<String, String>> { emptyMap() }
-/** 候选行的高度：拼音放在上方一行时比 44dp 矮，两行长候选按它收字号。 */
+/** 候选行的高度（44dp），两行长候选按它收字号。 */
 internal val LocalCandidateRowHeight = androidx.compose.runtime.staticCompositionLocalOf { 44.dp }
-/** 候选上方拼音行：最高 12dp，低于 9dp 放不下就退回候选栏左侧；候选行至少留 32dp（两端按钮的高度）。 */
-private val TOP_LINE_MAX = 12.dp
-private val TOP_LINE_MIN = 9.dp
-private val TOP_LINE_MIN_ROW = 32.dp
+/** 「紧贴候选上方」小签：高 26dp、拼音 16sp（11-20 他定：16sp 才够、要点得到），跟「候选字大小」一起缩放。 */
+internal val PREEDIT_TAB_HEIGHT = 26.dp
+internal const val PREEDIT_TAB_TEXT_SP = 16f
 
 private val CorrectionRed = Color(0xFFE53935)
 
@@ -1539,6 +1528,59 @@ private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (
             .heightIn(min = 44.dp).padding(vertical = 6.dp).then(if (hidden) HiddenPreeditBubble else Modifier),
             solidBackground = bubbleColor, maxLines = PREEDIT_BUBBLE_MAX_LINES)
     }
+}
+
+/**
+ * 「紧贴候选上方」的小签（11-20）：和键盘同色，底边正好贴在候选栏顶上（键盘边框外），左边让过卡片圆角；
+ * 宽度跟拼音走，最宽到屏宽；整张小签都能点开拼音编辑，编辑条也出在同一处（见 [PreeditEditorBar] 的 tab）。
+ */
+@Composable
+private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor: Color, color: Color,
+    leftInset: androidx.compose.ui.unit.Dp, onEdit: (() -> Unit)?, hidden: Boolean, corrected: Boolean) {
+    val density = LocalDensity.current
+    val screenWidth = (LocalConfiguration.current.screenWidthDp / LocalCandidateBarScale.current).dp
+    val inset = with(density) { leftInset.roundToPx() }
+    val tabBounds = remember { mutableStateOf<IntRect?>(null) }
+    val positionProvider = remember(inset) {
+        object : PopupPositionProvider {
+            override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize,
+                layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset =
+                IntOffset((anchorBounds.left + inset).coerceIn(0,
+                        (windowSize.width - popupContentSize.width).coerceAtLeast(0)),
+                    (anchorBounds.top - popupContentSize.height).coerceIn(0,
+                        (windowSize.height - popupContentSize.height).coerceAtLeast(0)))
+                    .also { offset ->
+                        val bounds = IntRect(offset, popupContentSize)
+                        if (tabBounds.value != bounds) tabBounds.value = bounds
+                    }
+        }
+    }
+    val shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+    val glass = LocalKeyboardInputPreferences.current.frostedGlass.normalized()
+    if (floatingPreeditBlurBehind(glass)) PreeditBubbleBlur(tabBounds.value, glass.blurRadiusDp, with(density) { 8.dp.toPx() }, hidden)
+    val size = (PREEDIT_TAB_TEXT_SP * LocalCandidateSizeFactor.current).sp
+    Popup(popupPositionProvider = positionProvider,
+        properties = PopupProperties(focusable = false, dismissOnBackPress = false,
+            dismissOnClickOutside = false, clippingEnabled = true)) {
+        Box(Modifier.widthIn(max = screenWidth - leftInset).heightIn(min = PREEDIT_TAB_HEIGHT).clip(shape).background(color)
+            .then(if (onEdit != null && !hidden) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = onEdit) else Modifier)
+            .padding(horizontal = 8.dp).testTag("preedit-tab").then(if (hidden) HiddenPreeditBubble else Modifier),
+            contentAlignment = Alignment.CenterStart) {
+            Text(text, color = textColor, fontSize = size, maxLines = 1, softWrap = false,
+                // 长句只露出正在打的结尾。
+                overflow = TextOverflow.StartEllipsis,
+                modifier = Modifier.testTag(if (corrected) "preedit-tab-correction" else "preedit-tab-text"))
+        }
+    }
+}
+
+/** 小签的底色：键盘面板的底色、不透明，看上去是键盘往上长出来的一块；开玻璃时和气泡一样半透明并垫模糊。 */
+@Composable
+internal fun preeditTabColor(fallbackSurface: Color): Color {
+    val surface = com.kingzcheung.xime.ui.theme.LocalMaterialPalette.current?.surface ?: fallbackSurface
+    val glass = LocalKeyboardInputPreferences.current.frostedGlass
+    return if (glass.enabled) floatingPreeditColor(surface, Color.Unspecified)
+        else preeditBubbleColor(surface, Color.Unspecified, blurBehind = false)
 }
 
 /**

@@ -125,18 +125,32 @@ class PreeditLocationTest {
             assertEquals("刷新候选不能把正在编辑的光标拉回末尾", "正文".length + 3, editor.selectionStart)
         }
         location(SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR)
-        // 默认照原来浮气泡；选了「紧贴候选上方」后拼音在键盘内候选上方一行，不浮气泡。
+        // 默认照原来浮气泡；选了「紧贴候选上方」后拼音是贴在键盘边框正上方的小签（11-20），不浮气泡、不进键盘。
         rule.onNodeWithTag("candidate-preedit", true).assertExists()
-        rule.onNodeWithTag("preedit-line", true).assertDoesNotExist()
+        rule.onNodeWithTag("preedit-tab", true).assertDoesNotExist()
         rule.runOnIdle { SettingsPreferences.setPreeditStyle(app, SettingsPreferences.PREEDIT_STYLE_LINE) }
-        rule.onNodeWithTag("preedit-line-text", true).assertExists()
+        rule.onNodeWithTag("preedit-tab-text", true).assertExists()
         rule.onNodeWithTag("candidate-preedit", true).assertDoesNotExist()
+        rule.onNodeWithTag("inline-preedit", true).assertDoesNotExist()
         run {
-            val line = rule.onNodeWithTag("preedit-line", true).fetchSemanticsNode().boundsInWindow
+            val tab = rule.onNodeWithTag("preedit-tab", true).fetchSemanticsNode().boundsInWindow
             val keyboard = rule.onNodeWithTag("keyboard", true).fetchSemanticsNode().boundsInWindow
-            org.junit.Assert.assertTrue("拼音行必须在键盘内", keyboard.contains(line.center))
+            val slack = with(rule.density) { 8.dp.toPx() }
+            org.junit.Assert.assertTrue("小签在键盘外面（上方）", tab.top < keyboard.top)
+            org.junit.Assert.assertTrue("小签底边贴着键盘顶，不隔开", tab.bottom >= keyboard.top - 1f && tab.bottom <= keyboard.top + slack)
+            org.junit.Assert.assertTrue("小签高到能点（≥26dp）", tab.height >= with(rule.density) { 26.dp.toPx() } - 1f)
         }
-        shot("candidate-line")
+        shot("candidate-tab")
+        // 点开编辑：编辑条出在小签同一处（键盘上方），不跑进候选栏。
+        rule.onNodeWithTag("preedit-tab", true).performClick()
+        run {
+            val code = rule.onNodeWithTag("preedit-editor-code", true).fetchSemanticsNode().boundsInWindow
+            val keyboard = rule.onNodeWithTag("keyboard", true).fetchSemanticsNode().boundsInWindow
+            org.junit.Assert.assertTrue("编辑条在键盘上方小签处", code.bottom <= keyboard.top + 1f)
+        }
+        shot("candidate-tab-edit")
+        rule.onNodeWithTag("preedit-editor-close", true).performClick()
+        rule.runOnIdle { edits = 0 }
         rule.runOnIdle { SettingsPreferences.setPreeditStyle(app, SettingsPreferences.PREEDIT_STYLE_BUBBLE) }
         rule.onNodeWithTag("candidate-preedit", true).assertExists()
         rule.onNodeWithTag("preedit-line", true).assertDoesNotExist()
