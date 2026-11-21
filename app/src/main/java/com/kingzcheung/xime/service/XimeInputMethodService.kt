@@ -1165,6 +1165,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
 
     override fun onCreate() {
         super.onCreate()
+        ImeServiceLiveness.alive = true
         if (BuildConfig.DEV_TOOLS) EnterProbe.service = java.lang.ref.WeakReference(this)
         com.kingzcheung.xime.stats.TypingStats.init(this)
         com.kingzcheung.xime.ui.keyboard.HandwritingGlassRegion.reporter = handwritingGlassRegionReporter
@@ -5306,6 +5307,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
     }
 
     override fun onDestroy() {
+        ImeServiceLiveness.alive = false
         if (EnterProbe.service?.get() === this) EnterProbe.service = null
         if (com.kingzcheung.xime.ui.keyboard.ImeHighRefresh.apply === highRefreshVote) {
             setHighRefresh(false)

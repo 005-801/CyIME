@@ -1,7 +1,6 @@
 package com.kingzcheung.xime.ui.settings
 
 import android.content.ActivityNotFoundException
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -138,12 +137,9 @@ fun SetupWizardScreen(
     var stall by remember { mutableStateOf<PreparationStall?>(null) }
 
     fun refreshImeState() {
-        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        val selected = ComponentName.unflattenFromString(
-            Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD).orEmpty())
         status = status.copy(
-            imeEnabled = imm?.enabledInputMethodList?.any { it.packageName == context.packageName } == true,
-            imeSelected = selected?.packageName == context.packageName,
+            imeEnabled = isCyimeEnabled(context),
+            imeSelected = isCyimeSelected(context),
         )
     }
     LaunchedEffect(visible, lifecycle) {
