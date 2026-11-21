@@ -40,6 +40,19 @@ class PreeditStyleTest {
         assertEquals(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.preeditStyle(app))
     }
 
+    @Test fun fourStylesAndAlignment() {
+        for (style in listOf(SettingsPreferences.PREEDIT_STYLE_BLOCK, SettingsPreferences.PREEDIT_STYLE_STRIP,
+                SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.PREEDIT_STYLE_LINE)) {
+            SettingsPreferences.setPreeditStyle(app, style)
+            assertEquals(style, SettingsPreferences.preeditStyle(app))
+        }
+        assertEquals("没选过靠左（气泡原来就靠左）", SettingsPreferences.PREEDIT_ALIGN_LEFT, SettingsPreferences.preeditAlign(app))
+        SettingsPreferences.setPreeditAlign(app, SettingsPreferences.PREEDIT_ALIGN_RIGHT)
+        assertEquals(SettingsPreferences.PREEDIT_ALIGN_RIGHT, SettingsPreferences.preeditAlign(app))
+        SettingsPreferences.setPreeditAlign(app, "nonsense")
+        assertEquals(SettingsPreferences.PREEDIT_ALIGN_RIGHT, SettingsPreferences.preeditAlign(app))
+    }
+
     @Test fun resolveTable() {
         assertEquals(SettingsPreferences.PREEDIT_STYLE_BUBBLE, SettingsPreferences.resolvePreeditStyle(null, null))
         assertEquals(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.resolvePreeditStyle(null, true))

@@ -141,7 +141,7 @@ class PreeditLocationTest {
             org.junit.Assert.assertTrue("小签在键盘外面（上方）", tab.top < keyboard.top)
             org.junit.Assert.assertTrue("小签底边贴着键盘顶，不隔开", tab.bottom >= keyboard.top - 1f && tab.bottom <= keyboard.top + slack)
             org.junit.Assert.assertTrue("小签高到能点（≥26dp）", tab.height >= with(rule.density) { 26.dp.toPx() } - 1f)
-            assertEquals("小签水平居中（11-21）", keyboard.center.x, tab.center.x, with(rule.density) { 2.dp.toPx() })
+            assertEquals("默认靠左、贴死键盘左边缘（11-21）", keyboard.left, tab.left, 1f)
         }
         shot("candidate-tab")
         // 点开编辑：和气泡点开的是同一条原来的编辑条（11-21 他要求恢复原样、不缩小、不居中），浮在键盘上方，不跑进候选栏。

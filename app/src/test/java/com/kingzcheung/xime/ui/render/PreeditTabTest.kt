@@ -84,7 +84,7 @@ class PreeditTabTest {
         val word = rule.onNodeWithText("我们是好朋友", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
         assertEquals("小签底边贴着栏顶", bar.top, tab.bottom, 2f)
         assertTrue("小签高 26dp，点得到", tab.height >= with(rule.density) { 26.dp.toPx() } - 1f)
-        assertEquals("小签水平居中（11-21）", bar.center.x, tab.center.x, with(rule.density) { 2.dp.toPx() })
+        assertEquals("默认靠左、贴死键盘左边缘（11-21）", bar.left, tab.left, 1f)
         assertEquals("候选还在 44dp 栏的正中，没被挤", bar.center.y, word.center.y, with(rule.density) { 2.dp.toPx() })
         rule.onNodeWithTag("preedit-tab-text", true).assertExists()
         rule.onNodeWithTag("candidate-preedit", true).assertDoesNotExist()
@@ -102,6 +102,53 @@ class PreeditTabTest {
         val association = rule.onNodeWithText("的", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
         assertEquals("联想态候选也在栏正中", bar.center.y, association.center.y, with(rule.density) { 2.dp.toPx() })
         render("preedit-tab-association.png")
+    }
+
+    /** 四种样式都能选左中右（11-21）：小签、方块靠边贴死卡片边缘，顶上一行和卡片一样宽；底边都贴着栏顶。 */
+    @Test fun stylesAndAlignments() {
+        KeyboardThemes.initFromConfig(context)
+        val prefs = mutableStateOf(KeyboardInputPreferences(preeditStyle = SettingsPreferences.PREEDIT_STYLE_LINE))
+        rule.setContent {
+            val palette = resolveKeyboardPalette("soft_blue", false)
+            Column(Modifier.fillMaxWidth()) {
+                Box(Modifier.fillMaxWidth().height(200.dp))
+                Box(Modifier.width(400.dp).height(44.dp).background(Color.White).testTag("bar")) {
+                    CompositionLocalProvider(LocalKeyboardPalette provides palette,
+                        LocalKeyboardInputPreferences provides prefs.value) {
+                        CandidateBar(state = typing,
+                            visuals = CandidateBarVisuals(Color.Transparent, palette.candidateText, Color.Gray, palette.accent, palette.selectedText),
+                            callbacks = CandidateBarCallbacks(onCandidateSelect = {}, onCancelInput = {}, onShowMoreCandidates = {}),
+                            onEditPreedit = {}, modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        }
+        val bar = rule.onNodeWithTag("bar").fetchSemanticsNode().boundsInWindow
+        fun tab() = rule.onNodeWithTag("preedit-tab", true).fetchSemanticsNode().config[PreeditPopupBoundsKey].toRect()
+        fun set(style: String, align: String) {
+            rule.runOnIdle { prefs.value = KeyboardInputPreferences(preeditStyle = style, preeditAlign = align) }
+            rule.waitForIdle()
+        }
+        val px = with(rule.density) { 2.dp.toPx() }
+        set(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.PREEDIT_ALIGN_RIGHT)
+        assertEquals("小签靠右贴死右边缘", bar.right, tab().right, 1f)
+        assertEquals("底边贴着栏顶", bar.top, tab().bottom, 2f)
+        rule.onNodeWithTag("preedit-tab-corner-fill", true).assertExists()
+        set(SettingsPreferences.PREEDIT_STYLE_LINE, SettingsPreferences.PREEDIT_ALIGN_CENTER)
+        assertEquals("小签居中", bar.center.x, tab().center.x, px)
+        rule.onNodeWithTag("preedit-tab-corner-fill", true).assertDoesNotExist()
+        set(SettingsPreferences.PREEDIT_STYLE_BLOCK, SettingsPreferences.PREEDIT_ALIGN_LEFT)
+        assertEquals("方块靠左贴死左边缘", bar.left, tab().left, 1f)
+        assertTrue("方块比小签高（36dp）", tab().height >= with(rule.density) { 36.dp.toPx() } - 1f)
+        assertEquals("底边贴着栏顶", bar.top, tab().bottom, 2f)
+        set(SettingsPreferences.PREEDIT_STYLE_STRIP, SettingsPreferences.PREEDIT_ALIGN_CENTER)
+        assertEquals("顶上一行和键盘一样宽", bar.width, tab().width, 1f)
+        assertEquals("顶上一行从键盘左边缘起", bar.left, tab().left, 1f)
+        assertEquals("底边贴着栏顶", bar.top, tab().bottom, 2f)
+        val text = rule.onNodeWithTag("preedit-tab-text", true).fetchSemanticsNode().boundsInWindow
+        // 拼音在弹窗里：自己的 boundsInWindow 是弹窗里的坐标，和弹窗宽比。
+        assertEquals("顶上一行里拼音居中", tab().width / 2f, text.center.x, px)
+        render("preedit-strip-center.png")
     }
 
     private fun render(name: String) {

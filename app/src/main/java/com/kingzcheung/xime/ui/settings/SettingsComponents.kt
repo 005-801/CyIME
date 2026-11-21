@@ -845,7 +845,7 @@ fun CodeDisplayCard(
 /**
  * 「拼音位置」的图例卡（11-20 他要的「同样需要设置图例」，和上面「编码显示」两张卡同一种样子）：
  * 上面是应用的输入框，下面是键盘顶（候选栏和一排键），拼音画在各自的位置。
- * [style] 取 SettingsPreferences.PREEDIT_STYLE_BUBBLE / LINE。
+ * [style] 取 SettingsPreferences.PREEDIT_STYLE_*（气泡、圆角小签、贴边方块、顶上一行），[align] 取 PREEDIT_ALIGN_*。
  */
 @Composable
 fun PreeditStyleCard(
@@ -853,15 +853,27 @@ fun PreeditStyleCard(
     style: String,
     isSelected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    align: String = com.kingzcheung.xime.settings.SettingsPreferences.PREEDIT_ALIGN_LEFT,
+    testTag: String = "preedit-style:$style",
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val onSurface = MaterialTheme.colorScheme.onSurface
     // 键盘画深一档，和后面的「应用」底色分得开，小签贴在它上面才看得出是键盘长出来的。
     val keyboard = MaterialTheme.colorScheme.outlineVariant
     val key = MaterialTheme.colorScheme.surface
-    val bubble = style == com.kingzcheung.xime.settings.SettingsPreferences.PREEDIT_STYLE_BUBBLE
-    Column(modifier = modifier.testTag("preedit-style:$style")) {
+    val prefs = com.kingzcheung.xime.settings.SettingsPreferences
+    val bubble = style == prefs.PREEDIT_STYLE_BUBBLE
+    val strip = style == prefs.PREEDIT_STYLE_STRIP
+    val block = style == prefs.PREEDIT_STYLE_BLOCK
+    val left = align == prefs.PREEDIT_ALIGN_LEFT
+    val right = align == prefs.PREEDIT_ALIGN_RIGHT
+    // 贴在键盘上的靠边时，键盘那一角画成直角（实际键盘上那一角的圆角被补平）；顶上一行两角都跟着它走。
+    val keyboardCorner = 6.dp
+    val keyboardShape = RoundedCornerShape(
+        topStart = if (strip || (!bubble && left)) 0.dp else keyboardCorner,
+        topEnd = if (strip || (!bubble && right)) 0.dp else keyboardCorner)
+    Column(modifier = modifier.testTag(testTag)) {
         Box(Modifier.fillMaxWidth().weight(1f)
             .then(if (isSelected) Modifier.border(2.dp, primary, RoundedCornerShape(12.dp)) else Modifier)) {
             Surface(onClick = onClick, modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface,
@@ -873,19 +885,37 @@ fun PreeditStyleCard(
                         .background(MaterialTheme.colorScheme.surface)
                         .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)))
                     Spacer(Modifier.weight(1f))
-                    // 键盘上方：气泡靠左、隔开一点、圆角、按键色；小签居中（11-21）、贴着键盘、键盘同色、只圆上两角。
-                    run {
-                        Box(Modifier.align(if (bubble) Alignment.Start else Alignment.CenterHorizontally)
-                            .padding(start = if (bubble) 4.dp else 0.dp, bottom = if (bubble) 4.dp else 0.dp)
-                            .clip(if (bubble) RoundedCornerShape(4.dp) else RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                            .background(if (bubble) key else keyboard)
-                            .then(if (bubble) Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)) else Modifier)
-                            .padding(horizontal = 4.dp, vertical = if (bubble) 2.dp else 1.dp)) {
-                            Text("shu'ru'fa", fontSize = if (bubble) 10.sp else 9.sp, lineHeight = 11.sp, color = onSurface, maxLines = 1)
-                        }
+                    // 键盘上方：气泡隔开一点、圆角、按键色；小签贴着键盘、键盘同色、只圆上两角（贴边那角直角）；
+                    // 方块直角、高一点；顶上一行整行宽、和键盘连成一体。
+                    val tabShape = when {
+                        bubble -> RoundedCornerShape(4.dp)
+                        strip -> RoundedCornerShape(topStart = keyboardCorner, topEnd = keyboardCorner)
+                        block -> RoundedCornerShape(0.dp)
+                        else -> RoundedCornerShape(topStart = if (left) 0.dp else 4.dp, topEnd = if (right) 0.dp else 4.dp)
+                    }
+                    val horizontal = when {
+                        strip -> Alignment.Start
+                        left -> Alignment.Start
+                        right -> Alignment.End
+                        else -> Alignment.CenterHorizontally
+                    }
+                    Box(Modifier.align(horizontal)
+                        .padding(start = if (bubble && left) 4.dp else 0.dp, end = if (bubble && right) 4.dp else 0.dp,
+                            bottom = if (bubble) 4.dp else 0.dp)
+                        .then(if (strip) Modifier.fillMaxWidth() else Modifier)
+                        .clip(tabShape)
+                        .background(if (bubble) key else keyboard)
+                        .then(if (bubble) Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)) else Modifier)
+                        .padding(horizontal = 4.dp, vertical = if (bubble || block) 2.dp else 1.dp),
+                        contentAlignment = when {
+                            !strip || left -> Alignment.CenterStart
+                            right -> Alignment.CenterEnd
+                            else -> Alignment.Center
+                        }) {
+                        Text("shu'ru'fa", fontSize = if (bubble || block) 10.sp else 9.sp, lineHeight = 11.sp, color = onSurface, maxLines = 1)
                     }
                     // 键盘：候选栏 + 一排键
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)).background(keyboard)
+                    Column(Modifier.fillMaxWidth().clip(keyboardShape).background(keyboard)
                         .padding(horizontal = 4.dp, vertical = 3.dp)) {
                         Row(Modifier.fillMaxWidth().height(18.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.clip(RoundedCornerShape(4.dp)).background(primary.copy(alpha = 0.15f))

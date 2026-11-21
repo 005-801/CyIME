@@ -449,6 +449,8 @@ fun CandidateBar(
     }
     var barOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
     var barTopInWindow by remember { mutableStateOf<Float?>(null) }
+    // 候选栏连内边距的整宽＝键盘卡片宽：「键盘顶上一行」要和卡片一样宽。
+    var barWidthPx by remember { mutableStateOf(0) }
     // 根布局坐标：Shift 拖线和候选位置都用这个坐标系。
     val dragSpace = LocalKeyDragSpace.current
     var barDragOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
@@ -470,6 +472,7 @@ fun CandidateBar(
             .onGloballyPositioned {
                 barOrigin = it.positionInWindow()
                 barTopInWindow = barOrigin.y
+                if (barWidthPx != it.size.width) barWidthPx = it.size.width
                 barDragOrigin = dragSpace.point(it)
             }
             .shiftDragOverlay({ barDragOrigin }, protectedVisuals.accentColor)
@@ -489,7 +492,7 @@ fun CandidateBar(
         // 气泡：默认；选了小签但悬浮键盘转了角度时也用气泡（「候选栏左侧」11-20 他要求去掉）。
         PreeditBubbleHost(showPreedit && (!previewPrefs.preeditOnTopLine || tabRotated)) { hidden ->
             PreeditPreview(preeditText, protectedVisuals, onEditPreedit,
-                floatingPreeditColor(themeSurface, visuals.preeditBackgroundColor), hidden)
+                floatingPreeditColor(themeSurface, visuals.preeditBackgroundColor), hidden, previewPrefs.preeditAlign)
         }
         PreeditBubbleHost(pinyinTabMode) { hidden ->
             // 首选是纠错来的：小签显示纠正后的读音，改动的字母标红。
@@ -500,7 +503,8 @@ fun CandidateBar(
             PreeditTab(
                 if (corrected.isNotEmpty()) correctionAnnotatedString(corrected, tabText, LocalCorrectionFullScheme.current)
                     else sentenceSelectionText(preeditText, LocalSentenceSelection.current.value, protectedVisuals.accentColor),
-                tabText, tabColor, onEditPreedit, hidden, corrected.isNotEmpty())
+                tabText, tabColor, previewPrefs.preeditStyle, previewPrefs.preeditAlign, horizontalPadding, cardTopCorner,
+                with(LocalDensity.current) { barWidthPx.toDp() }, onEditPreedit, hidden, corrected.isNotEmpty())
         }
 
         if (state is CandidateBarState.ClipboardDisplay) {
@@ -1144,6 +1148,8 @@ internal val LocalPreeditLineCorrections = androidx.compose.runtime.compositionL
 internal val LocalCandidateRowHeight = androidx.compose.runtime.staticCompositionLocalOf { 44.dp }
 /** 「紧贴候选上方」小签：高 26dp、拼音 16sp（11-20 他定：16sp 才够、要点得到），跟「候选字大小」一起缩放。 */
 internal val PREEDIT_TAB_HEIGHT = 26.dp
+/** 「贴边方块」的高度（11-21，照他第二张图：比小签高，字和气泡一样大）。 */
+internal val PREEDIT_BLOCK_HEIGHT = 36.dp
 internal const val PREEDIT_TAB_TEXT_SP = 16f
 
 private val CorrectionRed = Color(0xFFE53935)
@@ -1452,7 +1458,9 @@ private fun Modifier.glassStripBoost(alpha: Float): Modifier {
 @Composable
 private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (() -> Unit)?, bubbleColor: Color,
     /** 编码刚清空、窗口还没拆：气泡画成全透明，不能点，模糊也同时调成全透明（见 [PreeditBubbleHost]）。 */
-    hidden: Boolean = false) {
+    hidden: Boolean = false,
+    /** 靠左（默认，和原来一样）、居中、靠右（用户 11-21：四种样式都能选左中右）。 */
+    align: String = SettingsPreferences.PREEDIT_ALIGN_LEFT) {
     val density = LocalDensity.current
     // 放大后的候选栏里 dp 变大了，按屏宽限宽要换回同样的像素宽度。
     val screenWidth = (LocalConfiguration.current.screenWidthDp / LocalCandidateBarScale.current).dp
@@ -1467,13 +1475,18 @@ private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (
     // 气泡在键盘外面（上方），键盘的玻璃模糊盖不到它：开玻璃时给气泡单独垫一块同样的实时模糊（用户反馈 10-31
     // 「字母显示栏的模糊会消失」：气泡底色和按键一样半透明，后面却是没模糊的应用）。区域按气泡在输入法窗口里的位置算。
     val bubbleBounds = remember { mutableStateOf<IntRect?>(null) }
-    // 气泡贴着键盘左边（用户 10-20 要求恢复）：不跟光标，所有应用位置一样。
-    val positionProvider = remember(margin, gap) {
+    // 气泡默认贴着键盘左边（用户 10-20 要求恢复）：不跟光标，所有应用位置一样；11-21 起可选居中、靠右。
+    val positionProvider = remember(margin, gap, align) {
         object : PopupPositionProvider {
             override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize,
                 layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset {
+                val x = when (align) {
+                    SettingsPreferences.PREEDIT_ALIGN_CENTER -> anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2
+                    SettingsPreferences.PREEDIT_ALIGN_RIGHT -> anchorBounds.right - popupContentSize.width
+                    else -> anchorBounds.left
+                }
                 return IntOffset(
-                    anchorBounds.left.coerceIn(margin,
+                    x.coerceIn(margin,
                         (windowSize.width - popupContentSize.width - margin).coerceAtLeast(margin)),
                     (anchorBounds.top - popupContentSize.height - gap).coerceIn(0,
                         (windowSize.height - popupContentSize.height).coerceAtLeast(0)),
@@ -1491,59 +1504,149 @@ private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (
         PreeditBubbleBlur(bubbleBounds.value?.let { IntRect(it.left, it.top + inset, it.right, it.bottom - inset) },
             glass.blurRadiusDp, with(density) { 4.dp.toPx() }, hidden)
     }
+    val origin = LocalPreeditOrigin.current
+    val fontSp = PreeditStyle.FontSize.value
+    val vertical = with(density) { 6.dp.roundToPx() }
+    val edit: (() -> Unit)? = onEdit?.let { open -> {
+        // 编辑条从气泡的底色块处渐渐变长（用户 11-21：原来的样式只要逐渐变长）。
+        origin?.value = bubbleBounds.value?.let {
+            PreeditOrigin(IntRect(it.left, it.top + vertical, it.right, it.bottom - vertical), bubbleColor, fontSp)
+        }
+        open()
+    } }
     Popup(popupPositionProvider = positionProvider,
         properties = PopupProperties(focusable = false, dismissOnBackPress = false,
             dismissOnClickOutside = false, clippingEnabled = true)) {
-        PreeditLabel(text, visuals, onEdit.takeUnless { hidden }, Modifier.widthIn(max = screenWidth - 16.dp)
+        PreeditLabel(text, visuals, edit.takeUnless { hidden }, Modifier.widthIn(max = screenWidth - 16.dp)
             .heightIn(min = 44.dp).padding(vertical = 6.dp).then(if (hidden) HiddenPreeditBubble else Modifier),
             solidBackground = bubbleColor, maxLines = PREEDIT_BUBBLE_MAX_LINES)
     }
 }
 
 /**
- * 「紧贴候选上方」的小签（11-20）：和键盘同色，底边正好贴在候选栏顶上（键盘边框外）；
- * 宽度跟拼音走，最宽到屏宽；整张小签都能点开拼音编辑，点开是和气泡一样的原来那条编辑条。
- * 11-21 他要求小签水平居中（原来靠左，拼音正好压在应用输入框光标的手柄下面，手柄是系统画在最上层的，输入法盖不住）。
+ * 贴在键盘边框上的拼音（11-20 起）：和键盘同色，底边正好贴在候选栏顶上（键盘边框外），键盘本身不动、不加高。
+ * 整块都能点开拼音编辑，点开是和气泡一样的原来那条编辑条，从这里渐渐长大（11-21）。三种样子（用户 11-21「总共 4 种样式」，另一种是气泡）：
+ * - [SettingsPreferences.PREEDIT_STYLE_LINE] 圆角小签：高 26dp、16sp，宽度跟拼音走；
+ * - [SettingsPreferences.PREEDIT_STYLE_BLOCK] 贴边方块：直角，高 36dp，字和气泡一样大；
+ * - [SettingsPreferences.PREEDIT_STYLE_STRIP] 顶上一行：和键盘卡片一样宽、上两角跟卡片同一圆角，像键盘往上多出一行，拼音在行里按 [align] 摆。
+ * 小签和方块按 [align] 靠左、居中或靠右。靠左、靠右时贴死键盘卡片边缘，贴边那一角是直角，卡片在它下面的那个圆角用同色补平
+ * （他：「贴边就要处理圆角，不能圆角又露出来，上面再放一个标签会很丑」）；顶上一行两边都补。
  */
 @Composable
 private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor: Color, color: Color,
-    onEdit: (() -> Unit)?, hidden: Boolean, corrected: Boolean) {
+    style: String, align: String, barPadding: androidx.compose.ui.unit.Dp, cardCorner: androidx.compose.ui.unit.Dp,
+    cardWidth: androidx.compose.ui.unit.Dp, onEdit: (() -> Unit)?, hidden: Boolean, corrected: Boolean) {
     val density = LocalDensity.current
     val screenWidth = (LocalConfiguration.current.screenWidthDp / LocalCandidateBarScale.current).dp
     val tabBounds = remember { mutableStateOf<IntRect?>(null) }
-    val positionProvider = remember {
+    val strip = style == SettingsPreferences.PREEDIT_STYLE_STRIP
+    val block = style == SettingsPreferences.PREEDIT_STYLE_BLOCK
+    val left = align == SettingsPreferences.PREEDIT_ALIGN_LEFT
+    val right = align == SettingsPreferences.PREEDIT_ALIGN_RIGHT
+    // 挂在候选栏内边距里面：往外退回内边距才是键盘卡片的边缘。
+    val shift = with(density) { barPadding.roundToPx() }
+    // 贴边时在下面补卡片圆角的缺口；这一块伸进栏顶下面，本身的底边仍正好贴着栏顶。
+    val fillLeft = cardCorner > 0.dp && (strip || left)
+    val fillRight = cardCorner > 0.dp && (strip || right)
+    val notchDp = if (fillLeft || fillRight) cardCorner else 0.dp
+    val notch = with(density) { notchDp.roundToPx() }
+    val positionProvider = remember(strip, align, shift, notch) {
         object : PopupPositionProvider {
             override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize,
-                layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset =
-                IntOffset((anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2).coerceIn(0,
-                        (windowSize.width - popupContentSize.width).coerceAtLeast(0)),
-                    (anchorBounds.top - popupContentSize.height).coerceIn(0,
+                layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset {
+                val tabHeight = popupContentSize.height - notch
+                val x = when {
+                    strip || left -> anchorBounds.left - shift
+                    right -> anchorBounds.right + shift - popupContentSize.width
+                    else -> anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2
+                }
+                return IntOffset(x.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)),
+                    (anchorBounds.top - tabHeight).coerceIn(0,
                         (windowSize.height - popupContentSize.height).coerceAtLeast(0)))
                     .also { offset ->
-                        val bounds = IntRect(offset, popupContentSize)
+                        val bounds = IntRect(offset, IntSize(popupContentSize.width, tabHeight))
                         if (tabBounds.value != bounds) tabBounds.value = bounds
                     }
+            }
         }
     }
-    val shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+    val corner = when {
+        strip -> cardCorner
+        block -> 0.dp
+        else -> 8.dp
+    }
+    val shape = if (strip) RoundedCornerShape(topStart = corner, topEnd = corner)
+        else RoundedCornerShape(topStart = if (left) 0.dp else corner, topEnd = if (right) 0.dp else corner)
     val glass = LocalKeyboardInputPreferences.current.frostedGlass.normalized()
-    if (floatingPreeditBlurBehind(glass)) PreeditBubbleBlur(tabBounds.value, glass.blurRadiusDp, with(density) { 8.dp.toPx() }, hidden)
-    val size = (PREEDIT_TAB_TEXT_SP * LocalCandidateSizeFactor.current).sp
+    if (floatingPreeditBlurBehind(glass)) PreeditBubbleBlur(tabBounds.value, glass.blurRadiusDp, with(density) { corner.toPx() }, hidden)
+    val sizeSp = (if (block) 18f else PREEDIT_TAB_TEXT_SP) * LocalCandidateSizeFactor.current
+    val size = sizeSp.sp
+    val height = if (block) PREEDIT_BLOCK_HEIGHT else PREEDIT_TAB_HEIGHT
+    val stripWidth = if (cardWidth > 0.dp) cardWidth else screenWidth
+    val origin = LocalPreeditOrigin.current
+    val edit: (() -> Unit)? = onEdit?.let { open -> {
+        // 记下拼音在哪、什么底色字号，编辑条从这里渐渐长成原来的样子。
+        origin?.value = tabBounds.value?.let { PreeditOrigin(it, color, sizeSp) }
+        open()
+    } }
     Popup(popupPositionProvider = positionProvider,
         properties = PopupProperties(focusable = false, dismissOnBackPress = false,
             dismissOnClickOutside = false, clippingEnabled = true)) {
         val placed = tabBounds.value
-        Box(Modifier.widthIn(max = screenWidth).heightIn(min = PREEDIT_TAB_HEIGHT).clip(shape).background(color)
-            .then(if (onEdit != null && !hidden) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = onEdit) else Modifier)
-            .padding(horizontal = 8.dp).testTag("preedit-tab")
+        Column(horizontalAlignment = if (right && !strip) Alignment.End else Alignment.Start) {
+        Box(Modifier.then(if (strip) Modifier.width(stripWidth) else Modifier.widthIn(max = screenWidth))
+            .heightIn(min = height).clip(shape).background(color)
+            .then(if (edit != null && !hidden) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = edit) else Modifier)
+            .padding(horizontal = if (strip) 12.dp else 8.dp).testTag("preedit-tab")
             .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier)
             .then(if (hidden) HiddenPreeditBubble else Modifier),
-            contentAlignment = Alignment.CenterStart) {
+            contentAlignment = when {
+                !strip || left -> Alignment.CenterStart
+                right -> Alignment.CenterEnd
+                else -> Alignment.Center
+            }) {
             Text(text, color = textColor, fontSize = size, maxLines = 1, softWrap = false,
                 // 长句只露出正在打的结尾。
                 overflow = TextOverflow.StartEllipsis,
                 modifier = Modifier.testTag(if (corrected) "preedit-tab-correction" else "preedit-tab-text"))
         }
+        if (notchDp > 0.dp) {
+            val fillModifier = if (hidden) HiddenPreeditBubble else Modifier
+            if (strip) Row(Modifier.width(stripWidth)) {
+                PreeditTabCornerFill(notchDp, color, mirrored = false, modifier = fillModifier)
+                Spacer(Modifier.weight(1f))
+                PreeditTabCornerFill(notchDp, color, mirrored = true, modifier = fillModifier)
+            } else PreeditTabCornerFill(notchDp, color, mirrored = right, modifier = fillModifier)
+        }
+        }
+    }
+}
+
+/**
+ * 小签贴死卡片边缘时，卡片上角的圆角在小签下面留出的缺口，用小签同色补上：只补圆弧外那一块，半透明时不和卡片叠色。
+ * [mirrored] 为 false 补左上角（小签靠左），true 补右上角（小签靠右）。
+ */
+@Composable
+internal fun PreeditTabCornerFill(radius: androidx.compose.ui.unit.Dp, color: Color, mirrored: Boolean,
+    modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier.size(radius).testTag("preedit-tab-corner-fill")) {
+        val w = size.width
+        val h = size.height
+        val notch = androidx.compose.ui.graphics.Path().apply {
+            if (!mirrored) {
+                // 圆心在右下 (w, h)：从左上角沿上边到 (w, 0)，顺着圆弧逆时针回到 (0, h)。
+                moveTo(0f, 0f)
+                lineTo(w, 0f)
+                arcTo(androidx.compose.ui.geometry.Rect(0f, 0f, 2 * w, 2 * h), 270f, -90f, false)
+            } else {
+                // 圆心在左下 (0, h)：从右上角沿上边到 (0, 0)，顺着圆弧顺时针到 (w, h)。
+                moveTo(w, 0f)
+                lineTo(0f, 0f)
+                arcTo(androidx.compose.ui.geometry.Rect(-w, 0f, w, 2 * h), 270f, 90f, false)
+            }
+            close()
+        }
+        drawPath(notch, color)
     }
 }
 

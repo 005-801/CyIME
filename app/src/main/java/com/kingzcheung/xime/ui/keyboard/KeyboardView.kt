@@ -1346,12 +1346,16 @@ fun KeyboardView(
             }
 
             val editFrame = preeditFrame.takeIf { inputPreferences.showCodeInCandidateBar && preeditEditSession != null }
+            // 点小签、气泡时记下拼音原来在哪，编辑条从那里渐渐长成原样（11-21）；编辑条关掉就清掉。
+            val preeditOrigin = remember { mutableStateOf<PreeditOrigin?>(null) }
             val drawPreeditEditor: (@Composable () -> Unit)? = if (editFrame == null) null else ({
+                DisposableEffect(Unit) { onDispose { preeditOrigin.value = null } }
                 PreeditEditorBar(editFrame, keyBgColor, candidateTextColor, accentColor,
                     onClose = { closePreeditEditor() },
                     onCaret = { editPreedit(caret = it) },
                     onReplace = { editPreedit(text = it) },
-                    preedit = candidateState.value.preeditText)
+                    preedit = candidateState.value.preeditText,
+                    openFrom = preeditOrigin.value)
             })
             // 气泡和「紧贴候选上方」的小签点开后，都是同一个原来的编辑条，浮在键盘上方（11-21 他要求小签点开也恢复原样，不缩小）。
             drawPreeditEditor?.invoke()
@@ -1512,6 +1516,7 @@ fun KeyboardView(
                 LocalCorrectedCandidates provides correctionMarks,
                 LocalPreeditLineCorrections provides allCorrectionMarks,
                 LocalSentenceSelection provides sentenceDragOwnerState,
+                LocalPreeditOrigin provides preeditOrigin,
                 LocalSentenceCandidateHighlight provides sentenceEdit?.let { owner ->
                     val replacement = sentenceReplacement(owner)
                     SentenceCandidateHighlight(owner.sentence(replacement), owner.start, owner.start + replacement.length)

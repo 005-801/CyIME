@@ -637,25 +637,48 @@ private fun LayoutDisplayPage(
                         if (showPreview) {
                             // 拼音位置三选一（11-19）：默认照旧浮在键盘上方的气泡；「紧贴候选上方」是贴在键盘边框上的小签（11-20 他按微信那张图定的）；
                             // 「候选栏左侧」11-20 他要求去掉，存过的（含老开关「拼音放在键盘内」）按小签读。两张图例卡，和上面「编码显示」一个样（11-20「同样需要设置图例」）。
+                            // 11-21 他：「总共是 4 种样式，每种都能调整位置，左中右」——四张样式卡（两行），下面三张靠哪边的卡。
                             var preeditStyle by remember { mutableStateOf(SettingsPreferences.preeditStyle(context)) }
+                            var preeditAlign by remember { mutableStateOf(SettingsPreferences.preeditAlign(context)) }
                             val styles = listOf(
                                 Triple(SettingsPreferences.PREEDIT_STYLE_BUBBLE, "浮在键盘上方", "气泡浮在应用上，点开编辑前后位置不变，透明度可调；会挡住一点输入内容。"),
-                                Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "紧贴候选上方", "贴在键盘边框正中的小签，和键盘同色，不容易挡住输入内容。"),
+                                Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "紧贴候选上方", "圆角小签贴在键盘边框上，和键盘同色，不容易挡住输入内容。"),
+                                Triple(SettingsPreferences.PREEDIT_STYLE_BLOCK, "贴边方块", "直角方块贴在键盘边框上，和键盘同色，字和气泡一样大。"),
+                                Triple(SettingsPreferences.PREEDIT_STYLE_STRIP, "键盘顶上一行", "和键盘连成一体，像键盘往上多出一行；键盘本身不变高。"),
+                            )
+                            val aligns = listOf(
+                                SettingsPreferences.PREEDIT_ALIGN_LEFT to "靠左",
+                                SettingsPreferences.PREEDIT_ALIGN_CENTER to "居中",
+                                SettingsPreferences.PREEDIT_ALIGN_RIGHT to "靠右",
                             )
                             Column(Modifier.fillMaxWidth().settingsSearchAnchor("拼音位置", bleed = 16.dp, bleedVertical = 6.dp)
                                 .padding(horizontal = 16.dp, vertical = 8.dp)) {
                                 Text("拼音位置", style = MaterialTheme.typography.titleSmall)
-                                Row(Modifier.fillMaxWidth().height(150.dp).padding(top = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    styles.forEach { (style, label, _) ->
-                                        PreeditStyleCard(title = label, style = style, isSelected = preeditStyle == style,
-                                            onClick = { preeditStyle = style; SettingsPreferences.setPreeditStyle(context, style) },
-                                            modifier = Modifier.weight(1f))
+                                styles.chunked(2).forEach { pair ->
+                                    Row(Modifier.fillMaxWidth().height(150.dp).padding(top = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        pair.forEach { (style, label, _) ->
+                                            PreeditStyleCard(title = label, style = style, isSelected = preeditStyle == style,
+                                                onClick = { preeditStyle = style; SettingsPreferences.setPreeditStyle(context, style) },
+                                                modifier = Modifier.weight(1f), align = preeditAlign)
+                                        }
                                     }
                                 }
                                 styles.firstOrNull { it.first == preeditStyle }?.let { (_, _, description) ->
                                     Text(description, style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+                                }
+                            }
+                            Column(Modifier.fillMaxWidth().settingsSearchAnchor("拼音靠哪边", bleed = 16.dp, bleedVertical = 6.dp)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Text("拼音靠哪边", style = MaterialTheme.typography.titleSmall)
+                                Row(Modifier.fillMaxWidth().height(130.dp).padding(top = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    aligns.forEach { (align, label) ->
+                                        PreeditStyleCard(title = label, style = preeditStyle, isSelected = preeditAlign == align,
+                                            onClick = { preeditAlign = align; SettingsPreferences.setPreeditAlign(context, align) },
+                                            modifier = Modifier.weight(1f), align = align, testTag = "preedit-align:$align")
+                                    }
                                 }
                             }
                         }

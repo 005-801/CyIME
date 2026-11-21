@@ -490,8 +490,13 @@ object SettingsPreferences {
     const val KEY_PREEDIT_STYLE = "preedit_style"
     const val PREEDIT_STYLE_LINE = "line"
     const val PREEDIT_STYLE_BUBBLE = "bubble"
+    /** 「贴边方块」（用户 11-21 第二张图）：直角方块贴在键盘边框上，字和气泡一样大。 */
+    const val PREEDIT_STYLE_BLOCK = "block"
+    /** 「键盘顶上一行」（用户 11-21 第一张图）：整行宽、和键盘连成一体，像键盘往上多出一行；键盘本身高度不变。 */
+    const val PREEDIT_STYLE_STRIP = "strip"
     const val PREEDIT_STYLE_LEFT = "left"
-    private val PREEDIT_STYLES = setOf(PREEDIT_STYLE_LINE, PREEDIT_STYLE_BUBBLE)
+    /** 设置里的顺序：气泡（默认）、圆角小签、贴边方块、顶上一行（用户 11-21：「总共是 4 种样式」）。 */
+    val PREEDIT_STYLES = listOf(PREEDIT_STYLE_BUBBLE, PREEDIT_STYLE_LINE, PREEDIT_STYLE_BLOCK, PREEDIT_STYLE_STRIP)
     /** 「候选栏左侧」（和老开关「拼音放在键盘内」）11-20 他要求去掉：存过的按「紧贴候选上方」读，同样不浮气泡。只在读的时候换，不改存的值。 */
     fun resolvePreeditStyle(saved: String?, legacyInline: Boolean?): String = when {
         saved in PREEDIT_STYLES -> saved!!
@@ -506,6 +511,20 @@ object SettingsPreferences {
     }
     fun setPreeditStyle(context: Context, style: String) {
         if (style in PREEDIT_STYLES) getPrefs(context).edit().putString(KEY_PREEDIT_STYLE, style).apply()
+    }
+    /**
+     * 拼音靠哪边：四种样式都能选靠左、居中、靠右（用户 11-21：「每种都能调整位置，左中右」）。
+     * 靠左、靠右的小签和方块贴死键盘边缘，卡片圆角在它下面补平；新键，没存过是靠左（气泡原来就靠左）。
+     */
+    const val KEY_PREEDIT_ALIGN = "preedit_align"
+    const val PREEDIT_ALIGN_LEFT = "left"
+    const val PREEDIT_ALIGN_CENTER = "center"
+    const val PREEDIT_ALIGN_RIGHT = "right"
+    val PREEDIT_ALIGNS = listOf(PREEDIT_ALIGN_LEFT, PREEDIT_ALIGN_CENTER, PREEDIT_ALIGN_RIGHT)
+    fun preeditAlign(context: Context): String =
+        getPrefs(context).getString(KEY_PREEDIT_ALIGN, null)?.takeIf { it in PREEDIT_ALIGNS } ?: PREEDIT_ALIGN_LEFT
+    fun setPreeditAlign(context: Context, align: String) {
+        if (align in PREEDIT_ALIGNS) getPrefs(context).edit().putString(KEY_PREEDIT_ALIGN, align).apply()
     }
     /**
      * 浮在应用上面的拼音气泡和点开后的拼音编辑条共用这一个底色不透明度：20%~100%，按 5% 一档。
