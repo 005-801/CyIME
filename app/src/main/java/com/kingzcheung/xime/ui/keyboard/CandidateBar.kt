@@ -695,8 +695,10 @@ fun CandidateBar(
                     showNumberLabels = showNumberLabels,
                     gapWindowX = splitGapX,
                     scrollable = state is CandidateBarState.ChineseCandidates && !isGlidePreview,
-                    onUserScroll = callbacks.onCandidateStripScrolled,
-                    onNearEnd = callbacks.onCandidateStripNearEnd,
+                    // 开了「候选滑到头回弹展开」：栏里只放引擎这一页，不在滑近尾巴时接上整张展开列表，也不因为滑了一下收起展开页，
+                    // 不然尾巴越滑越远、永远滑不到头，往左拉展不开（11-22 他在手机上：「没用」「展不开」）。展开、收回只靠拉。
+                    onUserScroll = callbacks.onCandidateStripScrolled.takeUnless { swipeExpand },
+                    onNearEnd = callbacks.onCandidateStripNearEnd.takeUnless { swipeExpand },
                     scrollKey = (state as? CandidateBarState.ChineseCandidates)?.let { it.inputText to it.candidates.firstOrNull() },
                     itemPadding = candidateItemPadding,
                 )

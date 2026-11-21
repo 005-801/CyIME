@@ -136,6 +136,35 @@ class CandidatePullExpandTest {
         rule.runOnIdle { assertEquals(2, opens) }
     }
 
+    /**
+     * 候选多、能左右滑时（真机上打字几乎都是这样）：滑到这一页的尾巴再往左拉就展开，不会在滑近尾巴时接上整张展开列表、
+     * 让尾巴越滑越远（11-22 他在手机上开着开关：「展不开」）；滑一下也不收起展开页，收回靠往右拉。
+     */
+    @Test fun manyCandidatesReachTheEndAndExpand() {
+        val many = (1..12).map { "候选$it" }
+        val expanded = mutableStateOf(false)
+        var opens = 0
+        var extends = 0
+        var scrolled = 0
+        rule.setContent {
+            CandidateBar(state = CandidateBarState.ChineseCandidates(many, inputText = "houxuan", hasMore = true),
+                candidatePageExpanded = expanded.value, visuals = visuals,
+                callbacks = CandidateBarCallbacks(onCandidateSelect = {},
+                    onShowMoreCandidates = { opens++; expanded.value = true },
+                    onCollapseCandidates = { expanded.value = false },
+                    onCandidateStripScrolled = { scrolled++ },
+                    onCandidateStripNearEnd = { extends++ }),
+                showPreeditPreview = false, modifier = Modifier.width(360.dp))
+        }
+        val pull = rule.onNodeWithTag("candidate-pull-expand", useUnmergedTree = true)
+        repeat(6) { if (opens == 0) pull.pullAcross() }
+        rule.runOnIdle {
+            assertEquals("滑到头再拉就展开", 1, opens)
+            assertEquals("开关开着不接展开列表", 0, extends)
+            assertEquals("开关开着滑一下不收起展开页", 0, scrolled)
+        }
+    }
+
     /** 「<」和第一个候选之间那 4dp 空白也在拉动区里（11-21 平板上按在空白处拉不动）：从那里往右拉收回展开页。 */
     @Test fun gapRightOfCancelButtonAlsoPulls() {
         val expanded = mutableStateOf(true)
