@@ -20,10 +20,25 @@ class ImeSystemStatusTest {
         assertFalse(imeEnabledFrom(pkg, false, null, false, false))
     }
 
-    @Test fun theDefaultSettingWinsWhenReadable() {
+    @Test fun eitherTheSettingOrTheSystemsCurrentImeCounts() {
         assertTrue(imeSelectedFrom(pkg, "$pkg/com.kingzcheung.xime.service.XimeInputMethodService", null))
-        assertFalse("读得到别的输入法就不看当前输入法", imeSelectedFrom(pkg, "com.other/.Ime", pkg))
-        assertTrue("读不到时看当前输入法", imeSelectedFrom(pkg, "", pkg))
+        assertTrue("系统报的当前输入法是 CyIME，设置里留着旧值也算（#508）", imeSelectedFrom(pkg, "com.other/.Ime", pkg))
+        assertFalse(imeSelectedFrom(pkg, "com.other/.Ime", "com.other"))
+        assertTrue("读不到设置时看当前输入法", imeSelectedFrom(pkg, "", pkg))
         assertFalse(imeSelectedFrom(pkg, "", null))
+    }
+
+    @Test fun theRunningServiceCountsOnlyWhenNothingElseIsReadable() {
+        assertTrue(imeSelectedFrom(pkg, "", null, serviceAlive = true))
+        assertFalse("读得到别的输入法就不看服务", imeSelectedFrom(pkg, "com.other/.Ime", null, serviceAlive = true))
+        assertFalse(imeSelectedFrom(pkg, "", "com.other", serviceAlive = true))
+    }
+
+    @Test fun theWayOutShowsOnlyAfterVisitingSystemSettingsWithTheSchemesReady() {
+        val ready = SetupStatus(imeEnabled = false, imeSelected = false, preparing = false, schemas = listOf("中文26键"))
+        assertTrue(showSkipDetection(true, ready))
+        assertFalse("没去过系统设置的新用户照常三步", showSkipDetection(false, ready))
+        assertFalse("词库还在准备", showSkipDetection(true, ready.copy(preparing = true)))
+        assertFalse("已经认出来了", showSkipDetection(true, ready.copy(imeEnabled = true, imeSelected = true)))
     }
 }

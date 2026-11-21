@@ -136,11 +136,32 @@ fun SetupWizardScreen(
     var preparingSince by remember { mutableLongStateOf(android.os.SystemClock.elapsedRealtime()) }
     var stall by remember { mutableStateOf<PreparationStall?>(null) }
 
+    // 用户去过系统输入法设置（点过启用 / 选择）：回来以后还认不出，就给「直接开始使用」的出口（#508）。
+    var visitedSystemSettings by remember { mutableStateOf(false) }
+    var lastImeReport by remember { mutableStateOf("") }
     fun refreshImeState() {
         status = status.copy(
             imeEnabled = isCyimeEnabled(context),
             imeSelected = isCyimeSelected(context),
         )
+        if (!status.imeEnabled || !status.imeSelected) {
+            val report = imeStatusReport(context)
+            if (report != lastImeReport) {
+                lastImeReport = report
+                Log.w("SetupWizard", "IME not detected enabled=${status.imeEnabled} selected=${status.imeSelected} $report")
+                com.kingzcheung.xime.util.FileLogger.w("SetupWizard",
+                    "IME not detected enabled=${status.imeEnabled} selected=${status.imeSelected} $report")
+            }
+        }
+    }
+    fun finishSetup() {
+        val enabled = SchemaManager.getEnabledSchemas(context)
+        if (enabled.isNotEmpty()) {
+            if (SettingsPreferences.getCurrentSchema(context) !in enabled)
+                SettingsPreferences.setCurrentSchema(context, enabled.first())
+            SettingsPreferences.setSetupCompleted(context, true)
+            onCompleted()
+        }
     }
     LaunchedEffect(visible, lifecycle) {
         if (visible) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -199,29 +220,34 @@ fun SetupWizardScreen(
         stepElapsedMs = if (progress.stepStartedAt > 0) now - progress.stepStartedAt else now - preparingSince,
         stall = stall?.takeIf { status.preparing }?.copy(seconds = (now - lastChange) / 1000),
         onExportLog = { exportPreparationLog(context) },
-        onEnable = { openImeSettings(context) },
+        onEnable = { visitedSystemSettings = true; openImeSettings(context) },
         onSchemas = onNavigateToSchemaSettings,
         onRetry = { attempt++ },
         onSwitch = {
+            visitedSystemSettings = true
             val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
             if (imm != null) imm.showInputMethodPicker() else openImeSettings(context)
         },
         pickerFallbackHint = pickerFallbackHint,
-        onOpenImeSettings = { openImeSettings(context) },
+        onOpenImeSettings = { visitedSystemSettings = true; openImeSettings(context) },
         onFinish = {
             refreshImeState()
-            if (status.complete) {
-                val enabled = SchemaManager.getEnabledSchemas(context)
-                if (enabled.isNotEmpty()) {
-                    if (SettingsPreferences.getCurrentSchema(context) !in enabled)
-                        SettingsPreferences.setCurrentSchema(context, enabled.first())
-                    SettingsPreferences.setSetupCompleted(context, true)
-                    onCompleted()
-                }
-            }
+            if (status.complete) finishSetup()
+        },
+        showSkipDetection = showSkipDetection(visitedSystemSettings, status),
+        onSkipDetection = {
+            com.kingzcheung.xime.util.FileLogger.w("SetupWizard", "User skipped IME detection: ${imeStatusReport(context)}")
+            finishSetup()
         },
     )
 }
+
+/**
+ * 纯函数，可单测：去过系统设置、词库已准备好、还是认不出启用或切换时，给出口（#508 红米 Turbo5 / Android 17：
+ * 已启用、已设默认、能打字，引导还说没启用，进不了设置）。没去过系统设置的新用户看不到，照常按三步走。
+ */
+internal fun showSkipDetection(visitedSystemSettings: Boolean, status: SetupStatus): Boolean =
+    visitedSystemSettings && status.ready && !status.complete
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -238,6 +264,8 @@ internal fun SetupWizardContent(
     stepElapsedMs: Long = 0L,
     stall: PreparationStall? = null,
     onExportLog: () -> Unit = {},
+    showSkipDetection: Boolean = false,
+    onSkipDetection: () -> Unit = {},
 ) {
     Scaffold(topBar = { TopAppBar(title = { Text("设置向导") }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).settingsVerticalScroll()
@@ -308,6 +336,11 @@ internal fun SetupWizardContent(
             }
             Button(onClick = onFinish, enabled = status.complete, modifier = Modifier.fillMaxWidth()) {
                 Text(if (status.complete) "开始使用" else "完成三项后即可开始使用")
+            }
+            if (showSkipDetection) {
+                Text("已经在系统设置里启用、也能用 CyIME 打字，这里还是没变？有的手机读不到启用状态。",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = onSkipDetection, modifier = Modifier.fillMaxWidth()) { Text("已经能用了，直接开始使用") }
             }
         }
     }
