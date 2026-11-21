@@ -22,6 +22,8 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.ui.draw.rotate
 import androidx.compose.animation.core.tween
 import com.kingzcheung.xime.ui.theme.cySwapFadeIn
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -423,9 +425,6 @@ fun CandidateBar(
     val pullExpand = callbacks.onShowMoreCandidates
     val pullExpands = pullExpand != null && !candidatePageExpanded && hasAnyMore && !isGlidePreview
     val pullCollapse = callbacks.onCollapseCandidates?.takeIf { candidatePageExpanded && !isGlidePreview }
-    // 别的宿主（没有「<」时）右边放「清空」，这时不再放收起，一边仍只有一个按钮。
-    val rightClearShown = !candidatePageExpanded && displayAssociation.isNotEmpty() &&
-        callbacks.onClearAssociation != null && callbacks.onCancelInput == null
     val associationHighlight = (state as? CandidateBarState.AssociationOnly)?.highlightIndex
         ?.takeIf { it in displayAssociation.indices }
     // 换了一组候选回到最前；「下一项」移动联想高亮时，高亮已完整露出就不滚，移出栏外才滚到刚好露出，
@@ -437,6 +436,12 @@ fun CandidateBar(
         else candidateListState.revealItem(associationHighlight, associationSpacingPx)
     }
 
+    // Keep this animation outside the conditional button branches so changing pages
+    // does not discard the previous angle and jump directly to the destination.
+    val expansionRotation by animateFloatAsState(
+        targetValue = if (candidatePageExpanded) -180f else 0f,
+        animationSpec = tween(200, easing = FastOutSlowInEasing), label = "candidateExpansion",
+    )
     val existingPreedit = (state as? CandidateBarState.ChineseCandidates)?.let {
         it.preeditText.ifEmpty { it.inputText }
     }.orEmpty()
@@ -651,11 +656,11 @@ fun CandidateBar(
                 }
             }
 
-            // 能展开的打字候选和联想是一行固定的：放得下几个显示几个，不左右滚（用户 11-20），看更多就左右拉开展开页。
-            // 没有展开页的（手写候选等）照旧走下面能左右滑的那行，不然后面的候选看不到。
-            if (state is CandidateBarState.ChineseCandidates ||
-                (state is CandidateBarState.AssociationOnly && (state.hasMore || isGlidePreview)) ||
-                (splitGapX != null && state !is CandidateBarState.Idle)) {
+            // 11-21 恢复 1.15.101 的候选行（他：「原来的方案你还强制改了」）：打字候选照旧能左右滑看后面的，联想照旧走下面能滑的那行，
+            // 展开靠右边 ▾。往左拉展开只是附加：滑到头再往左拉过门槛松手展开（[PullToExpandCandidates]）。
+            if (state is CandidateBarState.ChineseCandidates || (isGlidePreview && state is CandidateBarState.AssociationOnly) ||
+                (splitGapX != null && state !is CandidateBarState.Idle) ||
+                (candidatePageExpanded && state is CandidateBarState.AssociationOnly && state.hasMore)) {
                 val previewAssociations = isGlidePreview && state is CandidateBarState.AssociationOnly
                 val stripCallbacks = if (isGlidePreview) callbacks.copy(
                     onVisibleCandidatesChanged = null,
@@ -681,6 +686,10 @@ fun CandidateBar(
                         ?.takeUnless { previewAssociations },
                     showNumberLabels = showNumberLabels,
                     gapWindowX = splitGapX,
+                    scrollable = state is CandidateBarState.ChineseCandidates && !isGlidePreview,
+                    onUserScroll = callbacks.onCandidateStripScrolled,
+                    onNearEnd = callbacks.onCandidateStripNearEnd,
+                    scrollKey = (state as? CandidateBarState.ChineseCandidates)?.let { it.inputText to it.candidates.firstOrNull() },
                     itemPadding = candidateItemPadding,
                 )
                 }
@@ -862,15 +871,17 @@ fun CandidateBar(
             }
             // 打字时候选栏只放候选：亮着的开关（悬浮、繁体、全角等）只在空闲工具栏里显示，
             // 不再挤到候选右边（11-03：悬浮键盘里一直多一个蓝色悬浮按钮，候选只剩一个）。
-            // 一边只有一个按钮（用户 11-20）：右边打字、联想、英文、展开页都是收起键盘，和空闲时同一个位置；
-            // 展开候选改成在候选上往左拉（[PullToExpandCandidates]），展开着往右拉收回；展开页上左右划、返回键也收回。
-            if (state !is CandidateBarState.Idle && !rightClearShown && callbacks.onHideKeyboard != null) {
-                KeyboardToolbarButton(callbacks.onHideKeyboard, edgePressedFill,
-                    modifier = Modifier.testTag("candidate-hide"), restingFill = edgeButtonFill,
-                    slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true) {
-                    Icon(if (isVoiceSticky) Icons.Default.KeyboardDoubleArrowDown else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isVoiceSticky) "收起成悬浮条" else "收起键盘",
-                        tint = protectedVisuals.textColor, modifier = Modifier.size(24.dp * LocalCandidateSizeFactor.current))
+            // 右边 ▾ 展开、▴ 收回，同 1.15.101（11-21 恢复）；往左拉展开、展开着往右拉收回是附加的。
+            if (state !is CandidateBarState.Idle && (candidatePageExpanded || hasAnyMore || isGlidePreview)) {
+                val action = if (candidatePageExpanded) callbacks.onBack else callbacks.onShowMoreCandidates
+                action?.let {
+                    if (isGlidePreview && !candidatePageExpanded && !hasAnyMore) {
+                        Spacer(Modifier.width(edgeSlot ?: 40.dp))
+                    } else {
+                        CandidateExpansionButton(it, edgePressedFill, protectedVisuals.accentColor,
+                            expanded = candidatePageExpanded, rotation = expansionRotation, restingFill = edgeButtonFill,
+                            slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true)
+                    }
                 }
             }
         }
@@ -1424,6 +1435,28 @@ internal fun rememberCandidateItemPadding(fontSize: androidx.compose.ui.unit.Tex
 @Composable
 internal fun candidateItemHeight(fontSize: androidx.compose.ui.unit.TextUnit): androidx.compose.ui.unit.Dp =
     with(LocalDensity.current) { (fontSize.value * 1.35f).sp.toDp() } + 4.dp
+
+/** 候选词和联想词共用：向下展开，向上返回键盘。 */
+@Composable
+private fun CandidateExpansionButton(
+    onClick: () -> Unit,
+    background: Color,
+    foreground: Color,
+    expanded: Boolean,
+    rotation: Float,
+    restingFill: Color = Color.Transparent,
+    slotWidth: androidx.compose.ui.unit.Dp? = null,
+    cornerRadius: androidx.compose.ui.unit.Dp? = null,
+    continuousPill: Boolean = false,
+) {
+    KeyboardToolbarButton(onClick, background, restingFill = restingFill, slotWidth = slotWidth, cornerRadius = cornerRadius,
+        continuousPill = continuousPill,
+        modifier = Modifier.testTag("candidate-expansion").semantics { stateDescription = if (expanded) "已展开" else "已收起" }) {
+        Icon(Icons.Default.KeyboardArrowDown,
+            contentDescription = if (expanded) "返回键盘" else "展开候选词",
+            tint = foreground, modifier = Modifier.size(24.dp * LocalCandidateSizeFactor.current).rotate(rotation))
+    }
+}
 
 /**
  * 候选栏这一条在键盘玻璃底色上再补多少同样的底色，才和按键一样厚：

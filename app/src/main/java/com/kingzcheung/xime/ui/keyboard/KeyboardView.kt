@@ -1478,8 +1478,8 @@ fun KeyboardView(
                             else cs.highlightedCandidateIndex,
                         hardwareHighlightIndex = hardwareCandidateHighlight,
                         associationHighlightIndex = cs.focusedT9AssociationIndex,
-                        // 英文补全也能往左拉展开（用户 11-20）；展开页接着栏里露出的往下排，栏里第一个是已打的原词。
-                        expandAssociations = true,
+                        // 英文补全不出 ▾，同 1.15.101（11-21 恢复）。
+                        expandAssociations = cs.pendingEnglishText.isEmpty(),
                     )
                 }
             }

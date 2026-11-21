@@ -26,6 +26,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -37,6 +41,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
@@ -81,6 +86,8 @@ private class RubberBand(private val scope: CoroutineScope, private val haptic: 
     var shown by mutableFloatStateOf(0f)
     /** 只认的方向：1 往右，-1 往左，0 两边都算。拉过头折回来最多回到 0，不会拉到另一边去。 */
     var direction = 0f
+    /** 这一下是能左右滑的候选行滑到头以后多出来的（嵌套滚动喂进来），松手由 onPreFling 结算，不由手势那边弹回。 */
+    var nested = false
     private var raw = 0f
     private var armed = false
     private var job: Job? = null
@@ -164,7 +171,8 @@ private fun Modifier.rubberBandDrag(band: RubberBand, enabled: () -> Boolean, di
             }
             // 不是拉（点候选、长按）：手指抬起来以后再接着弹回，按着时不动，点到的就是看到的那个。
             while (currentEvent.changes.any { it.pressed }) awaitPointerEvent(PointerEventPass.Final)
-            band.release(false)
+            // 能滑的候选行滑到头再拉（嵌套滚动）：松手时由列表的 onPreFling 判断展开没有，这里不抢着弹回。
+            if (!band.nested) band.release(false)
         }
     }
 
@@ -189,10 +197,45 @@ internal fun PullToExpandCandidates(
     val currentCollapsing by rememberUpdatedState(collapsing)
     val currentExpand by rememberUpdatedState(onExpand)
     val currentCollapse by rememberUpdatedState(onCollapse)
+    // 1.15.101 的候选行能左右滑（11-21 恢复）：滑到头还往左拉，多出来的距离拉动整行，过门槛松手展开；
+    // 展开着滑到最前还往右拉就收回。没滑到头时照旧只是滑候选，▾ 按钮照旧。
+    val overscrollPull = remember(band) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (!band.nested || source != NestedScrollSource.UserInput) return Offset.Zero
+                val dx = available.x
+                // 拉出来以后往回走：先收回拉出的这段，列表不动。
+                if (band.shown < 0f && dx > 0f || band.shown > 0f && dx < 0f) {
+                    band.move(dx)
+                    return Offset(dx, 0f)
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput || !currentEnabled) return Offset.Zero
+                val dir = if (currentCollapsing) 1f else -1f
+                val dx = available.x
+                if (dx == 0f || !band.nested && sign(dx) != dir) return Offset.Zero
+                band.direction = dir
+                band.nested = true
+                band.move(dx)
+                return Offset(dx, 0f)
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (!band.nested) return Velocity.Zero
+                band.nested = false
+                if (band.release(true)) { if (currentCollapsing) currentCollapse?.invoke() else currentExpand() }
+                return available
+            }
+        }
+    }
     Box(
         modifier
             .clipToBounds()
             .testTag("candidate-pull-expand")
+            .nestedScroll(overscrollPull)
             .semantics {
                 if (collapsing) customActions = listOf(CustomAccessibilityAction("收回候选") { currentCollapse?.invoke(); true })
                 else if (enabled) customActions = listOf(CustomAccessibilityAction("展开候选") { currentExpand(); true })
