@@ -1339,6 +1339,15 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                     commitHardwareLiteral(key)
                     return@command
                 }
+                // 数字后的 . , :（3.14、12:30）：上面的数字是直接上屏的，没进 Rime，Rime 的数字后半角规则管不到，
+                // 中文模式句号会成「。」（#527）。没在打字、光标前是数字时照半角上屏。
+                if (!service.uiState.value.isAsciiMode && service.t9PartialSegments.isEmpty() &&
+                    service.rimeEngine.readQueuedComposition()?.input.isNullOrEmpty() &&
+                    digitSeparatorStaysHalfWidth(key, withEditor {
+                        runCatching { service.editorConnection()?.getTextBeforeCursor(1, 0) }.getOrNull() })) {
+                    commitHardwareLiteral(key)
+                    return@command
+                }
                 // 打拼音时不按 Shift 的 ; / \ 等：先把字母原样上屏（不上屏首选，Gboard 规则，用户 2026-10-24），
                 // 再按空闲时的标点规则出符号。翻页键另有入口，拼音分隔符 ' 照旧。
                 // 分号是编码键的方案（微软双拼）分号照样送进 Rime：打字中是 ing，没在打字时由 Rime 出标点。

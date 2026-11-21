@@ -100,4 +100,18 @@ class InputTextPolicyTest {
         assertEquals(1, com.kingzcheung.xime.rime.compositionCaretStep("ni'hao", 3, 0, -1))
         assertEquals(4, com.kingzcheung.xime.rime.compositionCaretStep("ni'hao", 2, 0, 1))
     }
+
+    @Test fun aSeparatorAfterADigitStaysHalfWidth() {
+        // #527：实体键盘中文模式，3 后打 . 要 3.，不是 3。
+        assertTrue(digitSeparatorStaysHalfWidth(".", "3"))
+        assertTrue(digitSeparatorStaysHalfWidth(",", "价格1"))
+        assertTrue(digitSeparatorStaysHalfWidth(":", "12"))
+        assertFalse("不在数字后照常", digitSeparatorStaysHalfWidth(".", "你好"))
+        assertFalse(digitSeparatorStaysHalfWidth(".", ""))
+        assertFalse(digitSeparatorStaysHalfWidth(".", null))
+        assertFalse("全角数字不算", digitSeparatorStaysHalfWidth(".", "３"))
+        assertFalse("问号不是数字分隔", digitSeparatorStaysHalfWidth("?", "3"))
+        assertEquals(".", keyboardLiteralWidth(".", full = true, japanese = false, before = "3"))
+        assertEquals("。", keyboardLiteralWidth(".", full = true, japanese = false, before = "好"))
+    }
 }
