@@ -127,7 +127,7 @@ class AssociationHideButtonTest {
         hides[0].performClick(); hides[1].performClick()
         // 展开：在候选上横着拉过门槛松手。
         val pulls = rule.onAllNodesWithTag("candidate-pull-expand", useUnmergedTree = true)
-        pulls[0].pullAcross(); pulls[1].pullAcross(leftward = false)
+        pulls[0].pullAcross(); pulls[1].pullAcross()
         assertEquals(listOf("hide-idle", "hide-association", "hide-composing", "open-association", "open-composing"), actions)
     }
 

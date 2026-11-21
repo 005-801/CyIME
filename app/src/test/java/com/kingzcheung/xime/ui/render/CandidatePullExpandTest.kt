@@ -20,8 +20,8 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * 候选栏一行不滚动（用户 11-20）：往右拉过门槛松手才展开，拉得不够弹回，拉完照样能点候选；
- * 没有更多候选时拉不开。展开着往左拉收回；没展开往左、展开着往右都不动（用户 11-21）。
+ * 候选栏一行不滚动（用户 11-20）：往左拉过门槛松手才展开，拉得不够弹回，拉完照样能点候选；
+ * 没有更多候选时拉不开。展开着往右拉收回；没展开往右、展开着往左都不动（11-21，同合并前往左拉展开）。
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "w900dp-h1400dp-hdpi")
@@ -29,7 +29,7 @@ class CandidatePullExpandTest {
     @get:Rule val rule = createAndroidComposeRule<androidx.activity.ComponentActivity>()
     private val visuals = CandidateBarVisuals(Color.White, Color.Black, Color.Gray)
 
-    @Test fun rightPullOpensLeftPullCloses() {
+    @Test fun leftPullOpensRightPullCloses() {
         val state = mutableStateOf<CandidateBarState>(
             CandidateBarState.ChineseCandidates(listOf("你好", "你"), inputText = "nihao", hasMore = true))
         val expanded = mutableStateOf(false)
@@ -48,16 +48,16 @@ class CandidatePullExpandTest {
         pull.pullAcross(fraction = 0.1f)
         rule.onNodeWithTag("bar-candidate:1", useUnmergedTree = true).performClick()
         rule.runOnIdle { assertEquals(0, opens); assertEquals(1, picked) }
-        // 没展开往左拉：不展开，也不把手指下的候选当成点了。
-        pull.pullAcross(leftward = true)
+        // 没展开往右拉：不展开，也不把手指下的候选当成点了。
+        pull.pullAcross(leftward = false)
         rule.runOnIdle { assertEquals(0, opens); assertEquals(1, picked) }
         pull.pullAcross()
         rule.runOnIdle { assertEquals(1, opens) }
-        // 展开着往右拉：不再展开一次，也不收回。
+        // 展开着往左拉：不再展开一次，也不收回。
         pull.pullAcross()
         rule.runOnIdle { assertEquals(1, opens); assertEquals(0, closes) }
-        // 展开着往左拉：收回，打的字还在（栏里还是这两个候选）。
-        pull.pullAcross(leftward = true)
+        // 展开着往右拉：收回，打的字还在（栏里还是这两个候选）。
+        pull.pullAcross(leftward = false)
         rule.runOnIdle { assertEquals(1, closes); assertEquals(false, expanded.value); assertEquals(1, picked) }
         rule.onNodeWithTag("bar-candidate:1", useUnmergedTree = true).assertExists()
         pull.pullAcross()

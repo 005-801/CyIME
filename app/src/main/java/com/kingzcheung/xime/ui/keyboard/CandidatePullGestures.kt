@@ -166,7 +166,7 @@ private fun Modifier.rubberBandDrag(band: RubberBand, enabled: () -> Boolean, di
     }
 
 /**
- * 包住候选栏里的候选行：往右拉过门槛松手调 [onExpand]；给了 [onCollapse]（展开着）时改成往左拉过门槛松手调它。
+ * 包住候选栏里的候选行：往左拉过门槛松手调 [onExpand]（和合并前一样，往左拉就展开）；给了 [onCollapse]（展开着）时改成往右拉过门槛松手调它（11-21 他：合并后方向反了）。
  * [enabled] 为 false（没有更多候选、滑行预览）且没有 [onCollapse] 时不拉，行为和以前一样。
  */
 @Composable
@@ -192,7 +192,7 @@ internal fun PullToExpandCandidates(
                 if (collapsing) customActions = listOf(CustomAccessibilityAction("收回候选") { currentCollapse?.invoke(); true })
                 else if (enabled) customActions = listOf(CustomAccessibilityAction("展开候选") { currentExpand(); true })
             }
-            .rubberBandDrag(band, { currentEnabled }, { if (currentCollapsing) -1f else 1f }) {
+            .rubberBandDrag(band, { currentEnabled }, { if (currentCollapsing) 1f else -1f }) {
                 if (currentCollapsing) currentCollapse?.invoke() else currentExpand()
             },
     ) {
