@@ -2577,7 +2577,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     onNext = nextHardwareCandidate.takeUnless { hardwareCandidates.association },
                                     onCandidateSelect = selectHardwareCandidate,
                                     bottomDocked = bottomDocked,
-                                    showNumberLabels = true,
+                                    // 英文直接输入的补全不编号：数字、空格照字面打（hello123），按了选不中（#526），和工具条一样。
+                                    showNumberLabels = !hardwareEnglish,
                                     surface = hardwareSurface,
                                     onPreeditBoundsChanged = { updateHardwarePreeditBounds(it) },
                                     onBoundsChanged = { updateHardwareSurfaceBounds(toolbar = false, it) },

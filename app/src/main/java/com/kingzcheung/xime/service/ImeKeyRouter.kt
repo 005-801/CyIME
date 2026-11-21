@@ -490,6 +490,8 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         english: Boolean,
         predictionPending: Boolean = false,
     ): Int {
+        // 英文直接输入的补全只能点：空格照打空格、数字照打数字，不标高亮，免得看着像空格能上屏它（#526）。
+        if (english) return -1
         return hardwareCandidateSelection(state, english, predictionPending) ?: 0
     }
 

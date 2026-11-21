@@ -60,11 +60,9 @@ fun HardwareKeyboardSettingsContent(onBack: () -> Unit) {
             }
             HardwareOption("候选跟随光标", "候选窗显示在光标旁边", options.followCursor,
                 lockMessage = fixedNote) { save("follow_cursor", it) }
-            // 联想词只在「智能联想」开着时才有（PredictionManager）；关着时这项没有效果，置灰写明。
-            val predictionOn = remember { com.kingzcheung.xime.settings.SettingsPreferences.isSmartPredictionEnabled(context) }
-            HardwareOption("联想也显示在候选窗", "联想词也显示在候选浮窗里",
-                options.associationInWindow,
-                lockMessage = if (predictionOn) null else "「智能联想」关着，没有联想词") { save("association_in_window", it) }
+            // 中文联想词只在「智能联想」开着时才有，但英文直接输入的补全也按这项放，与智能联想无关，所以不置灰（#526）。
+            HardwareOption("联想也显示在候选窗", "联想词和英文补全也显示在候选浮窗里",
+                options.associationInWindow) { save("association_in_window", it) }
             HardwareOption("自动避开输入区域", "浮窗不挡住正在输入的地方", options.avoidEditor,
                 lockMessage = fixedNote) { save("avoid_editor", it) }
             HardwareOption("靠边停靠", "浮窗拖到屏幕边缘时贴边停靠", options.dockAtEdge,

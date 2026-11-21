@@ -183,7 +183,7 @@ fun HardwareKeyboardCandidateBar(
         val commentStyle = TextStyle(fontSize = (fontSize.value * 11f / 19f).sp, fontFamily = AppFonts.commentFontFamily)
         val textWidth = candidates.take(MAX_VISIBLE_CANDIDATES).mapIndexed { index, text ->
             val comment = comments.getOrNull(index).orEmpty()
-            measurer.measure(AnnotatedString(candidateNumberedText(text, index, true)),
+            measurer.measure(AnnotatedString(candidateNumberedText(text, index, showNumberLabels)),
                 candidatePrimaryTextStyle(fontSize, AppFonts.candidateFontFamily, index == highlightIndex), softWrap = false).size.width +
                 if (comment.isEmpty()) 0 else measurer.measure(AnnotatedString(comment), commentStyle, softWrap = false).size.width +
                     with(density) { 3.dp.roundToPx() }
