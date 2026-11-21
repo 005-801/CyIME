@@ -492,22 +492,31 @@ fun CandidateBar(
             .glassTextHalo(textSurface?.halo),
         verticalArrangement = Arrangement.Center,
     ) {
-        // 气泡：默认；选了小签但悬浮键盘转了角度时也用气泡（「候选栏左侧」11-20 他要求去掉）。
-        PreeditBubbleHost(showPreedit && (!previewPrefs.preeditOnTopLine || tabRotated)) { hidden ->
-            PreeditPreview(preeditText, protectedVisuals, onEditPreedit,
-                floatingPreeditColor(themeSurface, visuals.preeditBackgroundColor), hidden, previewPrefs.preeditAlign)
+        // 「拼音显示声调」（11-20）：按高亮候选的读音给拼音标调，只改这里画出来的字，上屏和编辑还是原来的字母。
+        val toneData = LocalPreeditToneData.current
+        val toneCandidate = (state as? CandidateBarState.ChineseCandidates)?.let { it.candidates.getOrNull(it.highlightIndex) }
+        val toneText: ((String) -> String)? = remember(toneData, toneCandidate) {
+            if (toneData == null || toneCandidate.isNullOrEmpty()) null
+            else ({ text: String -> com.kingzcheung.xime.rime.PinyinTones.mark(text, toneCandidate, toneData) })
         }
-        PreeditBubbleHost(pinyinTabMode) { hidden ->
-            // 首选是纠错来的：小签显示纠正后的读音，改动的字母标红。
-            val highlighted = (state as? CandidateBarState.ChineseCandidates)?.let { it.candidates.getOrNull(it.highlightIndex) }
-            val corrected = highlighted?.let { LocalPreeditLineCorrections.current[it] }.orEmpty()
-            val tabColor = preeditTabColor(themeSurface)
-            val tabText = readableThemeText(protectedVisuals.textColor, tabColor.copy(alpha = 1f))
-            PreeditTab(
-                if (corrected.isNotEmpty()) correctionAnnotatedString(corrected, tabText, LocalCorrectionFullScheme.current)
-                    else sentenceSelectionText(preeditText, LocalSentenceSelection.current.value, protectedVisuals.accentColor),
-                tabText, tabColor, previewPrefs.preeditStyle, previewPrefs.preeditAlign, horizontalPadding, cardTopCorner,
-                with(LocalDensity.current) { barWidthPx.toDp() }, onEditPreedit, hidden, corrected.isNotEmpty())
+        androidx.compose.runtime.CompositionLocalProvider(LocalPreeditToneText provides toneText) {
+            // 气泡：默认；选了小签但悬浮键盘转了角度时也用气泡（「候选栏左侧」11-20 他要求去掉）。
+            PreeditBubbleHost(showPreedit && (!previewPrefs.preeditOnTopLine || tabRotated)) { hidden ->
+                PreeditPreview(preeditText, protectedVisuals, onEditPreedit,
+                    floatingPreeditColor(themeSurface, visuals.preeditBackgroundColor), hidden, previewPrefs.preeditAlign)
+            }
+            PreeditBubbleHost(pinyinTabMode) { hidden ->
+                // 首选是纠错来的：小签显示纠正后的读音，改动的字母标红。
+                val highlighted = (state as? CandidateBarState.ChineseCandidates)?.let { it.candidates.getOrNull(it.highlightIndex) }
+                val corrected = highlighted?.let { LocalPreeditLineCorrections.current[it] }.orEmpty()
+                val tabColor = preeditTabColor(themeSurface)
+                val tabText = readableThemeText(protectedVisuals.textColor, tabColor.copy(alpha = 1f))
+                val tabLabel = if (corrected.isNotEmpty()) correctionAnnotatedString(corrected, tabText, LocalCorrectionFullScheme.current)
+                    else sentenceSelectionText(preeditText, LocalSentenceSelection.current.value, protectedVisuals.accentColor)
+                PreeditTab(LocalPreeditToneText.current?.let { tabLabel.withSameLengthText(it) } ?: tabLabel,
+                    tabText, tabColor, previewPrefs.preeditStyle, previewPrefs.preeditAlign, horizontalPadding, cardTopCorner,
+                    with(LocalDensity.current) { barWidthPx.toDp() }, onEditPreedit, hidden, corrected.isNotEmpty())
+            }
         }
 
         if (state is CandidateBarState.ClipboardDisplay) {
@@ -1147,6 +1156,17 @@ internal val LocalCorrectedCandidates = androidx.compose.runtime.compositionLoca
 internal val LocalCorrectionFullScheme = androidx.compose.runtime.compositionLocalOf<com.kingzcheung.xime.settings.DoublePinyinScheme?> { null }
 /** 「紧贴候选上方」小签用的纠错读音：不受「显示纠错标记」影响，由键盘根部提供。 */
 internal val LocalPreeditLineCorrections = androidx.compose.runtime.compositionLocalOf<Map<String, String>> { emptyMap() }
+/** 「拼音显示声调」用的读音表：开关关着、表还没读完、双拼显示按键时为 null（不标调），由键盘根部提供。 */
+internal val LocalPreeditToneData = androidx.compose.runtime.compositionLocalOf<com.kingzcheung.xime.rime.PinyinTones.Data?> { null }
+/** 气泡和小签画拼音时套上的标调（按高亮候选的读音），null 时原样，见 [PreeditLabel]。 */
+internal val LocalPreeditToneText = androidx.compose.runtime.compositionLocalOf<((String) -> String)?> { null }
+
+/** 换成同样长度的文字（标调只把元音换成带调字母），颜色、光标这些按位置的样式原样保留。 */
+internal fun AnnotatedString.withSameLengthText(transform: (String) -> String): AnnotatedString {
+    val replaced = transform(text)
+    return if (replaced == text || replaced.length != text.length) this else AnnotatedString(replaced, spanStyles, paragraphStyles)
+}
+
 /** 候选行的高度（44dp），两行长候选按它收字号。 */
 internal val LocalCandidateRowHeight = androidx.compose.runtime.staticCompositionLocalOf { 44.dp }
 /** 「紧贴候选上方」小签：高 26dp、拼音 16sp（11-20 他定：16sp 才够、要点得到），跟「候选字大小」一起缩放。 */
@@ -1839,8 +1859,9 @@ internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals, onEdit: ((
         val caretAlpha = if (caretOn) 1f else 0f
         // 折行时在隔音符后面垫零宽空格：tou'ming'du 整串没有空格，不垫就只能从音节中间断开。
         val displayText = if (maxLines > 1) shownText.replace("'", "'\u200B") else shownText
-        val annotated = sentenceSelectionText(displayText, LocalSentenceSelection.current.value, visuals.accentColor,
+        val plainAnnotated = sentenceSelectionText(displayText, LocalSentenceSelection.current.value, visuals.accentColor,
             preeditWithCaret(displayText, visuals.accentColor, textColor, visuals.selectedTextColor, caretAlpha))
+        val annotated = LocalPreeditToneText.current?.let { plainAnnotated.withSameLengthText(it) } ?: plainAnnotated
         val textStyle = LocalTextStyle.current.copy(shadow = visuals.textShadow)
         if (maxLines <= 1) {
             Text(annotated, color = textColor, fontSize = PreeditStyle.FontSize, maxLines = 1,

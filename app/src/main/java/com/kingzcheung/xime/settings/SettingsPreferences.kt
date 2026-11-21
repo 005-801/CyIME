@@ -478,6 +478,11 @@ object SettingsPreferences {
     const val KEY_SHOW_PREEDIT_PREVIEW = "show_preedit_preview"
     const val KEY_INLINE_PREEDIT_PREVIEW = "inline_preedit_preview"
     const val KEY_PREEDIT_BUBBLE_OPACITY = "preedit_bubble_opacity"
+    /** 「拼音显示声调」（用户 11-20）：气泡／小签里的拼音按首选的读音标调，只改显示。新键，默认关（拼音显示默认照原样）。 */
+    const val KEY_PREEDIT_TONES = "preedit_tones"
+    fun preeditTones(context: Context) = getPrefs(context).getBoolean(KEY_PREEDIT_TONES, false)
+    fun setPreeditTones(context: Context, enabled: Boolean) =
+        getPrefs(context).edit().putBoolean(KEY_PREEDIT_TONES, enabled).apply()
 
     fun showPreeditPreview(context: Context) = getPrefs(context).getBoolean(KEY_SHOW_PREEDIT_PREVIEW, true)
     fun setShowPreeditPreview(context: Context, show: Boolean) =

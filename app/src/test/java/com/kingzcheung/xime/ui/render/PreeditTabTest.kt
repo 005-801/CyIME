@@ -14,6 +14,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -31,6 +35,7 @@ import com.kingzcheung.xime.ui.keyboard.LocalKeyboardInputPreferences
 import com.kingzcheung.xime.ui.keyboard.LocalPreeditLineCorrections
 import com.kingzcheung.xime.ui.keyboard.PreeditPopupBoundsKey
 import androidx.compose.ui.unit.toRect
+import com.kingzcheung.xime.ui.keyboard.LocalPreeditToneData
 import com.kingzcheung.xime.ui.theme.KeyboardThemes
 import com.kingzcheung.xime.ui.theme.LocalKeyboardPalette
 import com.kingzcheung.xime.ui.theme.resolveKeyboardPalette
@@ -149,6 +154,50 @@ class PreeditTabTest {
         // 拼音在弹窗里：自己的 boundsInWindow 是弹窗里的坐标，和弹窗宽比。
         assertEquals("顶上一行里拼音居中", tab().width / 2f, text.center.x, px)
         render("preedit-strip-center.png")
+    }
+
+    /** 「拼音显示声调」（11-20）：开着时小签和气泡都按首选的读音标调；关着（没给读音表）照原样。 */
+    @Test fun tonesFollowTheFirstCandidateOnTabAndBubble() {
+        KeyboardThemes.initFromConfig(context)
+        val asset = { path: String ->
+            listOf("src/main/assets/$path", "app/src/main/assets/$path").map(::File).first { it.isFile }
+        }
+        val tones = com.kingzcheung.xime.rime.PinyinTones.Data(
+            asset("handwriting/hanzi_pinyin.tsv").useLines(Charsets.UTF_8) { com.kingzcheung.xime.handwriting.HanziPinyin.parse(it) }::lookup,
+            asset("pinyin/tone_words.tsv").useLines(Charsets.UTF_8) { com.kingzcheung.xime.rime.PinyinTones.parseWords(it) })
+        val style = mutableStateOf(SettingsPreferences.PREEDIT_STYLE_LINE)
+        val toneData = mutableStateOf<com.kingzcheung.xime.rime.PinyinTones.Data?>(tones)
+        val state = CandidateBarState.ChineseCandidates(listOf("就是这样", "就是", "就"),
+            inputText = "jiushizheyang", preeditText = "jiu shi zhe yang", hasMore = true)
+        rule.setContent {
+            val palette = resolveKeyboardPalette("soft_blue", false)
+            Column(Modifier.fillMaxWidth()) {
+                Box(Modifier.fillMaxWidth().height(200.dp))
+                Box(Modifier.width(400.dp).height(44.dp).background(Color.White)) {
+                    CompositionLocalProvider(LocalKeyboardPalette provides palette,
+                        LocalKeyboardInputPreferences provides KeyboardInputPreferences(preeditStyle = style.value),
+                        LocalPreeditToneData provides toneData.value) {
+                        CandidateBar(state = state,
+                            visuals = CandidateBarVisuals(Color.Transparent, palette.candidateText, Color.Gray, palette.accent, palette.selectedText),
+                            callbacks = CandidateBarCallbacks(onCandidateSelect = {}, onCancelInput = {}, onShowMoreCandidates = {}),
+                            onEditPreedit = {}, modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        }
+        rule.onNodeWithTag("preedit-tab-text", true).assert(hasShown("jiù shì zhè yàng"))
+        render("preedit-tab-tones.png")
+
+        rule.runOnIdle { style.value = SettingsPreferences.PREEDIT_STYLE_BUBBLE }
+        rule.onNodeWithTag("candidate-preedit-text", true).assert(hasShown("jiù'shì'zhè'yàng"))
+
+        rule.runOnIdle { toneData.value = null }
+        rule.onNodeWithTag("candidate-preedit-text", true).assert(hasShown("jiu'shi'zhe'yang"))
+    }
+
+    /** 气泡多行时会在 ' 后插零宽空格方便折行（U+200B），比的是去掉它之后的显示串。 */
+    private fun hasShown(expected: String) = SemanticsMatcher("显示 $expected（去掉 U+200B）") { node ->
+        node.config.getOrNull(SemanticsProperties.Text)?.any { it.text.replace("\u200B", "") == expected } == true
     }
 
     private fun render(name: String) {

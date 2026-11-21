@@ -19,6 +19,7 @@ import androidx.compose.material.icons.twotone.FormatListNumbered
 import androidx.compose.material.icons.twotone.FormatColorFill
 import androidx.compose.material.icons.twotone.AspectRatio
 import androidx.compose.material.icons.twotone.DataObject
+import androidx.compose.material.icons.twotone.RecordVoiceOver
 import androidx.compose.material.icons.twotone.Spellcheck
 import androidx.compose.material.icons.twotone.EmojiSymbols
 import androidx.compose.material.icons.twotone.DashboardCustomize
@@ -681,6 +682,11 @@ private fun LayoutDisplayPage(
                                     }
                                 }
                             }
+                            // 拼音标调（用户 11-20「能不能在拼音上显示声调」）：只改气泡／小签里的显示，默认关。
+                            var preeditTones by remember { mutableStateOf(SettingsPreferences.preeditTones(context)) }
+                            SettingsToggleItem(Icons.TwoTone.RecordVoiceOver, "拼音显示声调",
+                                "按首选字的读音标调，如 jiù'shì'zhè'yàng；只是显示，上屏的还是字母。简拼、双拼显示按键时不标。",
+                                preeditTones, { preeditTones = it; SettingsPreferences.setPreeditTones(context, it) })
                         }
                     }
                     // 拼音气泡底色可调透明（用户 11-01「我就喜欢透明度」）；点开的编辑条用同一个值（11-16）。只在键盘上方会浮出气泡时显示。

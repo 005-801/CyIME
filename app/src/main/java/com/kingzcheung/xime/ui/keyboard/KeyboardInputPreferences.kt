@@ -101,6 +101,8 @@ data class KeyboardInputPreferences(
     val preeditAlign: String = SettingsPreferences.PREEDIT_ALIGN_LEFT,
     /** 拼音气泡和拼音编辑条底色的不透明度，见 [SettingsPreferences.preeditBubbleOpacity]。 */
     val preeditBubbleOpacity: Float = SettingsPreferences.DEFAULT_PREEDIT_BUBBLE_OPACITY,
+    /** 拼音按首选的读音标调，见 [SettingsPreferences.preeditTones]。 */
+    val preeditTones: Boolean = false,
     val chineseLetterSwipes: Map<String, String> = emptyMap(),
     val englishLetterSwipes: Map<String, String> = emptyMap(),
     val splitKeyboardEnabled: Boolean = false,
@@ -384,7 +386,7 @@ data class KeyboardInputPreferences(
         internal val watchedKeys: Set<String> by lazy {
             setOf(CORNER_SYMBOL_INPUT_KEY, KeyEffectPreferences.GLOW, KeyEffectPreferences.ANIMATION, SettingsPreferences.KEY_SHOW_PRESS_BUBBLE,
                 SettingsPreferences.KEY_SHOW_PREEDIT_PREVIEW, SettingsPreferences.KEY_INLINE_PREEDIT_PREVIEW, SettingsPreferences.KEY_PREEDIT_STYLE, SettingsPreferences.KEY_PREEDIT_ALIGN, SettingsPreferences.KEY_INPUT_TEXT_LOCATION,
-                SettingsPreferences.KEY_PREEDIT_BUBBLE_OPACITY,
+                SettingsPreferences.KEY_PREEDIT_BUBBLE_OPACITY, SettingsPreferences.KEY_PREEDIT_TONES,
                 com.kingzcheung.xime.settings.LetterSwipeBindings.CHINESE, com.kingzcheung.xime.settings.LetterSwipeBindings.ENGLISH,
                 SettingsPreferences.KEY_SPLIT_KEYBOARD, SettingsPreferences.KEY_SPLIT_RIGHT_G, SettingsPreferences.KEY_FILL_KEYBOARD_BLANK, SettingsPreferences.KEY_WIDE_KEYS, SettingsPreferences.KEY_EVEN_MERGED_KEYS, SettingsPreferences.KEY_NUMBER_ROW, SettingsPreferences.KEY_SPLIT_GAP_PORTRAIT, SettingsPreferences.KEY_SPLIT_GAP_LANDSCAPE, CHINESE_GLIDE_KEY, DELETE_CHINESE_GLIDE_CHARACTER_KEY, com.kingzcheung.xime.glide.ExternalGlideEncodings.KEY, GLIDE_PREVIEW_KEY, ENGLISH_AUTO_SPACE_KEY, ENGLISH_PUNCTUATION_SPACE_KEY, EMAIL_SUFFIXES_KEY, ADDRESS_FIELDS_ENGLISH_KEY, SYMBOL_NAMES_KEY, GREEK_LETTERS_KEY, CYLM_LONG_ALTERNATIVE_KEY,
                 "space_hold_action", "cursor_gesture_mode", "cursor_hold_seconds", "neighbor_correction", com.kingzcheung.xime.settings.SpellingPatches.DOUBLE_PINYIN_CORRECTION_KEY, MIXED_INPUT_KEY, RARE_CHARACTERS_KEY, TRADITIONAL_OUTPUT_KEY, CANDIDATE_EMOJI_KEY, DATETIME_CANDIDATES_KEY, "symbol_input_mode", "symbol_long_press_seconds", "symbol_long_press_seconds_v2", "cursor_step_dp", "cursor_swipe_lines", "cursor_step_haptic", "cursor_step_sound", "key_text_scale", CORNER_HINT_OPACITY_KEY, HIDE_FUNCTION_KEY_HINTS_KEY, UPPERCASE_KEY_LABELS_KEY, CHINESE_UPPERCASE_KEY_LABELS_KEY, "fixed_symbols",
@@ -427,6 +429,7 @@ data class KeyboardInputPreferences(
                 preeditStyle = SettingsPreferences.preeditStyle(context),
                 preeditAlign = SettingsPreferences.preeditAlign(context),
                 preeditBubbleOpacity = SettingsPreferences.preeditBubbleOpacity(context),
+                preeditTones = SettingsPreferences.preeditTones(context),
                 chineseLetterSwipes = com.kingzcheung.xime.settings.LetterSwipeBindings.load(context, false),
                 englishLetterSwipes = com.kingzcheung.xime.settings.LetterSwipeBindings.load(context, true),
                 splitKeyboardEnabled = SettingsPreferences.isSplitKeyboardEnabled(context),

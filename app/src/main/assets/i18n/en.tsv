@@ -2266,6 +2266,8 @@ settings-fold:语言键切换方式	=
 靠右	Right
 浮在键盘上方	Floating above the keyboard
 气泡浮在应用上，点开编辑前后位置不变，透明度可调；会挡住一点输入内容。	A bubble over the app; editing opens in the same spot and its opacity is adjustable, but it can cover some of what you type.
+拼音显示声调	Show tones on pinyin
+按首选字的读音标调，如 jiù'shì'zhè'yàng；只是显示，上屏的还是字母。简拼、双拼显示按键时不标。	Marks tones from the first candidate's reading, e.g. jiù'shì'zhè'yàng. Display only; letters are still what gets entered. Not shown for initials-only input or double pinyin keys.
 拼音气泡不透明度：{0}%	Pinyin bubble opacity: {0}%
 键盘上方拼音气泡的底色。100% 是实底，后面有画面也看得清；调低更透。	Background of the pinyin bubble above the keyboard. 100% is solid and readable over anything; lower is more transparent.
 角标与长按	Hints & hold
