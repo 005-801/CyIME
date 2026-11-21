@@ -681,7 +681,8 @@ private fun LayoutDisplayPage(
                             Column(Modifier.fillMaxWidth().settingsSearchAnchor("拼音靠哪边", bleed = 16.dp, bleedVertical = 6.dp)
                                 .padding(horizontal = 16.dp, vertical = 8.dp)) {
                                 Text("拼音靠哪边", style = MaterialTheme.typography.titleSmall)
-                                Row(Modifier.fillMaxWidth().height(130.dp).padding(top = 8.dp),
+                                // 140dp：贴边方块比小签高一截（11-21 图例按实际比例画），130dp 时方块会把键盘挤出卡片。
+                                Row(Modifier.fillMaxWidth().height(140.dp).padding(top = 8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     aligns.forEach { (align, label) ->
                                         PreeditStyleCard(title = label, style = preeditStyle, isSelected = preeditAlign == align,
