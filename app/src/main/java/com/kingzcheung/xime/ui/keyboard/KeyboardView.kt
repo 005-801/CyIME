@@ -2654,14 +2654,15 @@ fun KeyboardView(
                     )
                     is OverlayRoute.Symbol -> SymbolKeyboardLayout(
                         onKeyPressDown = callbacks.onKeyPressDown,
+                        onKeyRelease = callbacks.onKeyRelease,
                         isFloatingMode = state.isFloatingMode,
                         onSelectExact = { symbol ->
                             (callbacks.onCommitExactText ?: callbacks.onCommitText)?.invoke(symbol)
                         },
                         onSelect = { symbol ->
                             // 删除键的清空、撤回同其他键盘（11-05「部分页面的删除键功能缺失」）。
+                            // 按键音和振动已在删除键按下时给（onKeyPressDown），这里不再补一次振动。
                             if (symbol == "delete" || symbol == "clear_all" || symbol == "undo_clear") {
-                                onHapticFeedback?.invoke()
                                 callbacks.onKeyPress(symbol, false)
                             } else {
                                 callbacks.onCommitText?.invoke(symbol)
