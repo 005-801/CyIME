@@ -266,7 +266,7 @@ private fun BoxScope.PullHint(band: RubberBand, hintColor: Color, verb: String) 
 }
 
 /**
- * 展开页的候选区：左右划过门槛松手调 [onCollapse]，页面跟手挪，不够就弹回。
+ * 展开页的候选区：往右划过门槛松手调 [onCollapse]，页面跟手挪，不够就弹回；往左划不动（只在「候选滑到头回弹展开」打开时有）。
  * 上下划照旧滚列表；只认横着划（先过横向触摸阈值才算），不影响点候选、长按。
  */
 @Composable
@@ -276,7 +276,8 @@ internal fun Modifier.swipeToCollapse(onCollapse: (() -> Unit)?): Modifier {
     val currentCollapse by rememberUpdatedState(onCollapse)
     return this
         .semantics { customActions = listOf(CustomAccessibilityAction("收回候选") { currentCollapse(); true }) }
-        .rubberBandDrag(band, { true }) { currentCollapse() }
+        // 只认往右划（和候选栏上展开着往右拉收回同一方向，11-21 他：展开后往回划收起）。
+        .rubberBandDrag(band, { true }, { 1f }) { currentCollapse() }
         .graphicsLayer {
             translationX = band.shown
             alpha = 1f - 0.3f * (abs(band.shown) / (band.threshold * PULL_MAX_FACTOR)).coerceIn(0f, 1f)

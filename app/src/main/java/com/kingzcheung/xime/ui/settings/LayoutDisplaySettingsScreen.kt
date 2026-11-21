@@ -495,7 +495,7 @@ private fun LayoutDisplayPage(
                     // 11-21 他：滑到头回弹展开只在打开这个开关后才有，默认关；关着时候选栏和 1.15.101 一样。
                     var swipeExpand by remember { mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context)) }
                     SettingsToggleItem(Icons.TwoTone.SwipeLeft, "候选滑到头回弹展开",
-                        "候选滑到最后再往左拉，松手展开；展开后往右拉收回。右边 ▾/▴ 照常可用", swipeExpand, {
+                        "候选滑到头再拉一下就展开，展开后往回划收起；右边按钮改为收起键盘，左边「<」取消输入", swipeExpand, {
                             swipeExpand = it
                             SettingsPreferences.setCandidateSwipeExpand(context, it)
                         })

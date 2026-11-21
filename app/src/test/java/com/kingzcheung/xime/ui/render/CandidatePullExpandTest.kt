@@ -72,6 +72,31 @@ class CandidatePullExpandTest {
         rule.runOnIdle { assertEquals(1, backs); assertEquals(false, expanded.value) }
     }
 
+    /** 开关打开：右边不放 ▾/▴，打字、展开着都是收起键盘（11-21 他：取消靠左、收键盘靠右、展开收起靠滑）。 */
+    @Test fun swipeModeRightButtonHidesKeyboard() {
+        val expanded = mutableStateOf(false)
+        var hides = 0
+        rule.setContent {
+            CandidateBar(state = CandidateBarState.ChineseCandidates(listOf("你好", "你"), inputText = "nihao", hasMore = true),
+                candidatePageExpanded = expanded.value, visuals = visuals,
+                callbacks = CandidateBarCallbacks(onCandidateSelect = {}, onCancelInput = {},
+                    onShowMoreCandidates = { expanded.value = true },
+                    onCollapseCandidates = { expanded.value = false },
+                    onBack = { expanded.value = false }, onHideKeyboard = { hides++ }),
+                showPreeditPreview = false, modifier = Modifier.width(360.dp))
+        }
+        rule.onNodeWithTag("candidate-expansion", useUnmergedTree = true).assertDoesNotExist()
+        rule.onNodeWithTag("candidate-hide").performClick()
+        rule.runOnIdle { assertEquals(1, hides); assertEquals(false, expanded.value) }
+        rule.onNodeWithTag("candidate-pull-expand", useUnmergedTree = true).pullAcross()
+        rule.runOnIdle { assertEquals(true, expanded.value) }
+        rule.onNodeWithTag("candidate-expansion", useUnmergedTree = true).assertDoesNotExist()
+        rule.onNodeWithTag("candidate-hide").performClick()
+        rule.runOnIdle { assertEquals(2, hides) }
+        rule.onNodeWithTag("candidate-pull-expand", useUnmergedTree = true).pullAcross(leftward = false)
+        rule.runOnIdle { assertEquals(false, expanded.value) }
+    }
+
     @Test fun leftPullOpensRightPullCloses() {
         val state = mutableStateOf<CandidateBarState>(
             CandidateBarState.ChineseCandidates(listOf("你好", "你"), inputText = "nihao", hasMore = true))

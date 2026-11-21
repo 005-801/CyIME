@@ -879,8 +879,22 @@ fun CandidateBar(
             }
             // 打字时候选栏只放候选：亮着的开关（悬浮、繁体、全角等）只在空闲工具栏里显示，
             // 不再挤到候选右边（11-03：悬浮键盘里一直多一个蓝色悬浮按钮，候选只剩一个）。
-            // 右边 ▾ 展开、▴ 收回，同 1.15.101（11-21 恢复）；往左拉展开、展开着往右拉收回是附加的。
-            if (state !is CandidateBarState.Idle && (candidatePageExpanded || hasAnyMore || isGlidePreview)) {
+            // 右边 ▾ 展开、▴ 收回，同 1.15.101（11-21 恢复）。
+            // 打开「候选滑到头回弹展开」后（11-21 他定）：右边在所有状态都是收起键盘，不放 ▾/▴；展开、收回只靠滑，
+            // 取消靠左边「<」，收键盘靠右边，各只有一种办法。别的宿主（没有「<」时）右边放「清空」，这时不再放收起。
+            val rightClearShown = !candidatePageExpanded && displayAssociation.isNotEmpty() &&
+                callbacks.onClearAssociation != null && callbacks.onCancelInput == null
+            if (swipeExpand) {
+                if (state !is CandidateBarState.Idle && !rightClearShown && callbacks.onHideKeyboard != null) {
+                    KeyboardToolbarButton(callbacks.onHideKeyboard, edgePressedFill,
+                        modifier = Modifier.testTag("candidate-hide"), restingFill = edgeButtonFill,
+                        slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true) {
+                        Icon(if (isVoiceSticky) Icons.Default.KeyboardDoubleArrowDown else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (isVoiceSticky) "收起成悬浮条" else "收起键盘",
+                            tint = protectedVisuals.textColor, modifier = Modifier.size(24.dp * LocalCandidateSizeFactor.current))
+                    }
+                }
+            } else if (state !is CandidateBarState.Idle && (candidatePageExpanded || hasAnyMore || isGlidePreview)) {
                 val action = if (candidatePageExpanded) callbacks.onBack else callbacks.onShowMoreCandidates
                 action?.let {
                     if (isGlidePreview && !candidatePageExpanded && !hasAnyMore) {
