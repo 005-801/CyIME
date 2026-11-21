@@ -94,6 +94,8 @@ data class KeyboardInputPreferences(
     val handwritingRecognizeWhileWriting: Boolean = false,
     val showPressBubble: Boolean = false,
     val showPreeditPreview: Boolean = true,
+    /** 候选滑到头回弹展开（默认关）：关着时展开页里左右划不收回，同 1.15.101，见 [SettingsPreferences.isCandidateSwipeExpand]。 */
+    val candidateSwipeExpand: Boolean = false,
     val inputTextLocation: String = SettingsPreferences.INPUT_TEXT_CANDIDATE_BAR,
     /** 「显示在候选栏」时拼音的位置，见 [SettingsPreferences.preeditStyle]。 */
     val preeditStyle: String = SettingsPreferences.PREEDIT_STYLE_BUBBLE,
@@ -385,7 +387,7 @@ data class KeyboardInputPreferences(
         const val HIDE_FUNCTION_KEY_HINTS_KEY = "hide_function_key_hints"
         internal val watchedKeys: Set<String> by lazy {
             setOf(CORNER_SYMBOL_INPUT_KEY, KeyEffectPreferences.GLOW, KeyEffectPreferences.ANIMATION, SettingsPreferences.KEY_SHOW_PRESS_BUBBLE,
-                SettingsPreferences.KEY_SHOW_PREEDIT_PREVIEW, SettingsPreferences.KEY_INLINE_PREEDIT_PREVIEW, SettingsPreferences.KEY_PREEDIT_STYLE, SettingsPreferences.KEY_PREEDIT_ALIGN, SettingsPreferences.KEY_INPUT_TEXT_LOCATION,
+                SettingsPreferences.KEY_SHOW_PREEDIT_PREVIEW, SettingsPreferences.KEY_CANDIDATE_SWIPE_EXPAND, SettingsPreferences.KEY_INLINE_PREEDIT_PREVIEW, SettingsPreferences.KEY_PREEDIT_STYLE, SettingsPreferences.KEY_PREEDIT_ALIGN, SettingsPreferences.KEY_INPUT_TEXT_LOCATION,
                 SettingsPreferences.KEY_PREEDIT_BUBBLE_OPACITY, SettingsPreferences.KEY_PREEDIT_TONES,
                 com.kingzcheung.xime.settings.LetterSwipeBindings.CHINESE, com.kingzcheung.xime.settings.LetterSwipeBindings.ENGLISH,
                 SettingsPreferences.KEY_SPLIT_KEYBOARD, SettingsPreferences.KEY_SPLIT_RIGHT_G, SettingsPreferences.KEY_FILL_KEYBOARD_BLANK, SettingsPreferences.KEY_WIDE_KEYS, SettingsPreferences.KEY_EVEN_MERGED_KEYS, SettingsPreferences.KEY_NUMBER_ROW, SettingsPreferences.KEY_SPLIT_GAP_PORTRAIT, SettingsPreferences.KEY_SPLIT_GAP_LANDSCAPE, CHINESE_GLIDE_KEY, DELETE_CHINESE_GLIDE_CHARACTER_KEY, com.kingzcheung.xime.glide.ExternalGlideEncodings.KEY, GLIDE_PREVIEW_KEY, ENGLISH_AUTO_SPACE_KEY, ENGLISH_PUNCTUATION_SPACE_KEY, EMAIL_SUFFIXES_KEY, ADDRESS_FIELDS_ENGLISH_KEY, SYMBOL_NAMES_KEY, GREEK_LETTERS_KEY, CYLM_LONG_ALTERNATIVE_KEY,
@@ -425,6 +427,7 @@ data class KeyboardInputPreferences(
                     .legibleForTheme(SettingsPreferences.getKeyboardTheme(context), isDark),
                 showPressBubble = SettingsPreferences.shouldShowPressBubble(context),
                 showPreeditPreview = SettingsPreferences.showPreeditPreview(context),
+                candidateSwipeExpand = SettingsPreferences.isCandidateSwipeExpand(context),
                 inputTextLocation = SettingsPreferences.getInputTextLocation(context),
                 preeditStyle = SettingsPreferences.preeditStyle(context),
                 preeditAlign = SettingsPreferences.preeditAlign(context),

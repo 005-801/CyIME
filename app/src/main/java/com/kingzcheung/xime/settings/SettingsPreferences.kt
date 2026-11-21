@@ -474,6 +474,8 @@ object SettingsPreferences {
     const val KEY_ASSOCIATION_CANCEL_CROSS = "association_cancel_cross"
     const val KEY_HANDWRITING_WUBI_HINTS = "handwriting_wubi_hints"
     const val KEY_CANDIDATE_PRESS_HIGHLIGHT = "candidate_press_highlight"
+    /** 候选滑到头回弹展开（11-21 他：默认关，关着时候选栏和 1.15.101 完全一样）。 */
+    const val KEY_CANDIDATE_SWIPE_EXPAND = "candidate_swipe_expand"
     const val KEY_INPUT_TEXT_LOCATION = "input_text_location"
     const val KEY_SHOW_PREEDIT_PREVIEW = "show_preedit_preview"
     const val KEY_INLINE_PREEDIT_PREVIEW = "inline_preedit_preview"
@@ -606,6 +608,17 @@ object SettingsPreferences {
 
     fun setShowCandidateCancelButton(context: Context, show: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_SHOW_CANDIDATE_CANCEL_BUTTON, show).apply()
+    }
+
+    /**
+     * 候选滑到头回弹展开（11-21 他：「谁让你直接生效了」，默认关）：打开后候选行滑到最后再往左拉、松手展开，
+     * 展开后往右拉收回，展开页里左右划也收回；右边 ▾/▴ 照常。关着时候选栏和 1.15.101 一样，只有 ▾/▴。
+     */
+    fun isCandidateSwipeExpand(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_CANDIDATE_SWIPE_EXPAND, false)
+
+    fun setCandidateSwipeExpand(context: Context, enabled: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_CANDIDATE_SWIPE_EXPAND, enabled).apply()
     }
 
     /**

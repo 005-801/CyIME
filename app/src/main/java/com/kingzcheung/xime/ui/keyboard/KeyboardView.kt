@@ -1883,10 +1883,13 @@ fun KeyboardView(
                         floating = state.isFloatingMode,
                     ),
                     callbacks = CandidatePageCallbacks(
-                        onCollapse = {
-                            toolbarFeedback()
-                            viewModel.setCandidatePageExpanded(false)
-                        },
+                        // 展开页里左右划收回：只在「候选滑到头回弹展开」打开时有（11-21 他：默认关，同 1.15.101）。
+                        onCollapse = if (inputPreferences.candidateSwipeExpand) {
+                            {
+                                toolbarFeedback()
+                                viewModel.setCandidatePageExpanded(false)
+                            }
+                        } else null,
                         onCandidateSelect = { entry ->
                             if (sentenceEdit != null) {
                                 if (sentenceWordsCode == sentenceCode && sentenceWordsSelection == sentenceSelected) sentenceWords.getOrNull(entry.globalIndex)?.let {

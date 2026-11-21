@@ -17,6 +17,7 @@ import androidx.compose.material.icons.twotone.Dialpad
 import androidx.compose.material.icons.twotone.Gesture
 import androidx.compose.material.icons.twotone.FormatListNumbered
 import androidx.compose.material.icons.twotone.FormatColorFill
+import androidx.compose.material.icons.twotone.SwipeLeft
 import androidx.compose.material.icons.twotone.AspectRatio
 import androidx.compose.material.icons.twotone.DataObject
 import androidx.compose.material.icons.twotone.RecordVoiceOver
@@ -490,6 +491,13 @@ private fun LayoutDisplayPage(
                         "按下候选栏按钮时显示高亮", pressHighlight, {
                             pressHighlight = it
                             pressPrefs.edit().putBoolean(SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT, it).apply()
+                        })
+                    // 11-21 他：滑到头回弹展开只在打开这个开关后才有，默认关；关着时候选栏和 1.15.101 一样。
+                    var swipeExpand by remember { mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context)) }
+                    SettingsToggleItem(Icons.TwoTone.SwipeLeft, "候选滑到头回弹展开",
+                        "候选滑到最后再往左拉，松手展开；展开后往右拉收回。右边 ▾/▴ 照常可用", swipeExpand, {
+                            swipeExpand = it
+                            SettingsPreferences.setCandidateSwipeExpand(context, it)
                         })
                 })
             }

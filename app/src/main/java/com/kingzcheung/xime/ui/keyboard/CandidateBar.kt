@@ -309,6 +309,9 @@ fun CandidateBar(
     var pressHighlight by remember(preferences) {
         mutableStateOf(preferences.getBoolean(SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT, false))
     }
+    var swipeExpand by remember(preferences) {
+        mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context))
+    }
     val edgePressedFill = if (pressHighlight) protectedVisuals.textColor.copy(alpha = 0.34f) else iconButtonContainer
     DisposableEffect(preferences) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -321,13 +324,17 @@ fun CandidateBar(
             if (key == SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT || key == null) {
                 pressHighlight = preferences.getBoolean(SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT, false)
             }
+            if (key == SettingsPreferences.KEY_CANDIDATE_SWIPE_EXPAND || key == null) {
+                swipeExpand = SettingsPreferences.isCandidateSwipeExpand(context)
+            }
         }
         preferences.registerOnSharedPreferenceChangeListener(listener)
         onDispose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
     }
     val showCompositionCancel = showCancelButton && state !is CandidateBarState.Idle && callbacks.onCancelInput != null
-    // 「<」右边那 4dp：后面是候选行时算拉动区的一部分（11-21 平板上按在空白处拉不动）。
-    val pullLeadingGap = if (showCompositionCancel && inlineSuggestions.isEmpty()) 4.dp else 0.dp
+    // 「<」右边那 4dp：开了「候选滑到头回弹展开」、后面是候选行时算拉动区的一部分（11-21 平板上按在空白处拉不动）；
+    // 开关关着时和 1.15.101 一样画在拉动区外面。
+    val pullLeadingGap = if (swipeExpand && showCompositionCancel && inlineSuggestions.isEmpty()) 4.dp else 0.dp
     // 候选栏两端最多两个按钮（用户 11-03）：左边取消，最右展开候选，位置固定。左边打字和联想都是「<」，
     // 设置「联想关闭键用叉号」打开后联想时才是 ⊗（用户 11-03：两种状态图标不一样）；
     // 收起键盘只在空闲（没有候选）时有。手写候选也是纯联想态，但那里的取消是撤销当前字，仍用「<」。
@@ -422,9 +429,10 @@ fun CandidateBar(
     }
 
     // 在候选栏上往左拉开展开页：有更多候选、还没展开、不是滑行预览时才拉得动；展开着往右拉收回（11-21，合并后方向反了改回）。
+    // 只在设置「候选滑到头回弹展开」打开时有（11-21 他：默认关，关着时和 1.15.101 一样只有 ▾/▴）。
     val pullExpand = callbacks.onShowMoreCandidates
-    val pullExpands = pullExpand != null && !candidatePageExpanded && hasAnyMore && !isGlidePreview
-    val pullCollapse = callbacks.onCollapseCandidates?.takeIf { candidatePageExpanded && !isGlidePreview }
+    val pullExpands = swipeExpand && pullExpand != null && !candidatePageExpanded && hasAnyMore && !isGlidePreview
+    val pullCollapse = callbacks.onCollapseCandidates?.takeIf { swipeExpand && candidatePageExpanded && !isGlidePreview }
     val associationHighlight = (state as? CandidateBarState.AssociationOnly)?.highlightIndex
         ?.takeIf { it in displayAssociation.indices }
     // 换了一组候选回到最前；「下一项」移动联想高亮时，高亮已完整露出就不滚，移出栏外才滚到刚好露出，
@@ -584,14 +592,14 @@ fun CandidateBar(
                 }
                 // 这 4dp 铺满栏高、自己接点按，免得点在第一个候选左边被这个键放大的触摸范围接走（#274）。
                 // 后面是候选行时这 4dp 放进拉动区里（[PullToExpandCandidates] 的 leadingGap），按在空白处也拉得动（11-21）。
-                if (inlineSuggestions.isNotEmpty()) Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
+                if (pullLeadingGap == 0.dp) Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
             } else if (showCompositionCancel) {
                 KeyboardBackButton({ callbacks.onCancelInput?.invoke() }, edgePressedFill, protectedVisuals.textColor,
                     label = if (closesAssociation) "关闭联想" else "取消输入",
                     modifier = if (closesAssociation) Modifier.testTag("association-cancel") else Modifier,
                     restingFill = edgeButtonFill, slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true)
                 // 同上：点在「<」和第一个候选之间算点候选，不算取消输入（#274）；后面是候选行时放进拉动区。
-                if (inlineSuggestions.isNotEmpty()) Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
+                if (pullLeadingGap == 0.dp) Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
             }
             if (showLeftIcon) {
                 when (state) {
@@ -657,7 +665,7 @@ fun CandidateBar(
             }
 
             // 11-21 恢复 1.15.101 的候选行（他：「原来的方案你还强制改了」）：打字候选照旧能左右滑看后面的，联想照旧走下面能滑的那行，
-            // 展开靠右边 ▾。往左拉展开只是附加：滑到头再往左拉过门槛松手展开（[PullToExpandCandidates]）。
+            // 展开靠右边 ▾。往左拉展开只是附加，设置「候选滑到头回弹展开」打开才有：滑到头再往左拉过门槛松手展开（[PullToExpandCandidates]）。
             if (state is CandidateBarState.ChineseCandidates || (isGlidePreview && state is CandidateBarState.AssociationOnly) ||
                 (splitGapX != null && state !is CandidateBarState.Idle) ||
                 (candidatePageExpanded && state is CandidateBarState.AssociationOnly && state.hasMore)) {

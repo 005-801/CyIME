@@ -13,12 +13,16 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.core.app.ApplicationProvider
+import com.kingzcheung.xime.settings.SettingsPreferences
 import com.kingzcheung.xime.ui.keyboard.CandidateBar
 import com.kingzcheung.xime.ui.keyboard.CandidateBarCallbacks
 import com.kingzcheung.xime.ui.keyboard.CandidateBarState
 import com.kingzcheung.xime.ui.keyboard.CandidateBarVisuals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,12 +31,46 @@ import org.robolectric.annotation.Config
 /**
  * 候选栏一行不滚动（用户 11-20）：往左拉过门槛松手才展开，拉得不够弹回，拉完照样能点候选；
  * 没有更多候选时拉不开。展开着往右拉收回；没展开往右、展开着往左都不动（11-21，同合并前往左拉展开）。
+ * 这些手势只在设置「候选滑到头回弹展开」打开时有，默认关，关着时和 1.15.101 一样只有 ▾/▴（11-21 他：「谁让你直接生效了」）。
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "w900dp-h1400dp-hdpi")
 class CandidatePullExpandTest {
     @get:Rule val rule = createAndroidComposeRule<androidx.activity.ComponentActivity>()
     private val visuals = CandidateBarVisuals(Color.White, Color.Black, Color.Gray)
+    private val prefs get() = SettingsPreferences.getPrefsPublic(ApplicationProvider.getApplicationContext())
+
+    @Before fun swipeExpandOn() { SettingsPreferences.setCandidateSwipeExpand(ApplicationProvider.getApplicationContext(), true) }
+
+    @After fun resetSwipeExpand() { prefs.edit().remove(SettingsPreferences.KEY_CANDIDATE_SWIPE_EXPAND).commit() }
+
+    /** 默认关：往左拉、往右拉都不展开不收回，▾ 照常展开、▴ 照常收回（和 1.15.101 一样）。 */
+    @Test fun swipeExpandIsOffByDefault() {
+        prefs.edit().remove(SettingsPreferences.KEY_CANDIDATE_SWIPE_EXPAND).commit()
+        assertEquals(false, SettingsPreferences.isCandidateSwipeExpand(ApplicationProvider.getApplicationContext()))
+        val expanded = mutableStateOf(false)
+        var opens = 0
+        var closes = 0
+        var backs = 0
+        rule.setContent {
+            CandidateBar(state = CandidateBarState.ChineseCandidates(listOf("你好", "你"), inputText = "nihao", hasMore = true),
+                candidatePageExpanded = expanded.value, visuals = visuals,
+                callbacks = CandidateBarCallbacks(onCandidateSelect = {},
+                    onShowMoreCandidates = { opens++; expanded.value = true },
+                    onCollapseCandidates = { closes++; expanded.value = false },
+                    onBack = { backs++; expanded.value = false }),
+                showPreeditPreview = false, modifier = Modifier.width(360.dp))
+        }
+        val pull = rule.onNodeWithTag("candidate-pull-expand", useUnmergedTree = true)
+        pull.pullAcross()
+        rule.runOnIdle { assertEquals(0, opens) }
+        rule.onNodeWithTag("candidate-expansion").performClick()
+        rule.runOnIdle { assertEquals(1, opens); assertEquals(true, expanded.value) }
+        pull.pullAcross(leftward = false)
+        rule.runOnIdle { assertEquals(0, closes); assertEquals(true, expanded.value) }
+        rule.onNodeWithTag("candidate-expansion").performClick()
+        rule.runOnIdle { assertEquals(1, backs); assertEquals(false, expanded.value) }
+    }
 
     @Test fun leftPullOpensRightPullCloses() {
         val state = mutableStateOf<CandidateBarState>(
