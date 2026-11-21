@@ -324,6 +324,8 @@ fun CandidateBar(
         onDispose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
     }
     val showCompositionCancel = showCancelButton && state !is CandidateBarState.Idle && callbacks.onCancelInput != null
+    // 「<」右边那 4dp：后面是候选行时算拉动区的一部分（11-21 平板上按在空白处拉不动）。
+    val pullLeadingGap = if (showCompositionCancel && inlineSuggestions.isEmpty()) 4.dp else 0.dp
     // 候选栏两端最多两个按钮（用户 11-03）：左边取消，最右展开候选，位置固定。左边打字和联想都是「<」，
     // 设置「联想关闭键用叉号」打开后联想时才是 ⊗（用户 11-03：两种状态图标不一样）；
     // 收起键盘只在空闲（没有候选）时有。手写候选也是纯联想态，但那里的取消是撤销当前字，仍用「<」。
@@ -576,14 +578,15 @@ fun CandidateBar(
                         tint = protectedVisuals.textColor, modifier = Modifier.size(22.dp * LocalCandidateSizeFactor.current))
                 }
                 // 这 4dp 铺满栏高、自己接点按，免得点在第一个候选左边被这个键放大的触摸范围接走（#274）。
-                Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
+                // 后面是候选行时这 4dp 放进拉动区里（[PullToExpandCandidates] 的 leadingGap），按在空白处也拉得动（11-21）。
+                if (inlineSuggestions.isNotEmpty()) Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
             } else if (showCompositionCancel) {
                 KeyboardBackButton({ callbacks.onCancelInput?.invoke() }, edgePressedFill, protectedVisuals.textColor,
                     label = if (closesAssociation) "关闭联想" else "取消输入",
                     modifier = if (closesAssociation) Modifier.testTag("association-cancel") else Modifier,
                     restingFill = edgeButtonFill, slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true)
-                // 同上：点在「<」和第一个候选之间算点候选，不算取消输入（#274）。
-                Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
+                // 同上：点在「<」和第一个候选之间算点候选，不算取消输入（#274）；后面是候选行时放进拉动区。
+                if (inlineSuggestions.isNotEmpty()) Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
             }
             if (showLeftIcon) {
                 when (state) {
@@ -661,7 +664,7 @@ fun CandidateBar(
                         else callbacks.onCandidateSelect,
                 ) else callbacks
                 PullToExpandCandidates(pullExpands, { pullExpand?.invoke() }, protectedVisuals.textColor,
-                    Modifier.weight(1f).fillMaxHeight(), onCollapse = pullCollapse) {
+                    Modifier.weight(1f).fillMaxHeight(), onCollapse = pullCollapse, leadingGap = pullLeadingGap) {
                 FixedCandidateStrip(
                     candidates = if (previewAssociations) displayAssociation else displayCandidates,
                     associations = if (previewAssociations) emptyList() else displayAssociation,
@@ -682,7 +685,7 @@ fun CandidateBar(
                 )
                 }
             } else if (state !is CandidateBarState.Idle) PullToExpandCandidates(pullExpands, { pullExpand?.invoke() },
-                protectedVisuals.textColor, Modifier.weight(1f)) { BoxWithConstraints(Modifier.fillMaxWidth()) {
+                protectedVisuals.textColor, Modifier.weight(1f), leadingGap = pullLeadingGap) { BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val showComments = candidateCommentsVisible(maxWidth.value, density.fontScale,
                     candidateTextSize.toFloat(), commentsAllowed)
                 val showDividers = candidateDividersShown(4.dp, candidateItemPadding)

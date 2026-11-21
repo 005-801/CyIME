@@ -7,7 +7,9 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +36,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
@@ -176,6 +179,8 @@ internal fun PullToExpandCandidates(
     hintColor: Color,
     modifier: Modifier = Modifier,
     onCollapse: (() -> Unit)? = null,
+    /** 左边「<」和第一个候选之间的空白（4dp）：画在拉动区里，按在这里也拉得动；点一下照旧算点最近的候选（#274）。 */
+    leadingGap: Dp = 0.dp,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val band = rememberRubberBand()
@@ -196,8 +201,9 @@ internal fun PullToExpandCandidates(
                 if (currentCollapsing) currentCollapse?.invoke() else currentExpand()
             },
     ) {
+        if (leadingGap > 0.dp) Spacer(Modifier.align(Alignment.CenterStart).width(leadingGap).fillMaxHeight().candidateGapTaps())
         // 位移只在画的时候读，拉动时候选行不重组。
-        Box(Modifier.graphicsLayer { translationX = band.shown }) { content() }
+        Box(Modifier.align(Alignment.CenterStart).padding(start = leadingGap).graphicsLayer { translationX = band.shown }) { content() }
         PullHint(band, hintColor, if (collapsing) "收起" else "展开")
     }
 }

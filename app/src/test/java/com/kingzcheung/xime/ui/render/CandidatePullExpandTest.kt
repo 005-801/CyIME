@@ -4,7 +4,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
@@ -14,6 +18,7 @@ import com.kingzcheung.xime.ui.keyboard.CandidateBarCallbacks
 import com.kingzcheung.xime.ui.keyboard.CandidateBarState
 import com.kingzcheung.xime.ui.keyboard.CandidateBarVisuals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,5 +71,28 @@ class CandidatePullExpandTest {
         rule.runOnIdle { expanded.value = false; state.value = CandidateBarState.ChineseCandidates(listOf("你"), inputText = "ni") }
         pull.pullAcross()
         rule.runOnIdle { assertEquals(2, opens) }
+    }
+
+    /** 「<」和第一个候选之间那 4dp 空白也在拉动区里（11-21 平板上按在空白处拉不动）：从那里往右拉收回展开页。 */
+    @Test fun gapRightOfCancelButtonAlsoPulls() {
+        val expanded = mutableStateOf(true)
+        var closes = 0
+        var cancels = 0
+        rule.setContent {
+            CandidateBar(state = CandidateBarState.ChineseCandidates(listOf("你好", "你"), inputText = "nihao", hasMore = true),
+                candidatePageExpanded = expanded.value, visuals = visuals,
+                callbacks = CandidateBarCallbacks(onCandidateSelect = {}, onCancelInput = { cancels++ },
+                    onShowMoreCandidates = { expanded.value = true },
+                    onCollapseCandidates = { closes++; expanded.value = false }),
+                showPreeditPreview = false, modifier = Modifier.width(360.dp))
+        }
+        val cancel = rule.onNodeWithContentDescription("取消输入").fetchSemanticsNode().boundsInRoot
+        val pullNode = rule.onNodeWithTag("candidate-pull-expand", useUnmergedTree = true)
+        val pull = pullNode.fetchSemanticsNode().boundsInRoot
+        val dp = rule.density.density
+        assertTrue("拉动区从「<」右边紧接着开始：${cancel.right} / ${pull.left}", pull.left <= cancel.right + 1f)
+        val startX = (cancel.right + 2f * dp) - pull.left
+        pullNode.performTouchInput { swipe(Offset(startX, centerY), Offset(startX + 250f * dp, centerY), durationMillis = 300) }
+        rule.runOnIdle { assertEquals(1, closes); assertEquals(0, cancels) }
     }
 }
