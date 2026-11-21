@@ -113,24 +113,24 @@ class CandidateBarOptionsTest {
         val pull = rule.onNodeWithTag("candidate-pull-expand")
         val second = rule.onNodeWithTag("bar-candidate:1", useUnmergedTree = true)
         val rest = second.fetchSemanticsNode().boundsInRoot
-        // 拉一小段：跟手往左挪，松手 150 ms 内回原位，不展开。
+        // 往右拉一小段：跟手往右挪，松手 150 ms 内回原位，不展开（11-21：往右拉展开，展开着往左拉收回）。
         rule.mainClock.autoAdvance = false
-        pull.performTouchInput { down(center); repeat(3) { moveBy(androidx.compose.ui.geometry.Offset(-20f * dp, 0f)) } }
+        pull.performTouchInput { down(center); repeat(3) { moveBy(androidx.compose.ui.geometry.Offset(20f * dp, 0f)) } }
         rule.mainClock.advanceTimeByFrame()
         val held = second.fetchSemanticsNode().boundsInRoot
-        assertTrue("跟手往左挪：${rest.left} → ${held.left}", held.left < rest.left - 5f * dp)
-        assertTrue("越拉越紧：手指走 60dp，栏挪得少", rest.left - held.left < 40f * dp)
+        assertTrue("跟手往右挪：${rest.left} → ${held.left}", held.left > rest.left + 5f * dp)
+        assertTrue("越拉越紧：手指走 60dp，栏挪得少", held.left - rest.left < 40f * dp)
         pull.performTouchInput { up() }
         rule.mainClock.advanceTimeBy(com.kingzcheung.xime.ui.keyboard.RELEASE_MS + 50L)
         assertEquals(rest.left, second.fetchSemanticsNode().boundsInRoot.left, 1f)
         rule.mainClock.autoAdvance = true
         rule.runOnIdle { assertEquals(0, opens) }
         // 回弹途中点候选照样选得上。
-        pull.performTouchInput { down(center); moveBy(androidx.compose.ui.geometry.Offset(-60f * dp, 0f)); up() }
+        pull.performTouchInput { down(center); moveBy(androidx.compose.ui.geometry.Offset(60f * dp, 0f)); up() }
         second.performTouchInput { click() }
         rule.runOnIdle { assertEquals(1, picked); assertEquals(0, opens) }
-        // 往右拉同样算；拉过门槛松手展开，展开着再拉不会再展开一次。
-        pull.pullAcross(leftward = false)
+        // 拉过门槛松手展开，展开着再往右拉不会再展开一次。
+        pull.pullAcross()
         rule.runOnIdle { assertEquals(1, opens); assertTrue(expanded.value) }
         pull.pullAcross()
         rule.runOnIdle { assertEquals(1, opens) }

@@ -1723,6 +1723,10 @@ fun KeyboardView(
                         callbacks.onUpdateQuickActions?.invoke(inlineEditor.finish())
                     },
                     onEditQuickActions = startInlineEditing,
+                    onCollapseCandidates = {
+                        toolbarFeedback()
+                        viewModel.setCandidatePageExpanded(false)
+                    },
                     onShowMoreCandidates = {
                         toolbarFeedback()
                         candidatePageOpening++

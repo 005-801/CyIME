@@ -196,6 +196,8 @@ data class CandidateBarCallbacks(
     val onClipboardImageSelect: ((com.kingzcheung.xime.clipboard.ClipboardImage) -> Unit)? = null,
     val onExpandClipboardImages: (() -> Unit)? = null,
     val onCancelInput: (() -> Unit)? = null,
+    /** 展开着在候选栏上往左划过门槛：收回展开页，打的字留着（用户 11-21：「右滑展开，左滑收起来」）。 */
+    val onCollapseCandidates: (() -> Unit)? = null,
     val onReorderToolbar: ((List<String>) -> Unit)? = null,
     // 长按候选：抛事件给宿主（键盘视图内弹确认覆盖层，不弹独立窗口——
     // 焦点型弹窗会抢焦点导致 IME 被系统收起）。
@@ -415,9 +417,10 @@ fun CandidateBar(
         else -> true
     }
 
-    // 在候选栏上左右拉开展开页：有更多候选、还没展开、不是滑行预览时才拉得动。
+    // 在候选栏上往右拉开展开页：有更多候选、还没展开、不是滑行预览时才拉得动；展开着往左拉收回（11-21）。
     val pullExpand = callbacks.onShowMoreCandidates
     val pullExpands = pullExpand != null && !candidatePageExpanded && hasAnyMore && !isGlidePreview
+    val pullCollapse = callbacks.onCollapseCandidates?.takeIf { candidatePageExpanded && !isGlidePreview }
     // 别的宿主（没有「<」时）右边放「清空」，这时不再放收起，一边仍只有一个按钮。
     val rightClearShown = !candidatePageExpanded && displayAssociation.isNotEmpty() &&
         callbacks.onClearAssociation != null && callbacks.onCancelInput == null
@@ -649,7 +652,7 @@ fun CandidateBar(
                         else callbacks.onCandidateSelect,
                 ) else callbacks
                 PullToExpandCandidates(pullExpands, { pullExpand?.invoke() }, protectedVisuals.textColor,
-                    Modifier.weight(1f).fillMaxHeight()) {
+                    Modifier.weight(1f).fillMaxHeight(), onCollapse = pullCollapse) {
                 FixedCandidateStrip(
                     candidates = if (previewAssociations) displayAssociation else displayCandidates,
                     associations = if (previewAssociations) emptyList() else displayAssociation,
@@ -848,7 +851,7 @@ fun CandidateBar(
             // 打字时候选栏只放候选：亮着的开关（悬浮、繁体、全角等）只在空闲工具栏里显示，
             // 不再挤到候选右边（11-03：悬浮键盘里一直多一个蓝色悬浮按钮，候选只剩一个）。
             // 一边只有一个按钮（用户 11-20）：右边打字、联想、英文、展开页都是收起键盘，和空闲时同一个位置；
-            // 展开候选改成在候选上左右拉（[PullToExpandCandidates]），收回展开页在展开页上左右划或按返回。
+            // 展开候选改成在候选上往右拉（[PullToExpandCandidates]），展开着往左拉收回；展开页上左右划、返回键也收回。
             if (state !is CandidateBarState.Idle && !rightClearShown && callbacks.onHideKeyboard != null) {
                 KeyboardToolbarButton(callbacks.onHideKeyboard, edgePressedFill,
                     modifier = Modifier.testTag("candidate-hide"), restingFill = edgeButtonFill,

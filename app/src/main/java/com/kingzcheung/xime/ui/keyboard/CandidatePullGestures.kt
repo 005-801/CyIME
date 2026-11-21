@@ -45,9 +45,9 @@ import kotlin.math.sign
 /*
  * 候选栏一边只有一个按钮（用户 11-20）：左边「<」取消，右边「⌄」收起键盘，展开候选不占按钮。
  * 候选栏这一行不滚动，放得下几个显示几个（用户 11-20：「显示多少就多少长度」）。
- * 展开：在候选栏上左右划，整行跟手但越拉越紧，拉过门槛松手就展开，不够就弹回（像安卓下拉通知栏）。
- * 收回：在展开页的候选上左右划，同样拉过门槛松手收回。返回键、选词照旧也收回。
- * 两个方向都算，不用记往哪边划。
+ * 展开：在候选栏上往右划，整行跟手但越拉越紧，拉过门槛松手就展开，不够就弹回（像安卓下拉通知栏）。
+ * 收回：展开着在候选栏上往左划，同样拉过门槛松手收回（用户 11-21：「右滑展开，左滑收起来」）；
+ * 在展开页的候选上左右划、返回键、选词照旧也收回。没展开时往左划、展开着往右划，栏不动、也不算点候选。
  *
  * 不用系统的边缘拉伸回弹：11-05 用户录屏，有的手机回弹收不完，列表把每次按下都当成接着滑，点候选选不上。
  * 这里的回弹是自己画的位移，松手后 [RELEASE_MS] 内一定回到 0；回弹途中按下去就停住，点到的就是看到的那个候选，抬手再接着弹回。
@@ -76,6 +76,8 @@ internal fun pullReleases(shown: Float, threshold: Float): Boolean = threshold >
 /** 一次横拉：手指走的距离、拉出的位移、是否已过门槛、正在弹回的动画。 */
 private class RubberBand(private val scope: CoroutineScope, private val haptic: HapticFeedback, val threshold: Float) {
     var shown by mutableFloatStateOf(0f)
+    /** 只认的方向：1 往右，-1 往左，0 两边都算。拉过头折回来最多回到 0，不会拉到另一边去。 */
+    var direction = 0f
     private var raw = 0f
     private var armed = false
     private var job: Job? = null
@@ -89,6 +91,7 @@ private class RubberBand(private val scope: CoroutineScope, private val haptic: 
 
     fun move(dx: Float) {
         raw += dx
+        if (direction > 0f) raw = raw.coerceAtLeast(0f) else if (direction < 0f) raw = raw.coerceAtMost(0f)
         shown = pulledDistance(raw, threshold)
         val now = pullReleases(shown, threshold)
         if (now && !armed) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -118,17 +121,24 @@ private fun rememberRubberBand(): RubberBand {
     return remember(threshold, scope, haptic) { RubberBand(scope, haptic, threshold) }
 }
 
-/** 横着拉过门槛松手调 [onTrigger]；[enabled] 为 false 时手指照常交给里面的候选。 */
-private fun Modifier.rubberBandDrag(band: RubberBand, enabled: () -> Boolean, onTrigger: () -> Unit): Modifier =
+/**
+ * 横着拉过门槛松手调 [onTrigger]；[enabled] 为 false 时手指照常交给里面的候选。
+ * [direction] 1 只认往右、-1 只认往左、0 两边都算；往不认的那边划，栏不动、不触发，这一下也不当成点候选。
+ */
+private fun Modifier.rubberBandDrag(band: RubberBand, enabled: () -> Boolean, direction: () -> Float = { 0f },
+    onTrigger: () -> Unit): Modifier =
     pointerInput(band) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false)
             band.hold()
             if (enabled()) {
+                val dir = direction()
+                band.direction = dir
+                var wrongWay = false
                 // 里面的候选先看到这一下（长按整句选段会接走），横着走过触摸阈值、没被接走才算拉。
                 val start = awaitHorizontalTouchSlopOrCancellation(down.id) { change, over ->
                     change.consume()
-                    band.move(over)
+                    if (dir != 0f && sign(over) != dir) wrongWay = true else band.move(over)
                 }
                 if (start != null) {
                     // 拉起来以后这一下归拉动：在 Initial 阶段先于里面的候选接走移动和抬起。候选用的 tolerantClick 不看移动
@@ -142,10 +152,10 @@ private fun Modifier.rubberBandDrag(band: RubberBand, enabled: () -> Boolean, on
                             change.consume()
                             break
                         }
-                        band.move(change.positionChange().x)
+                        if (!wrongWay) band.move(change.positionChange().x)
                         change.consume()
                     }
-                    if (band.release(lifted)) onTrigger()
+                    if (band.release(lifted) && !wrongWay) onTrigger()
                     return@awaitEachGesture
                 }
             }
@@ -156,8 +166,8 @@ private fun Modifier.rubberBandDrag(band: RubberBand, enabled: () -> Boolean, on
     }
 
 /**
- * 包住候选栏里的候选行：左右拉过门槛松手调 [onExpand]。
- * [enabled] 为 false（没有更多候选、已经展开、滑行预览）时不拉，行为和以前一样。
+ * 包住候选栏里的候选行：往右拉过门槛松手调 [onExpand]；给了 [onCollapse]（展开着）时改成往左拉过门槛松手调它。
+ * [enabled] 为 false（没有更多候选、滑行预览）且没有 [onCollapse] 时不拉，行为和以前一样。
  */
 @Composable
 internal fun PullToExpandCandidates(
@@ -165,35 +175,42 @@ internal fun PullToExpandCandidates(
     onExpand: () -> Unit,
     hintColor: Color,
     modifier: Modifier = Modifier,
+    onCollapse: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val band = rememberRubberBand()
-    val currentEnabled by rememberUpdatedState(enabled)
+    val collapsing = onCollapse != null
+    val currentEnabled by rememberUpdatedState(enabled || collapsing)
+    val currentCollapsing by rememberUpdatedState(collapsing)
     val currentExpand by rememberUpdatedState(onExpand)
+    val currentCollapse by rememberUpdatedState(onCollapse)
     Box(
         modifier
             .clipToBounds()
             .testTag("candidate-pull-expand")
             .semantics {
-                if (enabled) customActions = listOf(CustomAccessibilityAction("展开候选") { currentExpand(); true })
+                if (collapsing) customActions = listOf(CustomAccessibilityAction("收回候选") { currentCollapse?.invoke(); true })
+                else if (enabled) customActions = listOf(CustomAccessibilityAction("展开候选") { currentExpand(); true })
             }
-            .rubberBandDrag(band, { currentEnabled }) { currentExpand() },
+            .rubberBandDrag(band, { currentEnabled }, { if (currentCollapsing) -1f else 1f }) {
+                if (currentCollapsing) currentCollapse?.invoke() else currentExpand()
+            },
     ) {
         // 位移只在画的时候读，拉动时候选行不重组。
         Box(Modifier.graphicsLayer { translationX = band.shown }) { content() }
-        PullHint(band, hintColor)
+        PullHint(band, hintColor, if (collapsing) "收起" else "展开")
     }
 }
 
-/** 整行往哪边走，空出来的那一边写「展开」，过了门槛写「松手展开」。 */
+/** 整行往哪边走，空出来的那一边写「展开」/「收起」，过了门槛写「松手展开」/「松手收起」。 */
 @Composable
-private fun BoxScope.PullHint(band: RubberBand, hintColor: Color) {
+private fun BoxScope.PullHint(band: RubberBand, hintColor: Color, verb: String) {
     val shown = band.shown
     if (shown == 0f) return
     val widthDp = with(LocalDensity.current) { abs(shown).toDp() }
     Box(Modifier.align(if (shown < 0f) Alignment.CenterEnd else Alignment.CenterStart).width(widthDp).fillMaxHeight(),
         contentAlignment = Alignment.Center) {
-        Text(if (pullReleases(shown, band.threshold)) "松手展开" else "展开", color = hintColor.copy(alpha = 0.75f),
+        Text(if (pullReleases(shown, band.threshold)) "松手$verb" else verb, color = hintColor.copy(alpha = 0.75f),
             fontSize = 11.sp, lineHeight = 12.sp, textAlign = TextAlign.Center, maxLines = 2,
             modifier = Modifier.graphicsLayer { alpha = (abs(band.shown) / band.threshold).coerceIn(0f, 1f) })
     }
