@@ -873,9 +873,10 @@ fun PreeditStyleCard(
                         .background(MaterialTheme.colorScheme.surface)
                         .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)))
                     Spacer(Modifier.weight(1f))
-                    // 键盘上方：气泡隔开一点、圆角、按键色；小签贴着键盘、键盘同色、只圆上两角。
+                    // 键盘上方：气泡靠左、隔开一点、圆角、按键色；小签居中（11-21）、贴着键盘、键盘同色、只圆上两角。
                     run {
-                        Box(Modifier.padding(start = 4.dp, bottom = if (bubble) 4.dp else 0.dp)
+                        Box(Modifier.align(if (bubble) Alignment.Start else Alignment.CenterHorizontally)
+                            .padding(start = if (bubble) 4.dp else 0.dp, bottom = if (bubble) 4.dp else 0.dp)
                             .clip(if (bubble) RoundedCornerShape(4.dp) else RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                             .background(if (bubble) key else keyboard)
                             .then(if (bubble) Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)) else Modifier)

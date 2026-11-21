@@ -141,17 +141,20 @@ class PreeditLocationTest {
             org.junit.Assert.assertTrue("小签在键盘外面（上方）", tab.top < keyboard.top)
             org.junit.Assert.assertTrue("小签底边贴着键盘顶，不隔开", tab.bottom >= keyboard.top - 1f && tab.bottom <= keyboard.top + slack)
             org.junit.Assert.assertTrue("小签高到能点（≥26dp）", tab.height >= with(rule.density) { 26.dp.toPx() } - 1f)
+            assertEquals("小签水平居中（11-21）", keyboard.center.x, tab.center.x, with(rule.density) { 2.dp.toPx() })
         }
         shot("candidate-tab")
-        // 点开编辑：编辑条出在小签同一处（键盘上方），不跑进候选栏。
+        // 点开编辑：和气泡点开的是同一条原来的编辑条（11-21 他要求恢复原样、不缩小、不居中），浮在键盘上方，不跑进候选栏。
         rule.onNodeWithTag("preedit-tab", true).performClick()
         run {
             val code = rule.onNodeWithTag("preedit-editor", true).fetchSemanticsNode()
                 .config[com.kingzcheung.xime.ui.keyboard.PreeditPopupBoundsKey]
             val keyboard = rule.onNodeWithTag("keyboard", true).fetchSemanticsNode().boundsInWindow
-            val slack = with(rule.density) { 8.dp.toPx() }
-            org.junit.Assert.assertTrue("编辑条在键盘上方小签处（底边贴着键盘顶）",
-                code.bottom <= keyboard.top + slack && code.bottom >= keyboard.top - slack)
+            org.junit.Assert.assertTrue("编辑条浮在键盘上方", code.bottom <= keyboard.top + 1f)
+            org.junit.Assert.assertTrue("编辑条是原来的 44dp 高，不缩小",
+                code.height >= with(rule.density) { 44.dp.toPx() } - 1f)
+            org.junit.Assert.assertTrue("编辑条和原来一样从左边起、铺满宽度，不居中",
+                code.width >= keyboard.width - with(rule.density) { 2.dp.toPx() })
         }
         shot("candidate-tab-edit")
         rule.onNodeWithTag("preedit-editor-close", true).performClick()

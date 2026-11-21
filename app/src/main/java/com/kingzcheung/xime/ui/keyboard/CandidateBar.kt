@@ -500,7 +500,7 @@ fun CandidateBar(
             PreeditTab(
                 if (corrected.isNotEmpty()) correctionAnnotatedString(corrected, tabText, LocalCorrectionFullScheme.current)
                     else sentenceSelectionText(preeditText, LocalSentenceSelection.current.value, protectedVisuals.accentColor),
-                tabText, tabColor, cardTopCorner, onEditPreedit, hidden, corrected.isNotEmpty())
+                tabText, tabColor, onEditPreedit, hidden, corrected.isNotEmpty())
         }
 
         if (state is CandidateBarState.ClipboardDisplay) {
@@ -1501,21 +1501,21 @@ private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (
 }
 
 /**
- * 「紧贴候选上方」的小签（11-20）：和键盘同色，底边正好贴在候选栏顶上（键盘边框外），左边让过卡片圆角；
- * 宽度跟拼音走，最宽到屏宽；整张小签都能点开拼音编辑，编辑条也出在同一处（见 [PreeditEditorBar] 的 tab）。
+ * 「紧贴候选上方」的小签（11-20）：和键盘同色，底边正好贴在候选栏顶上（键盘边框外）；
+ * 宽度跟拼音走，最宽到屏宽；整张小签都能点开拼音编辑，点开是和气泡一样的原来那条编辑条。
+ * 11-21 他要求小签水平居中（原来靠左，拼音正好压在应用输入框光标的手柄下面，手柄是系统画在最上层的，输入法盖不住）。
  */
 @Composable
 private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor: Color, color: Color,
-    leftInset: androidx.compose.ui.unit.Dp, onEdit: (() -> Unit)?, hidden: Boolean, corrected: Boolean) {
+    onEdit: (() -> Unit)?, hidden: Boolean, corrected: Boolean) {
     val density = LocalDensity.current
     val screenWidth = (LocalConfiguration.current.screenWidthDp / LocalCandidateBarScale.current).dp
-    val inset = with(density) { leftInset.roundToPx() }
     val tabBounds = remember { mutableStateOf<IntRect?>(null) }
-    val positionProvider = remember(inset) {
+    val positionProvider = remember {
         object : PopupPositionProvider {
             override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize,
                 layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset =
-                IntOffset((anchorBounds.left + inset).coerceIn(0,
+                IntOffset((anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2).coerceIn(0,
                         (windowSize.width - popupContentSize.width).coerceAtLeast(0)),
                     (anchorBounds.top - popupContentSize.height).coerceIn(0,
                         (windowSize.height - popupContentSize.height).coerceAtLeast(0)))
@@ -1533,7 +1533,7 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
         properties = PopupProperties(focusable = false, dismissOnBackPress = false,
             dismissOnClickOutside = false, clippingEnabled = true)) {
         val placed = tabBounds.value
-        Box(Modifier.widthIn(max = screenWidth - leftInset).heightIn(min = PREEDIT_TAB_HEIGHT).clip(shape).background(color)
+        Box(Modifier.widthIn(max = screenWidth).heightIn(min = PREEDIT_TAB_HEIGHT).clip(shape).background(color)
             .then(if (onEdit != null && !hidden) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = onEdit) else Modifier)
             .padding(horizontal = 8.dp).testTag("preedit-tab")
             .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier)

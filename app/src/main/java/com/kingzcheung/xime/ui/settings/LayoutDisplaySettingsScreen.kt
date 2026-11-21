@@ -640,7 +640,7 @@ private fun LayoutDisplayPage(
                             var preeditStyle by remember { mutableStateOf(SettingsPreferences.preeditStyle(context)) }
                             val styles = listOf(
                                 Triple(SettingsPreferences.PREEDIT_STYLE_BUBBLE, "浮在键盘上方", "气泡浮在应用上，点开编辑前后位置不变，透明度可调；会挡住一点输入内容。"),
-                                Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "紧贴候选上方", "贴在键盘边框上的小签，和键盘同色，不容易挡住输入内容；点开编辑也在这里。"),
+                                Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "紧贴候选上方", "贴在键盘边框正中的小签，和键盘同色，不容易挡住输入内容。"),
                             )
                             Column(Modifier.fillMaxWidth().settingsSearchAnchor("拼音位置", bleed = 16.dp, bleedVertical = 6.dp)
                                 .padding(horizontal = 16.dp, vertical = 8.dp)) {

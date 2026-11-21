@@ -47,8 +47,6 @@ internal fun PreeditEditorBar(
     onReplace: (String) -> Unit,
     preedit: String = session.text,
     inline: Boolean = false,
-    /** 「紧贴候选上方」点开的：和小签同一处、同一底色、同一字号，底边贴着键盘边框（11-20：编辑前后位置不变）。 */
-    tab: Boolean = false,
 ) {
     if (LocalOnBackPressedDispatcherOwner.current != null) BackHandler(onBack = onClose)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -65,14 +63,11 @@ internal fun PreeditEditorBar(
         }
     }
     val density = LocalDensity.current
-    val gap = if (tab) 0 else with(density) { 2.dp.roundToPx() }
-    val tabInset = if (tab) LocalKeyboardCardTopCorner.current else 0.dp
+    val gap = with(density) { 2.dp.roundToPx() }
     // 浮在应用上时和拼音气泡同一个底色、同一个不透明度，开玻璃时下面同样垫实时模糊（用户 11-16：
     // 气泡是实底、一点拼音编辑条就变透，不统一）。放在键盘内（inline）时仍是原来的键帽色淡底。
-    val floatingColor = if (inline) null else if (tab) preeditTabColor(keyColor) else floatingPreeditColor(
+    val floatingColor = if (inline) null else floatingPreeditColor(
         com.kingzcheung.xime.ui.theme.LocalMaterialPalette.current?.surface ?: keyColor, keyColor)
-    val codeSize = if (tab) (PREEDIT_TAB_TEXT_SP * LocalCandidateSizeFactor.current).sp else PreeditStyle.FontSize
-    val surfaceShape = if (tab) RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp) else RoundedCornerShape(4.dp)
     val codeColor = floatingColor?.let { readableThemeText(textColor, it.copy(alpha = 1f)) } ?: textColor.copy(alpha = 0.9f)
     val iconColor = floatingColor?.let { codeColor } ?: textColor
     val halo = remember(codeColor, floatingColor) { floatingPreeditHalo(codeColor, floatingColor) }
@@ -91,19 +86,18 @@ internal fun PreeditEditorBar(
             // 浮着时拼音和关闭键合成一整块底（和气泡一样一块），模糊也只垫这一块；放在键盘内时照旧两块。
             // 光晕的图层要在浮窗自己的组合里建，不能从外面带进来。
             val rowSurface = if (floatingColor == null) Modifier
-                else Modifier.clip(surfaceShape).background(floatingColor).glassTextHalo(halo)
+                else Modifier.clip(RoundedCornerShape(4.dp)).background(floatingColor).glassTextHalo(halo)
             val placed = editorBounds.value.takeIf { !inline }
-            Row(Modifier.width(width).height(if (tab) PREEDIT_TAB_HEIGHT else 44.dp).testTag("preedit-editor")
+            Row(Modifier.width(width).height(44.dp).testTag("preedit-editor")
                 .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier)
-                .then(if (tab) Modifier.padding(start = tabInset, end = tabInset)
-                    else Modifier.padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp)),
+                .padding(start = 8.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically) {
               Row(Modifier.weight(1f).then(rowSurface), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f).then(if (floatingColor == null) Modifier.preeditSurface(keyColor)
-                        else Modifier.heightIn(min = if (tab) PREEDIT_TAB_HEIGHT else PreeditStyle.SurfaceHeight).padding(horizontal = 8.dp))
+                        else Modifier.heightIn(min = PreeditStyle.SurfaceHeight).padding(horizontal = 8.dp))
                     .testTag("preedit-editor-surface"),
                     contentAlignment = Alignment.CenterStart) {
-                    Text(code, color = codeColor, fontSize = codeSize, maxLines = 1, softWrap = false,
+                    Text(code, color = codeColor, fontSize = PreeditStyle.FontSize, maxLines = 1, softWrap = false,
                         onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth().horizontalScroll(scroll)
                             .testTag("preedit-editor-code")
                             .semantics {
@@ -129,7 +123,7 @@ internal fun PreeditEditorBar(
                                 }
                             })
                 }
-                Box(Modifier.padding(start = 4.dp).size(if (tab) PREEDIT_TAB_HEIGHT else 32.dp).clip(RoundedCornerShape(4.dp))
+                Box(Modifier.padding(start = 4.dp).size(32.dp).clip(RoundedCornerShape(4.dp))
                     .then(if (floatingColor == null) Modifier.background(keyColor.copy(alpha = 0.62f)) else Modifier)
                     .clickable(onClick = onClose).testTag("preedit-editor-close"), contentAlignment = Alignment.Center) {
                     Icon(Icons.Default.Close, "关闭拼音编辑", tint = iconColor, modifier = Modifier.size(24.dp))
@@ -144,13 +138,12 @@ internal fun PreeditEditorBar(
             val glass = LocalKeyboardInputPreferences.current.frostedGlass.normalized()
             if (floatingPreeditBlurBehind(glass)) {
                 // 底色块＝整行去掉内边距（左 8、右 4、上下各 6dp），圆角 4dp，和上面 rowSurface 一致。
-                // 小签点开的：左右各让卡片圆角，上下不留，上两角 8dp。
-                val start = with(density) { (if (tab) tabInset else 8.dp).roundToPx() }
-                val end = with(density) { (if (tab) tabInset else 4.dp).roundToPx() }
-                val vertical = if (tab) 0 else with(density) { 6.dp.roundToPx() }
+                val start = with(density) { 8.dp.roundToPx() }
+                val end = with(density) { 4.dp.roundToPx() }
+                val vertical = with(density) { 6.dp.roundToPx() }
                 PreeditBubbleBlur(editorBounds.value?.let {
                     IntRect(it.left + start, it.top + vertical, it.right - end, it.bottom - vertical)
-                }, glass.blurRadiusDp, with(density) { (if (tab) 8.dp else 4.dp).toPx() })
+                }, glass.blurRadiusDp, with(density) { 4.dp.toPx() })
             }
             Popup(popupPositionProvider = position,
                 properties = PopupProperties(focusable = false, dismissOnBackPress = false, dismissOnClickOutside = false)) {

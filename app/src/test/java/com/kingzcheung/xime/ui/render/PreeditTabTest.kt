@@ -84,6 +84,7 @@ class PreeditTabTest {
         val word = rule.onNodeWithText("我们是好朋友", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow
         assertEquals("小签底边贴着栏顶", bar.top, tab.bottom, 2f)
         assertTrue("小签高 26dp，点得到", tab.height >= with(rule.density) { 26.dp.toPx() } - 1f)
+        assertEquals("小签水平居中（11-21）", bar.center.x, tab.center.x, with(rule.density) { 2.dp.toPx() })
         assertEquals("候选还在 44dp 栏的正中，没被挤", bar.center.y, word.center.y, with(rule.density) { 2.dp.toPx() })
         rule.onNodeWithTag("preedit-tab-text", true).assertExists()
         rule.onNodeWithTag("candidate-preedit", true).assertDoesNotExist()

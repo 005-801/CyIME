@@ -1348,10 +1348,9 @@ fun KeyboardView(
                     onClose = { closePreeditEditor() },
                     onCaret = { editPreedit(caret = it) },
                     onReplace = { editPreedit(text = it) },
-                    preedit = candidateState.value.preeditText,
-                    tab = inputPreferences.preeditOnTopLine)
+                    preedit = candidateState.value.preeditText)
             })
-            // 气泡和「紧贴候选上方」的小签点开后，编辑条都浮在键盘上方原处（「候选栏左侧」11-20 已去掉）。
+            // 气泡和「紧贴候选上方」的小签点开后，都是同一个原来的编辑条，浮在键盘上方（11-21 他要求小签点开也恢复原样，不缩小）。
             drawPreeditEditor?.invoke()
 
             // 候选栏与展开页共用：展开页从同一版本中实际显示的候选之后接着排。
