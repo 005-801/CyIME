@@ -24,6 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * 开了「候选滑到头回弹展开」，「到头」是一屏（11-22 他：「一个屏幕就是一页」；群里：「最低 20 个用回弹展开每次想展开还得滑好一会」）：
@@ -32,6 +33,8 @@ import org.robolectric.annotation.Config
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "w400dp-h800dp-xhdpi")
+// 「一屏」按字宽算：默认的假排版里字宽不真实，量出来的一屏和实际排出来的对不上（11-22 电脑上全量：排到了第 19 个）。
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class CandidateFirstScreenTest {
     @get:Rule val rule = createAndroidComposeRule<androidx.activity.ComponentActivity>()
     private val visuals = CandidateBarVisuals(Color.White, Color.Black, Color.Gray)
@@ -111,6 +114,7 @@ class CandidateFirstScreenTest {
 /** 平板宽屏：一页的候选一屏还排不满时接上后面的把这一屏填满（不会因为「每页候选词数」少而空着半条）。 */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34], application = android.app.Application::class, qualifiers = "w1000dp-h700dp-xhdpi")
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class CandidateFirstScreenWideTest {
     @get:Rule val rule = createAndroidComposeRule<androidx.activity.ComponentActivity>()
     private val context get() = ApplicationProvider.getApplicationContext<android.app.Application>()
