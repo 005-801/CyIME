@@ -23,9 +23,17 @@ object SchemaPicking {
         return installed.filter { it.schemaId in ids }.distinctBy { it.schemaId }
     }
 
-    /** 方案一行：同一语言的每种方案一张卡片，当前布局没有的方案用它自己的布局（与设置页同一个函数）。 */
-    fun schemeRow(offeredOrdered: List<SchemaInfo>, current: SchemaInfo): List<SchemaInfo> =
-        InputProfileSelection.schemeEntries(offeredOrdered, current)
+    /**
+     * 方案一行：只列在当前布局上真能打字的方案（设置页和键盘面板同一个函数）。
+     * 用户 11-23：九键下面列出五笔，点了打不了字。别的布局才有的方案（五笔、仓颉只在 26 键和自建字母布局，
+     * 注音只在大千，笔画只在笔画键盘）从布局一行进去：点那个布局就换成它的方案。
+     */
+    fun schemeRow(offeredOrdered: List<SchemaInfo>, current: SchemaInfo): List<SchemaInfo> {
+        val layoutId = current.profile.layout.id
+        return offeredOrdered.filter { it.profile.mode == InputMode.KEYBOARD && it.profile.language == current.profile.language &&
+            (it.schemaId == current.schemaId || InputProfileSelection.offers(it, layoutId, offeredOrdered)) }
+            .distinctBy { it.schemaId }
+    }
 
     /** 启用关着的方案：组合（如小鹤 14 键）连同它需要的双拼和 14 键一起启用，并打开方案的语言。读写文件，在 IO 线程调用。 */
     fun enable(context: Context, schemaId: String) {

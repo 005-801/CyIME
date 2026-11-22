@@ -33,8 +33,24 @@ class SchemaPickingTest {
             assertEquals(current, SchemaPicking.schemeRow(settings, info(current)).map { it.schemaId },
                 SchemaPicking.schemeRow(keyboard, info(current)).map { it.schemaId })
         }
-        // 26 键上也列出别的布局的方案（注音用大千、笔画用笔画键盘），和设置页一样。
+        // 26 键：拼音、双拼、五笔、仓颉都能打；注音（大千）、笔画（笔画键盘）、九键拼音不在这一行，从布局一行进。
         val row = SchemaPicking.schemeRow(settings, info("rime_ice")).map { it.schemaId }
-        assertTrue(row.toString(), row.containsAll(listOf("rime_ice", "double_pinyin_flypy", "wubi86", "cyime_cangjie", "cyime_zhuyin", "stroke")))
+        assertTrue(row.toString(), row.containsAll(listOf("rime_ice", "double_pinyin_flypy", "wubi86", "cyime_cangjie", "cyime_quick")))
+        assertTrue(row.toString(), row.none { it in listOf("cyime_zhuyin", "stroke", "t9_pinyin") })
+    }
+
+    /** 用户 11-23：九键下面列出五笔，点了打不了字。方案一行只列这个布局上真能打字的。 */
+    @Test fun schemeRowOnlyListsSchemesTypableOnTheCurrentLayout() {
+        val offered = SchemaPicking.offered(installed, enabled)
+        assertEquals(listOf("t9_pinyin"), SchemaPicking.schemeRow(offered, info("t9_pinyin")).map { it.schemaId })
+        assertEquals(listOf("cyime_zhuyin"), SchemaPicking.schemeRow(offered, info("cyime_zhuyin")).map { it.schemaId })
+        assertEquals(listOf("stroke"), SchemaPicking.schemeRow(offered, info("stroke")).map { it.schemaId })
+        // 每一张卡片都能在当前布局上打：卡片对应的布局里有当前布局。
+        for (current in offered) {
+            val layoutId = current.profile.layout.id
+            for (entry in SchemaPicking.schemeRow(offered, current))
+                assertTrue("${current.schemaId} 的方案行里 ${entry.schemaId} 不能在 $layoutId 上打",
+                    entry.schemaId == current.schemaId || InputProfileSelection.offers(entry, layoutId, offered))
+        }
     }
 }
