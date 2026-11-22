@@ -495,9 +495,9 @@ class SpeechRecognitionManager(
             .append(" channels=").append(record.channelCount).append(" session=").append(record.audioSessionId)
         runCatching { record.routedDevice }.getOrNull()?.let { d ->
             append(" device=").append(d.type).append('/').append(d.productName)
-            if (android.os.Build.VERSION.SDK_INT >= 28) append('@').append(d.address)
+            append('@').append(d.address)
         }
-        if (android.os.Build.VERSION.SDK_INT >= 28) runCatching { record.activeMicrophones }.getOrNull()?.let { mics ->
+        runCatching { record.activeMicrophones }.getOrNull()?.let { mics ->
             append(" mics=").append(mics.joinToString(",") { m -> "${m.type}:${m.location}:${m.description}" })
         }
         append(" ns=").append(android.media.audiofx.NoiseSuppressor.isAvailable())
