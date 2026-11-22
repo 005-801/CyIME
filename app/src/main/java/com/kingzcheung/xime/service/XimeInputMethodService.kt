@@ -5819,8 +5819,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         SettingsPreferences.isKeyboardBlankFilled(this),
                         editor.left - decorOnScreen[0], editor.right - decorOnScreen[0])
                 }
+                // 拼音贴在键盘上沿（小标签、方块、整行）：顶线再往上报一截，应用把输入框顶到拼音上面（11-21 他：
+                // 「还是挡住的,根本没抬高输入框」）。只改报给应用的顶线，触摸范围仍从键盘顶开始，空出来那条点下去还是应用的。
+                val tabReserve = com.kingzcheung.xime.ui.keyboard.PreeditTabInsets.reservePx
                 val reportedTop = if (editorBeside)
-                    window.window?.decorView?.height ?: resources.displayMetrics.heightPixels else topPx
+                    window.window?.decorView?.height ?: resources.displayMetrics.heightPixels else (topPx - tabReserve).coerceAtLeast(0)
                 outInsets.contentTopInsets = reportedTop
                 outInsets.visibleTopInsets = reportedTop
                 // Transparent side gutters must not swallow touches to the host app.
@@ -5838,6 +5841,11 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                         outInsets.touchableRegion.op(it.left.roundToInt(), it.top.roundToInt(),
                             it.right.roundToInt(), it.bottom.roundToInt(), android.graphics.Region.Op.DIFFERENCE)
                     }
+                } else if (tabReserve > 0 && !editorBeside) {
+                    // 顶线提上去了，不能再用「可见范围就是触摸范围」，否则空出来那条会吃掉点按。
+                    outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_REGION
+                    outInsets.touchableRegion.set(loc[0], topPx, loc[0] + keyboardContainer.width,
+                        window.window?.decorView?.height ?: resources.displayMetrics.heightPixels)
                 } else {
                     outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_VISIBLE
                 }

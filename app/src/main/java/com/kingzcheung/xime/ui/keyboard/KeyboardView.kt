@@ -647,6 +647,19 @@ fun KeyboardView(
                     ?: state.fixedWidthDp.takeIf { it > 0 } ?: screenW).toFloat(),
                 state.keyboardHeightDp.toFloat()))
         }
+        // 拼音贴在键盘上沿（小标签、方块、整行）时让应用的输入框往上让开那一截，见 PreeditTabInsets；悬浮键盘不占应用的地方，不用让。
+        val tabReservePx = if (inputPreferences.preeditOnTopLine && !state.isFloatingMode) {
+            val tabHeight = if (inputPreferences.preeditStyle == com.kingzcheung.xime.settings.SettingsPreferences.PREEDIT_STYLE_BLOCK)
+                PREEDIT_BLOCK_HEIGHT else PREEDIT_TAB_HEIGHT
+            kotlin.math.ceil(tabHeight.value * candidateBarScaleState.floatValue * LocalDensity.current.density).toInt()
+        } else 0
+        val insetsHost = LocalView.current
+        SideEffect {
+            if (PreeditTabInsets.reservePx != tabReservePx) {
+                PreeditTabInsets.reservePx = tabReservePx
+                insetsHost.requestLayout()
+            }
+        }
         // 候选栏上面那一截的高度（翻译栏、工具面板、剪贴板搜索、拼音编辑条）；菜单等面板据此让开工具栏，见 belowCandidateBar。
         val aboveCandidateBarPx = remember { mutableIntStateOf(0) }
         Box(modifier = Modifier.fillMaxSize().then(contentModifier).inlineQuickActionGestures(inlineEditor).onSizeChanged { size ->

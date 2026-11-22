@@ -1213,6 +1213,15 @@ internal val PREEDIT_TAB_HEIGHT = 26.dp
 internal val PREEDIT_BLOCK_HEIGHT = 36.dp
 internal const val PREEDIT_TAB_TEXT_SP = 16f
 
+/**
+ * 拼音贴在键盘上沿时（小标签、方块、整行），输入框要往上让开这么多像素（11-21 他：「还是挡住的,根本没抬高输入框」）。
+ * 只由输入法自己的 [KeyboardView] 写，[com.kingzcheung.xime.service.XimeInputMethodService.onComputeInsets] 读：
+ * 固定键盘报给应用的顶线往上提这一截。选了这三种就一直留着，不是打字时才留，免得每打一个词应用就上下跳一次。
+ */
+internal object PreeditTabInsets {
+    @Volatile var reservePx: Int = 0
+}
+
 private val CorrectionRed = Color(0xFFE53935)
 
 /** 纠错候选的拼音只显示改正后的读音（所打字母已在输入框里），改动的字母标红：补上的、换成的、对调的；多打的不再显示。 */
