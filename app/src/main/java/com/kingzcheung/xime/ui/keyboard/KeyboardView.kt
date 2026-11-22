@@ -654,7 +654,8 @@ fun KeyboardView(
         val tabReservePx = if (inputPreferences.preeditOnTopLine && !state.isFloatingMode) {
             val tabHeight = if (inputPreferences.preeditStyle == com.kingzcheung.xime.settings.SettingsPreferences.PREEDIT_STYLE_BLOCK)
                 PREEDIT_BLOCK_HEIGHT else PREEDIT_TAB_HEIGHT
-            kotlin.math.ceil(tabHeight.value * candidateBarScaleState.floatValue * candidateZoom * LocalDensity.current.density).toInt()
+            // 拼音是单独的弹窗，弹窗里的 dp 按屏幕本来的 density 算，不跟候选栏放大（见 PreeditTab）。
+            kotlin.math.ceil(tabHeight.value * LocalContext.current.resources.displayMetrics.density).toInt()
         } else 0
         val insetsHost = LocalView.current
         SideEffect {

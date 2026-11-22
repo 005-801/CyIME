@@ -1691,8 +1691,11 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
     // 贴边时在下面补卡片圆角的缺口；这一块伸进栏顶下面，本身的底边仍正好贴着栏顶。
     val fillLeft = cardCorner > 0.dp && (strip || left)
     val fillRight = cardCorner > 0.dp && (strip || right)
-    val notchDp = if (fillLeft || fillRight) cardCorner else 0.dp
-    val notch = with(density) { notchDp.roundToPx() }
+    // 弹窗里用的是屏幕本来的 density，不是候选栏放大后的（平板上候选栏放大 1.18 倍时，整行按放大后的 dp 换回去
+    // 只剩 85% 宽，右边停在 ▾ 左边，11-22 平板 105 实测）。卡片宽、卡片圆角先在这里换成像素，进弹窗再按弹窗的 density 换回 dp。
+    val cardCornerPx = with(density) { cardCorner.toPx() }
+    val stripWidthPx = with(density) { (if (cardWidth > 0.dp) cardWidth else screenWidth).toPx() }
+    val notch = if (fillLeft || fillRight) cardCornerPx.roundToInt() else 0
     val positionProvider = remember(strip, align, shift, notch) {
         object : PopupPositionProvider {
             override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize,
@@ -1713,23 +1716,16 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
             }
         }
     }
-    val corner = when {
-        strip -> cardCorner
-        block -> 0.dp
-        else -> 8.dp
-    }
-    val startCorner = if (strip || !left) corner else 0.dp
-    val endCorner = if (strip || !right) corner else 0.dp
-    val shape = RoundedCornerShape(topStart = startCorner, topEnd = endCorner)
+    val platformDensity = LocalContext.current.resources.displayMetrics.density
     // 轮廓（11-21 他：「有什么区别?」）：底色和键盘一样，深色主题下键盘色又和应用底色差不多，小签、方块、顶上一行
     // 只剩一行字，看不出形状。沿上边和两侧描一圈细线（底边接着键盘，不描），三种形状一眼分得出。
     val outline = textColor.copy(alpha = PREEDIT_TAB_OUTLINE_ALPHA)
     val glass = LocalKeyboardInputPreferences.current.frostedGlass.normalized()
-    if (floatingPreeditBlurBehind(glass)) PreeditBubbleBlur(tabBounds.value, glass.blurRadiusDp, with(density) { corner.toPx() }, hidden)
+    if (floatingPreeditBlurBehind(glass)) PreeditBubbleBlur(tabBounds.value, glass.blurRadiusDp,
+        if (strip) cardCornerPx else if (block) 0f else 8f * platformDensity, hidden)
     val sizeSp = (if (block) 18f else PREEDIT_TAB_TEXT_SP) * LocalCandidateSizeFactor.current
     val size = sizeSp.sp
     val height = if (block) PREEDIT_BLOCK_HEIGHT else PREEDIT_TAB_HEIGHT
-    val stripWidth = if (cardWidth > 0.dp) cardWidth else screenWidth
     val origin = LocalPreeditOrigin.current
     val edit: (() -> Unit)? = onEdit?.let { open -> {
         // 记下拼音在哪、什么底色字号，编辑条从这里渐渐长成原来的样子。
@@ -1740,8 +1736,20 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
         properties = PopupProperties(focusable = false, dismissOnBackPress = false,
             dismissOnClickOutside = false, clippingEnabled = true)) {
         val placed = tabBounds.value
+        val popupDensity = LocalDensity.current
+        val stripWidth = with(popupDensity) { stripWidthPx.toDp() }
+        val notchDp = with(popupDensity) { notch.toDp() }
+        val popupScreenWidth = LocalConfiguration.current.screenWidthDp.dp
+        val corner = when {
+            strip -> with(popupDensity) { cardCornerPx.toDp() }
+            block -> 0.dp
+            else -> 8.dp
+        }
+        val startCorner = if (strip || !left) corner else 0.dp
+        val endCorner = if (strip || !right) corner else 0.dp
+        val shape = RoundedCornerShape(topStart = startCorner, topEnd = endCorner)
         Column(horizontalAlignment = if (right && !strip) Alignment.End else Alignment.Start) {
-        Box(Modifier.then(if (strip) Modifier.width(stripWidth) else Modifier.widthIn(max = screenWidth))
+        Box(Modifier.then(if (strip) Modifier.width(stripWidth) else Modifier.widthIn(max = popupScreenWidth))
             .heightIn(min = height).clip(shape).background(color)
             .preeditTabOutline(outline, startCorner, endCorner)
             .then(if (edit != null && !hidden) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = edit) else Modifier)
