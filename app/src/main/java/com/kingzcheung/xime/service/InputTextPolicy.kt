@@ -52,6 +52,15 @@ internal fun japaneseChoonpuIsCode(key: String, ascii: Boolean, profile: com.kin
 internal fun zhuyinKeyIsCode(key: String, ascii: Boolean, profile: com.kingzcheung.xime.settings.InputProfile): Boolean =
     !ascii && profile.scheme == com.kingzcheung.xime.settings.InputScheme.ZHUYIN && ZhuyinKeys.code(key) != null
 
+/**
+ * 笔画方案的通配键 *（笔画键盘第二排末尾那个键，实体键盘 Shift+8）：笔画方案的字母表里有它，每个 * 代替一笔，
+ * 由 lua/cyime_stroke_wildcard.lua 出字（一* → 二 十 七 丁 厂……）。* 在 Unicode 里算标点，以前被 [isLiteralPunctuation]
+ * 当成标点直接上屏：打着笔画时先上屏首选再接一个 *，引擎从来收不到（11-22 他：笔画的通配键一直是坏的）。
+ * 笔画方案、非西文时 * 和全角 ＊ 都当编码键交给按键队列送进 Rime。
+ */
+internal fun strokeWildcardIsCode(key: String, ascii: Boolean, profile: com.kingzcheung.xime.settings.InputProfile): Boolean =
+    !ascii && profile.scheme == com.kingzcheung.xime.settings.InputScheme.STROKE && (key == "*" || key == "＊")
+
 /** Keyboard punctuation only: never rewrite pasted prose, digits, emoji or speech results. */
 internal fun punctuationWidth(text: String, full: Boolean, japanese: Boolean = false): String {
     if (text.isEmpty() || !text.all { isLiteralPunctuation(it.toString()) }) return text

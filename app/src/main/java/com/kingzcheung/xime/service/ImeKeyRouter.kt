@@ -1030,10 +1030,12 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
      * 只管自定义编码方案（[com.kingzcheung.xime.settings.InputScheme.EXTERNAL]）；内置方案、字母表里没有的符号返回 null，照旧按标点上屏。
      * 字母表里的数字（声笔 sbxm 末尾带 1234567890，#106）也一样，但只在打字中：方案用数字编码还是选词（sbxm 的
      * alternative_select_keys）由 Rime 定；没在打字时数字照旧直接上屏。九键等数字本来就是编码的键盘不经过这里。
+     * 内置笔画方案的通配键 * 也从这里送进 Rime（[strokeWildcardIsCode]）。
      */
     internal fun schemeCodeKey(text: String): String? {
         val state = service.uiState.value
         if (auxCodeTrigger(text)) return text
+        if (strokeWildcardIsCode(text, state.isAsciiMode, state.inputProfile)) return "*"
         if (text.length != 1 || state.isAsciiMode ||
             state.inputProfile.scheme != com.kingzcheung.xime.settings.InputScheme.EXTERNAL) return null
         val c = schemeCodeChar(text[0])

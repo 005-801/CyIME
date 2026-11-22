@@ -15,6 +15,17 @@ class InputTextPolicyTest {
         listOf(",", "。", "！", "/", "@", "(").forEach { assertTrue(it, isLiteralPunctuation(it)) }
         listOf("delete", "space", "abc", "s", "4", "").forEach { assertFalse(it, isLiteralPunctuation(it)) }
     }
+    // 11-22 笔画通配键：* 是标点，以前直接上屏、进不了引擎；笔画方案里它是编码键，别的方案、西文照旧是标点。
+    @Test fun strokeWildcardGoesToTheEngineOnlyInStroke() {
+        val stroke = com.kingzcheung.xime.settings.InputProfiles.describe("stroke")
+        assertTrue(isLiteralPunctuation("*"))
+        assertTrue(strokeWildcardIsCode("*", false, stroke))
+        assertTrue(strokeWildcardIsCode("＊", false, stroke))
+        assertFalse(strokeWildcardIsCode("*", true, stroke))
+        assertFalse(strokeWildcardIsCode("，", false, stroke))
+        assertFalse(strokeWildcardIsCode("h", false, stroke))
+        assertFalse(strokeWildcardIsCode("*", false, com.kingzcheung.xime.settings.InputProfiles.describe("rime_ice")))
+    }
     // 2026-11-02「标点上屏首选」：只有断句标点先上屏首选，括号、引号、@ 照旧先上屏字母。
     @Test fun onlySentencePunctuationCommitsTheFirstCandidate() {
         listOf(",", "，", ".", "。", "?", "？", "!", "！", "、", ";", "；", ":", "：", "……").forEach { assertTrue(it, isSentencePunctuation(it)) }
