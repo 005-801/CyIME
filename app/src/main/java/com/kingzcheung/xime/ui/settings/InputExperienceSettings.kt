@@ -343,12 +343,18 @@ internal fun InputExperienceSettings(
                 }
                 // 上滑取消只在按住说话时起作用，选了语音开关才显示（别人提的需求，默认关，11-02）。
                 if (spaceHold == SpaceHoldAction.VOICE_TOGGLE) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    // 和「九键与 14 键 › 空格上滑输入 0」互锁（他 11-22）：被锁时置灰、写明被谁锁，点名字跳过去。
+                    val swipeCancelLock = com.kingzcheung.xime.ui.keyboard.InputGestureLocks.lockFor(settings,
+                        com.kingzcheung.xime.ui.keyboard.InputGestureLock.Option.VOICE_SWIPE_CANCEL, true)
+                        ?.takeIf { !settings.voiceSwipeCancel }
+                    Row(Modifier.settingsSearchAnchor("上滑取消").fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("上滑取消", style = MaterialTheme.typography.titleSmall)
                             Text("说话时上滑松手，不上屏", style = MaterialTheme.typography.bodySmall)
+                            if (swipeCancelLock != null) SettingsLockNote(swipeCancelLock.message)
                         }
-                        Switch(checked = settings.voiceSwipeCancel, colors = settingsSwitchColors(), modifier = Modifier.testTag("voice-swipe-cancel"),
+                        Switch(checked = settings.voiceSwipeCancel, enabled = swipeCancelLock == null,
+                            colors = settingsSwitchColors(), modifier = Modifier.testTag("voice-swipe-cancel"),
                             onCheckedChange = { settings = settings.copy(voiceSwipeCancel = it); settings.save(context) })
                     }
                 }

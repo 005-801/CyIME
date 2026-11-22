@@ -4009,3 +4009,12 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 浮窗固定在{0}，这项不起作用	Has no effect while the bar is fixed at {0}
 拂动提示	Flick hints
 拂动选字母、双字母键	Flick for letters, two-letter keys
+空格上滑输入 0	Swipe up on Space for 0
+九键与 14 键 › 空格上滑输入 0	9-key & 14-key › Swipe up on Space for 0
+长按空格 › 上滑取消	Hold space › Swipe up to cancel
+九键空格往上滑打 0，打字时不接	Swipe up on the 9-key Space to type 0 (not while typing)
+九键空格往上滑打 0，打字时不接；0 键一直是「→」，没有候选时点它光标右移、左滑左移	Swipe up on the 9-key Space to type 0 (not while typing). The 0 key always shows “→”; with no candidates, tap it to move the cursor right, swipe left to move it left
+空格上滑	Swipe up on Space
+打 0，打字时不接。见「九键与 14 键 › 空格上滑输入 0」。	types 0 (not while typing). See “9-key & 14-key › Swipe up on Space for 0”.
+没有候选时点「→」	Tap “→” with no candidates
+光标右移一格，左滑左移、右滑右移。	moves the cursor right one character; swipe left or right to move it.

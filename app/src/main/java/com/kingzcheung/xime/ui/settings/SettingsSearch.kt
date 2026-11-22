@@ -264,6 +264,8 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         SettingsSearchEntry("移动光标时振动", gestures, gesturePage, "光标 振动 震动 触感", section = "光标与空格"),
         SettingsSearchEntry("移动光标时播放按键音", gestures, gesturePage, "光标 声音 按键音", section = "光标与空格"),
         SettingsSearchEntry("长按空格", gestures, gesturePage, "空格 长按 移动光标 连续空格 语音 语音开关 按住说话 麦克风 上滑取消 松手取消 取消语音", section = "光标与空格"),
+        // 只在长按空格选了语音时显示；不显示时亮「光标与空格」那一组。
+        SettingsSearchEntry("上滑取消", gestures, gesturePage, "空格 按住说话 语音 上滑 松手取消 取消语音 不上屏", section = "光标与空格"),
         // 输入 › 物理键盘
         SettingsSearchEntry("Ctrl + 空格", hardware, SettingsRoutes.HardwareKeyboard, "ctrl 空格 语言切换 快捷键 循环切换"),
         SettingsSearchEntry("单独轻按 Shift", hardware, SettingsRoutes.HardwareKeyboard, "shift 中英切换 快捷键 语言切换"),
@@ -315,6 +317,7 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         SettingsSearchEntry("候选注释内容", candidates, candidatePage, "注释 拼音 释义 翻译 编码 中英 英文意思 词典 英文 单词 英文单词 选英文 出英文 上屏英文 打英文 中译英 下一项 长按下一项 shift"),
         // 九键的「下一项」键：搜「下一项」时排在上面「候选注释内容」后面（同分按先后）
         SettingsSearchEntry("去掉 0 键，回车加高", ninePath, nine, "九键 0键 零键 数字0 去掉0 大回车 回车加高 合并 下一项 上一项 回车键 确定键"),
+        SettingsSearchEntry("空格上滑输入 0", ninePath, nine, "九键 空格 上滑 0 零 数字0 0键 零键 下一项 箭头 光标"),
         SettingsSearchEntry("笔画去掉 0 键，回车加高", ninePath, nine, "笔画 0键 零键 数字0 去掉0 大回车 回车加高 合并 回车键 确定键"),
         SettingsSearchEntry("笔画编码显示成 一丨丿丶乛", ninePath, nine, "笔画 编码 输入串 hspnz 字母 横竖撇点折 一丨丿丶乛 笔画显示 部首 乛 乙"),
         SettingsSearchEntry("显示纠错标记", candidates, candidatePage, "纠错 拼音 标注 红字 隐藏", section = "拼音显示"),

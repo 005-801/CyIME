@@ -158,6 +158,16 @@ internal fun LayoutInputSettingsContent(category: LayoutInputCategory, onBack: (
                             checked = settings.t9MergeZeroIntoEnter, onCheckedChange = {
                                 settings = settings.copy(t9MergeZeroIntoEnter = it); settings.save(context)
                             })
+                        HorizontalDivider()
+                        // 别人提、他要进 1.15.105（11-22），默认关。和「上滑取消」互锁：都用空格往上滑（见 InputGestureLocks）。
+                        SettingsToggleItem(Icons.TwoTone.SpaceBar, "空格上滑输入 0",
+                            t9SpaceUpZeroSubtitle(settings.t9MergeZeroIntoEnter),
+                            checked = settings.t9SpaceSwipeUpZero, onCheckedChange = {
+                                settings = settings.copy(t9SpaceSwipeUpZero = it); settings.save(context)
+                            },
+                            lockMessage = com.kingzcheung.xime.ui.keyboard.InputGestureLocks.lockFor(settings,
+                                com.kingzcheung.xime.ui.keyboard.InputGestureLock.Option.T9_SPACE_UP_ZERO, true)
+                                ?.takeIf { !settings.t9SpaceSwipeUpZero }?.message)
                     })
                     // 用户 11-17 转来：笔画键盘的 0 键用的也是九键那个键，给它一个同款开关。默认关，原来的排法不变。
                     SettingsSection(title = "笔画按键", content = {
@@ -609,6 +619,11 @@ internal fun t9MergeZeroSubtitle(cornerSymbolInput: Boolean, reverseSymbolSwipe:
     val zero = if (cornerSymbolInput) "0 改在回车上${if (reverseSymbolSwipe) "上滑" else "下滑"}输入" else "0 到数字键盘里打"
     return "没有「下一项」键，$zero"
 }
+
+/** 「空格上滑输入 0」的说明：去掉了 0 键时没有右边那个键，只说空格。 */
+internal fun t9SpaceUpZeroSubtitle(mergeZero: Boolean): String =
+    if (mergeZero) "九键空格往上滑打 0，打字时不接"
+    else "九键空格往上滑打 0，打字时不接；0 键一直是「→」，没有候选时点它光标右移、左滑左移"
 
 /**
  * 笔画编码显示成 一丨丿丶乛（默认关，显示 h s p n z；11-18 贡献者偏向全用字母）。

@@ -65,6 +65,12 @@ fun SpaceKeyButton(
     shadowElevation: Dp = 1.dp,
     shadowShapeRadius: Dp = 8.dp,
     fontSize: TextUnit = 14.sp,
+    /**
+     * 空格往上滑一下（没到长按时间、往上多于往旁边）松手时做的事，如九键「空格上滑输入 0」；null 时上滑照旧什么都不做。
+     * 滑的时候空格上渐渐写出 [swipeUpLabel]，过了点击容差就是到位，松手执行；滑回来就不算。
+     */
+    onSwipeUp: (() -> Unit)? = null,
+    swipeUpLabel: String? = null,
 ) {
     val settings = LocalKeyboardInputPreferences.current
     val actions = LocalKeyboardInputActions.current
@@ -94,6 +100,7 @@ fun SpaceKeyButton(
     val currentClick by rememberUpdatedState(onClick)
     val currentPress by rememberUpdatedState(onPress)
     val currentRelease by rememberUpdatedState(onRelease)
+    val currentSwipeUp by rememberUpdatedState(onSwipeUp)
     val scope = rememberCoroutineScope()
     val view = LocalView.current
     val density = LocalDensity.current
@@ -109,6 +116,9 @@ fun SpaceKeyButton(
     // 这次长按开了语音：空格从按住处铺开一层强调色、写「正在听…」、麦克风随音量起伏（用户 11-20：长按后看不出进没进语音）。
     var voiceHoldStarted by remember { mutableStateOf(false) }
     var voiceHoldX by remember { mutableFloatStateOf(0f) }
+    // 空格上滑（[onSwipeUp]）：往上走了多少（0~1，到点击容差为 1）和到没到位。到位后松手执行。
+    var swipeUpProgress by remember { mutableFloatStateOf(0f) }
+    var swipeUpArmed by remember { mutableStateOf(false) }
     val frostedGlass = settings.frostedGlass
     val shadow = remember(shadowEnabled, shadowElevation, shadowShapeRadius, KeyShapes.current, density, backgroundColor, frostedGlass.enabled) {
         if (shadowEnabled && !frostedGlass.enabled) Modifier.drawBehind {
@@ -206,6 +216,8 @@ fun SpaceKeyButton(
                     if (!guarded) currentPress?.invoke()
                     // 已锁定在听：这一下（点或按住都算）就是结束，松手结束并上屏，不输入空格、不再长按。
                     val endsLock = voiceLock?.locked == true && voiceOn
+                    // 这一下按下时有没有上滑动作：整个手势按按下时的算，中途候选变了也不换。
+                    val swipeUp = currentSwipeUp?.takeIf { !endsLock && !guarded }
                     var held = false
                     var movedBeforeHold = false
                     // 按住说话（用户 10-30：长按开了语音松手不停，和点麦克风是两回事）：这次长按开的语音，松手就结束并上屏。
@@ -277,6 +289,18 @@ fun SpaceKeyButton(
                                     if (armed) view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                                 }
                             }
+                            // 空格上滑：长按还没开始时，往上比往旁边多、超过点击容差就到位；滑回来或往旁边偏多了就不算。
+                            // 长按一开始（光标、语音、连续空格）就不再是上滑，照旧交给长按。
+                            if (swipeUp != null) {
+                                val up = down.position.y - change.position.y
+                                val vertical = !held && up > abs(change.position.x - down.position.x)
+                                swipeUpProgress = if (vertical) (up / tapTolerance).coerceIn(0f, 1f) else 0f
+                                val armed = vertical && up > tapTolerance
+                                if (armed != swipeUpArmed) {
+                                    swipeUpArmed = armed
+                                    if (armed) view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                                }
+                            }
                             // 拇指点空格常带几毫米横移：在约 4 mm 内仍算一次点击（三星、Gboard 偏移 3.6 mm 仍上屏），
                             // 超出才算滑动。系统 touchSlop 只有约 8 dp，曾让 2.4 mm 的偏移把空格吞掉（1.12.36 实测）。
                             if (!held && (abs(change.position.x - down.position.x) > tapTolerance ||
@@ -300,6 +324,9 @@ fun SpaceKeyButton(
                                 if (endsLock) {
                                     voiceLock?.locked = false
                                     onVoiceHoldEnd?.invoke()
+                                } else if (swipeUp != null && swipeUpArmed && !held) {
+                                    gapLightTrigger.tap()
+                                    swipeUp()
                                 } else if (!held && !movedBeforeHold && !guarded) {
                                     gapLightTrigger.tap()
                                     currentClick()
@@ -340,6 +367,8 @@ fun SpaceKeyButton(
                         voiceCancelArmed = false
                         voiceCancelPull = 0f
                         voiceHoldStarted = false
+                        swipeUpProgress = 0f
+                        swipeUpArmed = false
                         pressed = false
                         cursorActive = false
                         onCursorMode?.invoke(false)
@@ -352,6 +381,9 @@ fun SpaceKeyButton(
             .clip(RoundedCornerShape(LocalKeyCornerRadius.current))
             .background(cancelColors?.background ?: keyFill)
             .drawBehind {
+                // 空格上滑：往上走时一层强调色跟着变深（键内渐变，不弹气泡），到位时最深。
+                val up = swipeUpProgress
+                if (up > 0f) drawRect(accentColor.copy(alpha = (if (swipeUpArmed) 0.24f else 0.12f) * up))
                 // 开始说话：强调色从按住的地方铺满整个空格，之后随音量轻轻变深；上滑时一点点让给删除色。
                 val spread = voiceSpread.value * (1f - cancelProgress)
                 if (spread > 0f) {
@@ -402,6 +434,14 @@ fun SpaceKeyButton(
                         modifier = Modifier.testTag(if (showVoiceCancel) "space-voice-cancel-hint" else "space-voice-hold-hint"))
                 }
             }
+        } else if (swipeUpLabel != null && swipeUpProgress > 0f) {
+            // 往上滑时空格上写要打的字（如「0」），越往上越清楚；到位时用强调色。
+            val size = (maxHeight.value * 0.5f / density.fontScale).coerceIn(10f, 24f)
+            Text(swipeUpLabel, color = if (swipeUpArmed) accentColor else textColor,
+                fontSize = size.sp, lineHeight = (size * 1.2f).sp, maxLines = 1, softWrap = false,
+                fontFamily = AppFonts.keyFontFamily,
+                modifier = Modifier.graphicsLayer { alpha = 0.35f + 0.65f * swipeUpProgress }
+                    .testTag("space-swipe-up-label").semantics { contentDescription = "空格" })
         } else if (cursorActive) {
             SpaceCursorHint(textColor, maxWidth.value, maxHeight.value, density.fontScale, !settings.hideFunctionKeyHints)
         } else if (!settings.hideFunctionKeyHints && SpaceLanguageFlash.isLanguageName(displayName) && labelSize >= 8f) {
