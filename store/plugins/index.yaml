@@ -33,11 +33,15 @@ plugins:
       sha256: 97a52cd88cefe1faaa1f7f713bc0ad95205e0bb181131676b37d82ee2759abbe
 - id: com.kingzcheung.xime.plugin.ai_rewrite
   name: AI 改写
-  description: 选中一段字（不选就是整个输入框），点键盘菜单里的「AI 改写」，选润色、改错字、更正式、更口语、缩短或翻译，点结果替换原文。可选讯飞星火 X2 或自己的 OpenAI 兼容接口，密钥只存在手机里。
+  description: 选中一段字（不选就是整个输入框），点键盘菜单里的「AI 改写」，选润色、改错字、更正式、更口语、缩短或翻译，点结果替换原文。这些动作和提示词可以在设置里增删、改名、排序。可选讯飞星火 X2 或自己的 OpenAI 兼容接口，密钥只存在手机里。
   pluginType: tool
-  appVersion: '>=1.15.40'
-  currentVersion: 0.5.0
+  appVersion: '>=1.15.101'
+  currentVersion: 0.6.0
   versions:
+  - version: 0.6.0
+    downloadUrl:
+    - url: https://raw.githubusercontent.com/Cyletix/CyIME/main/store/plugins/packages/ai-rewrite-0.6.0.xipk
+      sha256: ca560c2d5aaad8489ae58da001995c9dddc9fff66c6800dca8eebc1cda08af72
   - version: 0.5.0
     downloadUrl:
     - url: https://raw.githubusercontent.com/Cyletix/CyIME/main/store/plugins/packages/ai-rewrite-0.5.0.xipk
