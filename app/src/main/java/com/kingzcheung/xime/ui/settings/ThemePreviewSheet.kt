@@ -52,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -132,8 +133,10 @@ private fun AppearancePreviewSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        modifier = Modifier.windowInsetsPadding(SheetOuterInsets),
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentWindowInsets = sheetContentInsets,
     ) {
         Column(
             modifier = Modifier
