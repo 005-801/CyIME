@@ -471,7 +471,7 @@ fun CandidateBar(
     // Keep this animation outside the conditional button branches so changing pages
     // does not discard the previous angle and jump directly to the destination.
     val expansionRotation by animateFloatAsState(
-        targetValue = if (candidatePageExpanded) -180f else 0f,
+        targetValue = if (candidatePageExpanded) CANDIDATE_EXPANSION_ARROW_EXPANDED_DEGREES else 0f,
         animationSpec = tween(200, easing = FastOutSlowInEasing), label = "candidateExpansion",
     )
     val existingPreedit = (state as? CandidateBarState.ChineseCandidates)?.let {
@@ -1520,6 +1520,14 @@ internal fun rememberCandidateItemPadding(fontSize: androidx.compose.ui.unit.Tex
 internal fun candidateItemHeight(fontSize: androidx.compose.ui.unit.TextUnit): androidx.compose.ui.unit.Dp =
     with(LocalDensity.current) { (fontSize.value * 1.35f).sp.toDp() } + 4.dp
 
+/**
+ * ▾ 展开时箭头尖从左边转上去，收回时从左边转下来（0.1.5 起就是这个方向）。
+ * 11-01 把图标从 ▴ 换成 ▾ 时角度没跟着改号，尖变成从右边转了（11-22 他：「应该从左侧旋转，远古版本就修了」）。
+ * 换图标就要同时改这个角度：CandidateExpansionArrowTest 按图标和角度算尖走哪边。
+ */
+internal val CANDIDATE_EXPANSION_ARROW get() = Icons.Default.KeyboardArrowDown
+internal const val CANDIDATE_EXPANSION_ARROW_EXPANDED_DEGREES = 180f
+
 /** 候选词和联想词共用：向下展开，向上返回键盘。 */
 @Composable
 private fun CandidateExpansionButton(
@@ -1536,7 +1544,7 @@ private fun CandidateExpansionButton(
     KeyboardToolbarButton(onClick, background, restingFill = restingFill, slotWidth = slotWidth, cornerRadius = cornerRadius,
         continuousPill = continuousPill,
         modifier = Modifier.testTag("candidate-expansion").semantics { stateDescription = if (expanded) "已展开" else "已收起" }) {
-        Icon(Icons.Default.KeyboardArrowDown,
+        Icon(CANDIDATE_EXPANSION_ARROW,
             contentDescription = if (expanded) "返回键盘" else "展开候选词",
             tint = foreground, modifier = Modifier.size(24.dp * LocalCandidateSizeFactor.current).rotate(rotation))
     }
