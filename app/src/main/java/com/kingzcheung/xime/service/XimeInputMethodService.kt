@@ -2880,6 +2880,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     toolPanelRequestEpoch = state.toolPanelRequestEpoch,
                                     toolPanelDisplay = state.toolPanelDisplay,
                                     toolPanelUiNodes = state.toolPanelUiNodes,
+                                    toolPanelDownloadProgress = state.toolPanelDownloadProgress,
                                     clipboardSyncEnabled = state.clipboardSyncEnabled,
                                 )
                             }
