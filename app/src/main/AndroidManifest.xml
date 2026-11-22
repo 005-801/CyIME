@@ -41,7 +41,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Xime"
         tools:targetApi="31">
-        
+
+        <!-- true only in 装到我的设备 builds (app/build.gradle.kts): adb may then sample where the CPU goes. -->
+        <profileable android:shell="${profileableByShell}" tools:targetApi="29" />
+
         <!-- Developer tool for test scripts (does nothing outside 装到我的设备 builds); only adb (DUMP) may send it. -->
         <receiver
             android:name="com.kingzcheung.xime.service.DevLearningReceiver"

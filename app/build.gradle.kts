@@ -126,6 +126,9 @@ android {
         // Developer-only features (handwriting training / capture): only the packager's 装到我的设备 preset (-PdevTools=true)
         // and debug builds show them; public, elder and friend packages never do.
         buildConfigField("boolean", "DEV_TOOLS", (providers.gradleProperty("devTools").orNull == "true").toString())
+        // The same preset lets `adb shell simpleperf` sample the app (tools/ime_lab/cpu_profile.py: where the CPU goes,
+        // by thread and function). Every other package keeps the platform default: not profileable from the shell.
+        manifestPlaceholders["profileableByShell"] = (providers.gradleProperty("devTools").orNull == "true").toString()
     }
 
     signingConfigs {
