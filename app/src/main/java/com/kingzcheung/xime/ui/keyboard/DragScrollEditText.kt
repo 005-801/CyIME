@@ -31,6 +31,9 @@ import kotlin.math.roundToInt
  * 看得见的那根竖线按这一行字的排版位置画在选区末尾。系统光标的位置是缓存的，平板上打完字、拖回末尾后
  * 常画在倒数第二个字前面（提交一长串后差好几个字），打字却加在最后（平板 20261506 验收「好|吗」）。
  * 自己画的竖线和字用同一份排版、同一次绘制，不会对不上。安卓 9 换不了光标图，照旧用系统光标。
+ *
+ * 字清空、打字去了应用输入框时横向滚动回到开头：不然长串翻完清空后，提示「打字，停一下…」按原来的
+ * 滚动位置画，前半截被滚走（平板 20261506 验收）。
  */
 internal class DragScrollEditText(context: Context) : EditText(context) {
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
@@ -70,8 +73,15 @@ internal class DragScrollEditText(context: Context) : EditText(context) {
     fun setCursorWanted(visible: Boolean) {
         if (cursorWanted == visible) return
         cursorWanted = visible
+        // 回到栏里时不主动滚：点回来那一下按当前位置落光标，滚了会落到别的字上；打字时 TextView 自己把光标滚进框里
+        if (ready && shouldResetTextScroll(text.isNullOrEmpty(), cursorWanted, isFocused)) resetTextScroll()
         applyCursor()
         restartBlink()
+    }
+
+    /** 横向滚回这一行的开头（提示语、字都从头看）。 */
+    private fun resetTextScroll() {
+        if (scrollX != 0) scrollTo(0, scrollY)
     }
 
     private fun applyCursor() {
@@ -122,11 +132,17 @@ internal class DragScrollEditText(context: Context) : EditText(context) {
 
     override fun onTextChanged(text: CharSequence?, start: Int, lengthBefore: Int, lengthAfter: Int) {
         super.onTextChanged(text, start, lengthBefore, lengthAfter)
+        if (ready && text.isNullOrEmpty()) {
+            resetTextScroll()
+            // 换成提示语的排版在下一帧，那时再复位一次，免得排版时又按旧位置滚回去
+            post { if (this.text.isNullOrEmpty()) resetTextScroll() }
+        }
         restartBlink()
     }
 
     override fun onFocusChanged(focused: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
         super.onFocusChanged(focused, direction, previouslyFocusedRect)
+        if (ready && shouldResetTextScroll(text.isNullOrEmpty(), cursorWanted, focused)) resetTextScroll()
         restartBlink()
     }
 
@@ -208,6 +224,10 @@ private const val BLINK_MS = 500L
 /** 光标的横坐标（这一行字里的位置）在不在框里看得到的范围外；留 2 像素，贴着框边的不算。 */
 internal fun cursorOutsideView(x: Float, scrollX: Int, visibleWidth: Int): Boolean =
     x < scrollX - 2 || x > scrollX + visibleWidth + 2
+
+/** 横向滚动要不要回到开头：字清空了，或者光标不在这个框里（打字去了应用输入框、框没焦点）。 */
+internal fun shouldResetTextScroll(textEmpty: Boolean, cursorWanted: Boolean, focused: Boolean): Boolean =
+    textEmpty || !cursorWanted || !focused
 
 /** 横着拖：横向超过触摸阈值，且不比竖向少。 */
 internal fun isHorizontalDrag(dx: Float, dy: Float, touchSlop: Int): Boolean =

@@ -36,4 +36,11 @@ class DragScrollEditTextTest {
         assertTrue(cursorOutsideView(0f, scrollX = 400, visibleWidth = 600))     // 光标在开头、框滚到末尾
         assertFalse(cursorOutsideView(500f, scrollX = 0, visibleWidth = 600))
     }
+
+    @Test fun textScrollGoesBackToStartWhenClearedOrLeft() {
+        assertTrue(shouldResetTextScroll(textEmpty = true, cursorWanted = true, focused = true))   // 字清空：提示语从头画
+        assertTrue(shouldResetTextScroll(textEmpty = false, cursorWanted = false, focused = true)) // 打字去了应用输入框
+        assertTrue(shouldResetTextScroll(textEmpty = false, cursorWanted = true, focused = false)) // 框没焦点
+        assertFalse(shouldResetTextScroll(textEmpty = false, cursorWanted = true, focused = true)) // 正在栏里打字、拖动：不动
+    }
 }
