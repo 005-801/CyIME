@@ -6,7 +6,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.drawable.GradientDrawable
-import android.os.Build
 import android.text.Layout
 import android.view.Gravity
 import android.view.MotionEvent
@@ -43,7 +42,7 @@ internal class DragScrollEditText(context: Context) : EditText(context) {
     private var cursorWanted = true
     /** 构造完了才动光标：TextView 构造时就会回调 onSelectionChanged、onTextChanged，那时下面的字段还没初始化。 */
     private var ready = false
-    private val ownCursor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+    private val ownCursor = com.kingzcheung.xime.platform.AndroidPlatform.textCursorDrawable
     private val cursorWidth = maxOf(1, (2 * resources.displayMetrics.density).roundToInt())
     private val cursorPaint = Paint()
     private var blinkOn = true
@@ -57,7 +56,7 @@ internal class DragScrollEditText(context: Context) : EditText(context) {
     }
 
     init {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (com.kingzcheung.xime.platform.AndroidPlatform.textCursorDrawable) {
             // 系统光标还在（把手、粘贴菜单要靠它），只是看不见
             textCursorDrawable = GradientDrawable().apply {
                 setColor(Color.TRANSPARENT)

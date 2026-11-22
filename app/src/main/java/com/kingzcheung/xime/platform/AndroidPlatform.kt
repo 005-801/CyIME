@@ -23,6 +23,7 @@ enum class PlatformFeature(val minSdk: Int, val label: String) {
     NAV_BAR_COLOR_IGNORED(Build.VERSION_CODES.VANILLA_ICE_CREAM, "系统不画导航栏颜色，只把键盘底色报给系统"),
 
     // —— 编辑框 ——
+    TEXT_CURSOR_DRAWABLE(Build.VERSION_CODES.Q, "编辑框光标换成自己画的（翻译栏一行框）"),
     INITIAL_SURROUNDING_TEXT(Build.VERSION_CODES.R, "EditorInfo 自带光标前后文字"),
     INLINE_SUGGESTIONS(Build.VERSION_CODES.R, "自动填充建议显示在候选栏"),
     SURROUNDING_TEXT(Build.VERSION_CODES.S, "一次读光标前后文字和选区"),
@@ -129,6 +130,8 @@ object AndroidPlatform {
     val navBarColorIgnored: Boolean = has(PlatformFeature.NAV_BAR_COLOR_IGNORED)
 
     // —— 编辑框 ——
+    @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.Q)
+    val textCursorDrawable: Boolean = has(PlatformFeature.TEXT_CURSOR_DRAWABLE)
     @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.R)
     val initialSurroundingText: Boolean = has(PlatformFeature.INITIAL_SURROUNDING_TEXT)
     @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.R)
