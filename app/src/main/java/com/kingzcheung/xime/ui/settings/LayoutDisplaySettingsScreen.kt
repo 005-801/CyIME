@@ -630,7 +630,7 @@ private fun LayoutDisplayPage(
                             SettingsPreferences.setCandidateSwipeExpand(context, it)
                         })
                     // 11-22 他：全面屏手势的人要「不管什么时候点右边同一个位置都能收起键盘」。开关打开后才有这两项：
-                    // 关闭键放左边（同 104）还是右边（「×」，和收起键盘同一格），下面一张图例把四种操作画出来。
+                    // 关闭键放左边（同 104）还是右边（「×」，和收起键盘同一格）。
                     if (swipeExpand) {
                         var closeRight by remember { mutableStateOf(SettingsPreferences.isCandidateCloseOnRight(context)) }
                         Column(Modifier.settingsSearchAnchor("关闭键位置")) {
@@ -653,11 +653,8 @@ private fun LayoutDisplayPage(
                                     }
                                 }
                             }
-                            Text("操作图例", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp))
-                            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
-                                CandidateSwipeLegend(closeRight)
-                            }
+                            // 11-23 他：四格「操作图例」太丑、也没让人看懂，不如不加，整块拿掉。
+                            Spacer(Modifier.height(8.dp))
                         }
                     }
                     HorizontalDivider(

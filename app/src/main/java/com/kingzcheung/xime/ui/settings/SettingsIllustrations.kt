@@ -777,38 +777,3 @@ internal fun CandidateCloseSideIllustration(right: Boolean) {
     Text(if (right) "右边：先关候选/联想，再点收键盘" else "右边：永远收起键盘", fontSize = 11.sp,
         color = primary, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
 }
-
-/**
- * 「候选滑到头回弹展开」打开后的独立图例（11-22 他：设置里要有明显的图例）：
- * 滑到头往左拉展开、展开后往右划收起、点关闭键、空闲时点同一处收起键盘。跟着「关闭键位置」换。
- */
-@Composable
-internal fun CandidateSwipeLegend(closeRight: Boolean) = LegendKeyboardColors {
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    val primary = MaterialTheme.colorScheme.primary
-    @Composable
-    fun Cell(modifier: Modifier, bar: String, mark: String, title: String, action: String) {
-        Column(modifier.clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(bar, Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 4.dp, vertical = 2.dp), fontSize = 11.sp, color = onSurface, maxLines = 1,
-                overflow = TextOverflow.Clip)
-            Spacer(Modifier.height(4.dp))
-            Text(mark, fontSize = 18.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(title, fontSize = 11.sp, color = onSurface.copy(alpha = 0.75f), maxLines = 2,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Text(action, fontSize = 12.sp, color = primary, fontWeight = FontWeight.Bold, maxLines = 1)
-        }
-    }
-    Row(Modifier.fillMaxWidth().testTag("candidate-swipe-legend:$closeRight"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Cell(Modifier.weight(1f), "…妮 你好啊 ▕松手", "←", "滑到头再往左拉", "展开")
-        Cell(Modifier.weight(1f), "松手▏你好 你", "→", "展开后往右划", "收起")
-        if (closeRight) {
-            Cell(Modifier.weight(1f), "世界 啊   ×", "点 ×", "打字时取消\n联想时关联想", "关闭")
-            Cell(Modifier.weight(1f), "☰ 🎤 ✂   ⌄", "再点同处", "回到空闲后", "收起键盘")
-        } else {
-            Cell(Modifier.weight(1f), "‹ 你好 拟好", "点 ‹", "打字时取消\n联想时关联想", "关闭")
-            Cell(Modifier.weight(1f), "‹ 你好   ⌄", "点 ⌄", "右边永远", "收起键盘")
-        }
-    }
-}
