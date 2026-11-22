@@ -320,10 +320,13 @@ private fun LayoutDisplayPage(
                             value = candidateTextSize,
                             onValueChange = { candidateTextSize = it },
                             onValueChangeFinished = {
-                                SettingsPreferences.setCandidateTextSize(context, candidateTextSize.toInt())
+                                SettingsPreferences.setCandidateTextSize(context, kotlin.math.round(candidateTextSize).toInt())
                             },
-                            valueRange = 12f..22f,
-                            steps = 9
+                            // 上限 22 → 44（用户 11-22）；超过 22 时候选栏跟着变高，默认 19 不变。
+                            valueRange = com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MIN_SP.toFloat()..
+                                com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MAX_SP.toFloat(),
+                            steps = com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MAX_SP -
+                                com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MIN_SP - 1
                         )
                     }
 

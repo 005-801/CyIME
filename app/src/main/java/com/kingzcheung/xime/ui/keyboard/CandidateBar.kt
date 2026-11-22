@@ -346,7 +346,8 @@ fun CandidateBar(
         if (it == CandidateCommentMode.AUTO && page is KeyboardPage.Main && page.type == MainType.HANDWRITING) CandidateCommentMode.SHOW else it
     }
     // 终端里编码一律显示在候选栏（见 TerminalEditor）。
-    val candidateTextSize = rememberCandidateTextSize()
+    // 超过 22sp 的部分由 ScaledCandidateBar 整条放大，这里写 22sp 那一档（见 candidateBarTextSp）。
+    val candidateTextSize = candidateBarTextSp(rememberCandidateTextSize())
     val candidateItemPadding = rememberCandidateItemPadding(candidateTextSize.sp)
     val candidateFontFamily = AppFonts.candidateFontFamily
     val commentFontFamily = AppFonts.commentFontFamily

@@ -322,7 +322,9 @@ internal fun ThemeKeyboardPreview(
                     .fillMaxSize()
                     .padding(start = 4.dp, end = 4.dp, bottom = 8.dp),
             ) {
-                CandidateBarPreview(accent, candidateTextColor, selectedTextColor, candidateTextSize)
+                // 主题预览只有 50dp 高，字号最多按 22sp 画（候选栏放大见 candidateBarTextSp）。
+                CandidateBarPreview(accent, candidateTextColor, selectedTextColor,
+                    com.kingzcheung.xime.ui.keyboard.candidateBarTextSp(candidateTextSize))
 
                 Column(modifier = Modifier
                     .fillMaxWidth()

@@ -525,7 +525,8 @@ fun KeyboardView(
 
         val hostLandscape = screenW > screenH
         val hostHeightDp = maxHeight.value.roundToInt().coerceAtLeast(1)
-        val fixedRange = fixedHeightRange ?: keyboardHeightBounds(screenH, hostLandscape)
+        val heightFloorDp = rememberKeyboardHeightFloorDp()
+        val fixedRange = fixedHeightRange ?: keyboardHeightBounds(screenH, hostLandscape, minHeightDp = heightFloorDp)
         val minBottomPx = state.floatingMinOffsetY.coerceAtLeast(0) * resizeControlDensity.density
         val normalFloatingRect = floatingCardRect(
             hostWidthPx = hostWidthPx,
@@ -647,11 +648,13 @@ fun KeyboardView(
                     ?: state.fixedWidthDp.takeIf { it > 0 } ?: screenW).toFloat(),
                 state.keyboardHeightDp.toFloat()))
         }
+        // 「候选字大小」超过 22sp 时候选栏整条放大的倍数（11-22）；面板让开候选栏时要按放大后的高度算。
+        val candidateZoom = candidateTextZoom(rememberCandidateTextSize())
         // 拼音贴在键盘上沿（小标签、方块、整行）时让应用的输入框往上让开那一截，见 PreeditTabInsets；悬浮键盘不占应用的地方，不用让。
         val tabReservePx = if (inputPreferences.preeditOnTopLine && !state.isFloatingMode) {
             val tabHeight = if (inputPreferences.preeditStyle == com.kingzcheung.xime.settings.SettingsPreferences.PREEDIT_STYLE_BLOCK)
                 PREEDIT_BLOCK_HEIGHT else PREEDIT_TAB_HEIGHT
-            kotlin.math.ceil(tabHeight.value * candidateBarScaleState.floatValue * LocalDensity.current.density).toInt()
+            kotlin.math.ceil(tabHeight.value * candidateBarScaleState.floatValue * candidateZoom * LocalDensity.current.density).toInt()
         } else 0
         val insetsHost = LocalView.current
         SideEffect {
@@ -2383,7 +2386,7 @@ fun KeyboardView(
                     val toolbarSlot = handwritingOverlaySlot
                     Box((if (toolbarSlot == null) Modifier.align(Alignment.TopCenter).fillMaxWidth()
                         else Modifier.align(Alignment.BottomCenter)
-                            .padding(bottom = (toolbarSlot.heightDp - candidateBarHeightDp(candidateBarScaleState.floatValue)).coerceAtLeast(0f).dp)
+                            .padding(bottom = (toolbarSlot.heightDp - candidateBarHeightDp(candidateBarScaleState.floatValue * candidateZoom)).coerceAtLeast(0f).dp)
                             .absoluteOffset(x = toolbarSlot.offsetXDp.dp).width(toolbarSlot.widthDp.dp))
                         .keyboardPanelBackground(keyboardBgColor)
                         .then(if (!overlayVisibility.targetState) Modifier.clearAndSetSemantics {} else Modifier)) {
@@ -2519,9 +2522,9 @@ fun KeyboardView(
                 visible = page is KeyboardPage.Overlay,
                 modifier = (handwritingOverlaySlot?.let { slot ->
                     Modifier.align(Alignment.BottomCenter).absoluteOffset(x = slot.offsetXDp.dp).width(slot.widthDp.dp)
-                        .height((slot.heightDp - candidateBarHeightDp(candidateBarScaleState.floatValue)).coerceAtLeast(0f).dp)
+                        .height((slot.heightDp - candidateBarHeightDp(candidateBarScaleState.floatValue * candidateZoom)).coerceAtLeast(0f).dp)
                 } ?: Modifier.fillMaxSize().belowCandidateBar(aboveCandidateBarPx,
-                    candidateBarHeightDp(candidateBarScaleState.floatValue).dp))
+                    candidateBarHeightDp(candidateBarScaleState.floatValue * candidateZoom).dp))
                     .testTag("keyboard-overlay"),
                 visibility = overlayVisibility,
                 revealState = overlayReveal,
@@ -2794,7 +2797,8 @@ fun KeyboardView(
             density = resizeControlDensity,
             aspectLimits = KeyboardAspectLimits.forLayout(state.inputProfile.layout.kind, splitActive, splitGapFraction),
             squareSnap = KeyboardSquareSnap.forLayout(state.inputProfile.layout.kind, splitActive, splitGapFraction,
-                inputPreferences.wideKeys, numberRow = inputPreferences.numberRow),
+                inputPreferences.wideKeys, numberRow = inputPreferences.numberRow)
+                ?.copy(candidateZoom = candidateTextZoom(rememberCandidateTextSize())),
             splitGapFraction = splitGapSetting,
             splitPitchDp = splitPitchDp,
             onSplitGapChange = { splitGapPreview.value = it },

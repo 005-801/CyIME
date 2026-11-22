@@ -1338,7 +1338,10 @@ object SettingsPreferences {
     fun getKeyboardHeightDp(context: Context, isLandscape: Boolean): Int {
         val key = if (isLandscape) KEY_KEYBOARD_HEIGHT_DP_LANDSCAPE else KEY_KEYBOARD_HEIGHT_DP
         val stored = getPrefs(context).getInt(key, -1)
-        if (stored > 0) return if (isLandscape) stored.coerceIn(com.kingzcheung.xime.ui.keyboard.keyboardHeightBounds(context.resources.configuration.screenHeightDp, true)) else stored
+        // 横屏存值夹在范围内；下限按物理尺寸算（11-22），横屏调矮的值不被拉回 244dp。
+        if (stored > 0) return if (isLandscape) stored.coerceIn(com.kingzcheung.xime.ui.keyboard.keyboardHeightBounds(
+            context.resources.configuration.screenHeightDp, true,
+            minHeightDp = com.kingzcheung.xime.ui.keyboard.keyboardHeightFloorDp(context))) else stored
         // 横竖屏各存一份：横屏没调过就用横屏默认高度，不再借竖屏存的高度（竖屏 40% 多的高度放到横屏会盖住大半个屏幕，用户 11-02）。
         return getDefaultKeyboardHeightDp(context, isLandscape)
     }

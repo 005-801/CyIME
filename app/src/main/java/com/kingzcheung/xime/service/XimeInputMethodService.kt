@@ -2898,7 +2898,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                      initialWidthDp = state.resizePreviewWidthDp,
                                      minWidthDp = com.kingzcheung.xime.ui.keyboard.keyboardWidthBounds(resources.configuration.screenWidthDp).first,
                                      maxWidthDp = com.kingzcheung.xime.ui.keyboard.keyboardWidthBounds(resources.configuration.screenWidthDp).last,
-                                     defaultHeightDp = SettingsPreferences.getDefaultKeyboardHeightDp(this@XimeInputMethodService, screenIsLandscape),
+                                     defaultHeightDp = KeyboardHeightProfiles.defaultFixed(this@XimeInputMethodService, screenIsLandscape),
                                      defaultSize = resetSize,
                                      currentBottomPaddingDp = contentBottomPaddingDp + (activeBottomDp - previewInsetDp),
                                      defaultBottomPaddingDp = defaultBottomPadding,
@@ -3203,7 +3203,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val preview = state.showKeyboardResize && !reset
         val height = if (preview && state.resizePreviewHeightDp > 0) state.resizePreviewHeightDp else
             if (floating && !reset && state.clipboardSearchFloatingHeightDp > 0) state.clipboardSearchFloatingHeightDp else
-            if (reset) SettingsPreferences.getDefaultKeyboardHeightDp(this, landscape)
+            // 固定键盘「重置」回到 1.15.104 同一个默认高度（按 244dp 下限夹过）；新的物理下限只放宽拖动范围。
+            if (reset) (if (floating) SettingsPreferences.getDefaultKeyboardHeightDp(this, landscape)
+                else KeyboardHeightProfiles.defaultFixed(this, landscape))
             else KeyboardHeightProfiles.selected(this, floating, landscape, hostHeightDp)
         // 悬浮：已存或预览中的高度可以低到方形吸附点（默认高度已在 KeyboardHeightProfiles 里按默认下限夹过）。
         val heightBounds = if (floating)
