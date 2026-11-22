@@ -499,10 +499,41 @@ private fun LayoutDisplayPage(
                     // 11-21 他：滑到头回弹展开只在打开这个开关后才有，默认关；关着时候选栏和 1.15.101 一样。
                     var swipeExpand by remember { mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context)) }
                     SettingsToggleItem(Icons.TwoTone.SwipeLeft, "候选滑到头回弹展开",
-                        "候选滑到头再拉一下就展开，展开后往回划收起；右边按钮改为收起键盘，左边「<」取消输入", swipeExpand, {
+                        "候选滑到头再拉一下就展开，展开后往回划收起；右边那一格不再展开，用来关闭和收起键盘", swipeExpand, {
                             swipeExpand = it
                             SettingsPreferences.setCandidateSwipeExpand(context, it)
                         })
+                    // 11-22 他：全面屏手势的人要「不管什么时候点右边同一个位置都能收起键盘」。开关打开后才有这两项：
+                    // 关闭键放左边（同 104）还是右边（「×」，和收起键盘同一格），下面一张图例把四种操作画出来。
+                    if (swipeExpand) {
+                        var closeRight by remember { mutableStateOf(SettingsPreferences.isCandidateCloseOnRight(context)) }
+                        Column(Modifier.settingsSearchAnchor("关闭键位置")) {
+                            Text("关闭键位置", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp))
+                            Text("放右边时用「×」，和收起键盘同一个位置：上屏后点一下关掉联想，同一处再点一下收起键盘",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp))
+                            Row(Modifier.fillMaxWidth().choiceCardRowHeight(150.dp).padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                for (right in listOf(false, true)) {
+                                    IllustratedChoiceCard(if (right) "右边" else "左边", closeRight == right,
+                                        onClick = {
+                                            closeRight = right
+                                            SettingsPreferences.setCandidateCloseOnRight(context, right)
+                                        },
+                                        modifier = Modifier.weight(1f), tag = "candidate-close-side:${if (right) "right" else "left"}",
+                                        titleMaxLines = 1) {
+                                        CandidateCloseSideIllustration(right)
+                                    }
+                                }
+                            }
+                            Text("操作图例", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp))
+                            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                                CandidateSwipeLegend(closeRight)
+                            }
+                        }
+                    }
                 })
             }
             if (page == "candidates") item {

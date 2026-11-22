@@ -63,6 +63,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
@@ -312,6 +313,9 @@ fun CandidateBar(
     var swipeExpand by remember(preferences) {
         mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context))
     }
+    var closeOnRight by remember(preferences) {
+        mutableStateOf(SettingsPreferences.isCandidateCloseOnRight(context))
+    }
     val edgePressedFill = if (pressHighlight) protectedVisuals.textColor.copy(alpha = 0.34f) else iconButtonContainer
     DisposableEffect(preferences) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -327,14 +331,21 @@ fun CandidateBar(
             if (key == SettingsPreferences.KEY_CANDIDATE_SWIPE_EXPAND || key == null) {
                 swipeExpand = SettingsPreferences.isCandidateSwipeExpand(context)
             }
+            if (key == SettingsPreferences.KEY_CANDIDATE_CLOSE_ON_RIGHT || key == null) {
+                closeOnRight = SettingsPreferences.isCandidateCloseOnRight(context)
+            }
         }
         preferences.registerOnSharedPreferenceChangeListener(listener)
         onDispose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
     }
     val showCompositionCancel = showCancelButton && state !is CandidateBarState.Idle && callbacks.onCancelInput != null
+    // 开了「候选滑到头回弹展开」又选了「关闭键位置：右边」（11-22 他）：取消／关联想画成「×」放在右边收起键盘那一格，
+    // 左边不放；打字时点它取消、出联想时点它关联想、回到空闲后同一个位置是收起键盘。开关关着时和 1.15.101 一样。
+    val closeAtRight = swipeExpand && closeOnRight && showCompositionCancel
+    val cancelAtLeft = showCompositionCancel && !closeAtRight
     // 「<」右边那 4dp：开了「候选滑到头回弹展开」、后面是候选行时算拉动区的一部分（11-21 平板上按在空白处拉不动）；
     // 开关关着时和 1.15.101 一样画在拉动区外面。
-    val pullLeadingGap = if (swipeExpand && showCompositionCancel && inlineSuggestions.isEmpty()) 4.dp else 0.dp
+    val pullLeadingGap = if (swipeExpand && cancelAtLeft && inlineSuggestions.isEmpty()) 4.dp else 0.dp
     // 候选栏两端最多两个按钮（用户 11-03）：左边取消，最右展开候选，位置固定。左边打字和联想都是「<」，
     // 设置「联想关闭键用叉号」打开后联想时才是 ⊗（用户 11-03：两种状态图标不一样）；
     // 收起键盘只在空闲（没有候选）时有。手写候选也是纯联想态，但那里的取消是撤销当前字，仍用「<」。
@@ -584,7 +595,7 @@ fun CandidateBar(
                 .cySwapFadeIn(state is CandidateBarState.Idle),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (showCompositionCancel && closesAssociation && associationCancelCross) {
+            if (cancelAtLeft && closesAssociation && associationCancelCross) {
                 KeyboardToolbarButton({ callbacks.onCancelInput?.invoke() }, edgePressedFill,
                     modifier = Modifier.testTag("association-cancel-cross"), restingFill = edgeButtonFill,
                     slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true) {
@@ -594,7 +605,7 @@ fun CandidateBar(
                 // 这 4dp 铺满栏高、自己接点按，免得点在第一个候选左边被这个键放大的触摸范围接走（#274）。
                 // 后面是候选行时这 4dp 放进拉动区里（[PullToExpandCandidates] 的 leadingGap），按在空白处也拉得动（11-21）。
                 if (pullLeadingGap == 0.dp) Spacer(Modifier.width(4.dp).fillMaxHeight().candidateGapTaps())
-            } else if (showCompositionCancel) {
+            } else if (cancelAtLeft) {
                 KeyboardBackButton({ callbacks.onCancelInput?.invoke() }, edgePressedFill, protectedVisuals.textColor,
                     label = if (closesAssociation) "关闭联想" else "取消输入",
                     modifier = if (closesAssociation) Modifier.testTag("association-cancel") else Modifier,
@@ -888,7 +899,15 @@ fun CandidateBar(
             val rightClearShown = !candidatePageExpanded && displayAssociation.isNotEmpty() &&
                 callbacks.onClearAssociation != null && callbacks.onCancelInput == null
             if (swipeExpand) {
-                if (state !is CandidateBarState.Idle && !rightClearShown && callbacks.onHideKeyboard != null) {
+                if (closeAtRight) {
+                    // 和下面收起键盘、空闲时的收起键同一格：同一个位置先关候选／联想，再点就收起键盘。
+                    KeyboardToolbarButton({ callbacks.onCancelInput?.invoke() }, edgePressedFill,
+                        modifier = Modifier.testTag("candidate-close-right"), restingFill = edgeButtonFill,
+                        slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true) {
+                        Icon(Icons.Default.Close, contentDescription = if (closesAssociation) "关闭联想" else "取消输入",
+                            tint = protectedVisuals.textColor, modifier = Modifier.size(22.dp * LocalCandidateSizeFactor.current))
+                    }
+                } else if (state !is CandidateBarState.Idle && !rightClearShown && callbacks.onHideKeyboard != null) {
                     KeyboardToolbarButton(callbacks.onHideKeyboard, edgePressedFill,
                         modifier = Modifier.testTag("candidate-hide"), restingFill = edgeButtonFill,
                         slotWidth = edgeSlot, cornerRadius = edgeCorner, continuousPill = true) {

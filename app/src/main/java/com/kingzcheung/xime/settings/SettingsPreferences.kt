@@ -477,6 +477,8 @@ object SettingsPreferences {
     const val KEY_CANDIDATE_PRESS_HIGHLIGHT = "candidate_press_highlight"
     /** 候选滑到头回弹展开（11-21 他：默认关，关着时候选栏和 1.15.101 完全一样）。 */
     const val KEY_CANDIDATE_SWIPE_EXPAND = "candidate_swipe_expand"
+    /** 开了「候选滑到头回弹展开」时，取消／关联想键放右边画成「×」（11-22 他：和收起键盘同一个位置）；默认左边。 */
+    const val KEY_CANDIDATE_CLOSE_ON_RIGHT = "candidate_close_on_right"
     const val KEY_INPUT_TEXT_LOCATION = "input_text_location"
     const val KEY_SHOW_PREEDIT_PREVIEW = "show_preedit_preview"
     const val KEY_INLINE_PREEDIT_PREVIEW = "inline_preedit_preview"
@@ -620,6 +622,18 @@ object SettingsPreferences {
 
     fun setCandidateSwipeExpand(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_CANDIDATE_SWIPE_EXPAND, enabled).apply()
+    }
+
+    /**
+     * 关闭键放右边（11-22 他：全面屏手势的人要「不管什么时候点右边同一个位置都能收起键盘」）：只在
+     * [isCandidateSwipeExpand] 打开时起作用。打开后打字时右边是「×」取消输入、出联想时是「×」关联想、空闲时是收起键盘，
+     * 上屏后同一个位置点两下就收起；左边不放按钮。默认关（左边「<」，右边永远收起键盘，同 1.15.104）。
+     */
+    fun isCandidateCloseOnRight(context: Context): Boolean =
+        getPrefs(context).getBoolean(KEY_CANDIDATE_CLOSE_ON_RIGHT, false)
+
+    fun setCandidateCloseOnRight(context: Context, right: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_CANDIDATE_CLOSE_ON_RIGHT, right).apply()
     }
 
     /**
