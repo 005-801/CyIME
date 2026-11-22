@@ -91,6 +91,7 @@ fun SchemaListView(
             LayoutPreviewChoices(layouts, current.profile.language, layoutId,
                 "profile-layout-list", itemTagPrefix = "panel-layout:",
                 unavailableIds = switches.filterValues { it?.keepsScheme == false }.keys,
+                unavailableNotes = InputProfileSelection.unavailableNotes(current, switches),
                 rowHeight = layoutHeight,
                 qwertyPreviewStagger = qwertyStagger,
                 onManage = {

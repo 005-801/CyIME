@@ -47,7 +47,8 @@ internal fun InputProfileSelectors(
     Column(modifier.fillMaxWidth().testTag("profile-settings-selectors")) {
         LayoutPreviewChoices(layouts, profile.language, profile.layout.id, "layout-choice:${profile.language.id}",
             containerColor = containerColor, contentColor = contentColor, accentColor = accentColor,
-            unavailableIds = switches.filterValues { it?.keepsScheme == false }.keys) { id ->
+            unavailableIds = switches.filterValues { it?.keepsScheme == false }.keys,
+            unavailableNotes = InputProfileSelection.unavailableNotes(selected, switches)) { id ->
             // 与键盘里的选择面板一致：没有当前方案的布局标灰，点了换成它有的方案并提示。
             switches[id]?.let { switch ->
                 if (!switch.keepsScheme) layouts.firstOrNull { it.id == id }?.let { layout ->
