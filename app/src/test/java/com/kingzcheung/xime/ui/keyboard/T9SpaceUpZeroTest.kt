@@ -116,7 +116,8 @@ class T9SpaceUpZeroTest {
         assertEquals(listOf(1), moves)
         rule.onNodeWithTag("t9-zero-key", true).performTouchInput {
             down(center)
-            for (step in 1..6) moveTo(center + Offset(-8.dp.toPx() * step, 0f))
+            // 横滑门槛 50dp（SwipeableKeyButton）：拖 64dp 才算左滑，48dp 只是点按。
+            for (step in 1..8) moveTo(center + Offset(-8.dp.toPx() * step, 0f))
             up()
         }
         rule.waitForIdle()
