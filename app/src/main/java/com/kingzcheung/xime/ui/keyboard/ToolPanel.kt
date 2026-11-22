@@ -277,7 +277,9 @@ fun ToolPanelBar(
                 update = { editText ->
                     syncToolPanelEditText(editText, isFocused, "")
                     // 打字去了应用输入框：栏里不显示光标，看得出字不会进栏；点一下栏又回来。
-                    if (editText.isCursorVisible != isFocused) editText.isCursorVisible = isFocused
+                    // 一行的栏用 DragScrollEditText：光标滚到框外时它自己先不画
+                    if (editText is DragScrollEditText) editText.setCursorWanted(isFocused)
+                    else if (editText.isCursorVisible != isFocused) editText.isCursorVisible = isFocused
                     if (editText.hint?.toString() != hint) editText.hint = hint
                 },
                 modifier = Modifier.fillMaxWidth().height(36.dp),
