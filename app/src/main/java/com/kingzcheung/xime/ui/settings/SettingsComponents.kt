@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kingzcheung.xime.ui.keyboard.preeditTabOutline
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import com.kingzcheung.xime.settings.SchemaInfo
@@ -915,7 +916,11 @@ fun PreeditStyleCard(
                         .then(if (tabHeight != null) Modifier.height(tabHeight) else Modifier)
                         .clip(tabShape)
                         .background(if (bubble) key else keyboard)
-                        .then(if (bubble) Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp)) else Modifier)
+                        .then(if (bubble) Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp))
+                            // 和键盘上一样沿上边和两侧描细线（底边接键盘），形状一眼看得出。
+                            else Modifier.preeditTabOutline(onSurface.copy(alpha = com.kingzcheung.xime.ui.keyboard.PREEDIT_TAB_OUTLINE_ALPHA),
+                                if (strip) keyboardCorner else if (block || left) 0.dp else 5.dp,
+                                if (strip) keyboardCorner else if (block || right) 0.dp else 5.dp))
                         .padding(horizontal = if (block) 7.dp else if (strip) 6.dp else 4.dp, vertical = if (bubble) 2.dp else 0.dp),
                         contentAlignment = when {
                             !strip || left -> Alignment.CenterStart

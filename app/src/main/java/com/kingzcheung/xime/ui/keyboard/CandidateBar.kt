@@ -1658,8 +1658,12 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
         block -> 0.dp
         else -> 8.dp
     }
-    val shape = if (strip) RoundedCornerShape(topStart = corner, topEnd = corner)
-        else RoundedCornerShape(topStart = if (left) 0.dp else corner, topEnd = if (right) 0.dp else corner)
+    val startCorner = if (strip || !left) corner else 0.dp
+    val endCorner = if (strip || !right) corner else 0.dp
+    val shape = RoundedCornerShape(topStart = startCorner, topEnd = endCorner)
+    // 轮廓（11-21 他：「有什么区别?」）：底色和键盘一样，深色主题下键盘色又和应用底色差不多，小签、方块、顶上一行
+    // 只剩一行字，看不出形状。沿上边和两侧描一圈细线（底边接着键盘，不描），三种形状一眼分得出。
+    val outline = textColor.copy(alpha = PREEDIT_TAB_OUTLINE_ALPHA)
     val glass = LocalKeyboardInputPreferences.current.frostedGlass.normalized()
     if (floatingPreeditBlurBehind(glass)) PreeditBubbleBlur(tabBounds.value, glass.blurRadiusDp, with(density) { corner.toPx() }, hidden)
     val sizeSp = (if (block) 18f else PREEDIT_TAB_TEXT_SP) * LocalCandidateSizeFactor.current
@@ -1679,6 +1683,7 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
         Column(horizontalAlignment = if (right && !strip) Alignment.End else Alignment.Start) {
         Box(Modifier.then(if (strip) Modifier.width(stripWidth) else Modifier.widthIn(max = screenWidth))
             .heightIn(min = height).clip(shape).background(color)
+            .preeditTabOutline(outline, startCorner, endCorner)
             .then(if (edit != null && !hidden) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = edit) else Modifier)
             .padding(horizontal = if (strip) 12.dp else 8.dp).testTag("preedit-tab")
             .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier)
@@ -1703,6 +1708,33 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
         }
         }
     }
+}
+
+internal const val PREEDIT_TAB_OUTLINE_ALPHA = 0.28f
+
+/** 沿上边和两侧描 1dp 细线，上两角按 [startCorner]/[endCorner] 的圆角走；底边接着键盘，不描。 */
+internal fun Modifier.preeditTabOutline(color: Color, startCorner: androidx.compose.ui.unit.Dp,
+    endCorner: androidx.compose.ui.unit.Dp): Modifier = drawWithContent {
+    drawContent()
+    val stroke = 1.dp.toPx()
+    val half = stroke / 2f
+    val w = size.width
+    val h = size.height
+    val r1 = startCorner.toPx().coerceAtMost(minOf(w, h) / 2f)
+    val r2 = endCorner.toPx().coerceAtMost(minOf(w, h) / 2f)
+    val path = androidx.compose.ui.graphics.Path().apply {
+        moveTo(half, h)
+        if (r1 > 0f) {
+            lineTo(half, r1)
+            arcTo(androidx.compose.ui.geometry.Rect(half, half, half + 2f * (r1 - half), half + 2f * (r1 - half)), 180f, 90f, false)
+        } else lineTo(half, half)
+        if (r2 > 0f) {
+            lineTo(w - r2, half)
+            arcTo(androidx.compose.ui.geometry.Rect(w - half - 2f * (r2 - half), half, w - half, half + 2f * (r2 - half)), 270f, 90f, false)
+        } else lineTo(w - half, half)
+        lineTo(w - half, h)
+    }
+    drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
 }
 
 /**
