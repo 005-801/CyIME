@@ -174,4 +174,24 @@ class PhysicalKeyboardPolicyTest {
         assertTrue(capitals < body.indexOf("if (processHardwareCandidateKey(hardwareEvent)) return@command"))
         assertTrue(capitals < body.indexOf("if (hardwarePageDirection != 0 &&"))
     }
+
+    /**
+     * #548：, . 是翻页键，从 onKeyDown 的翻页分支进来时不带 hardwareEvent。数字后半角（#527）和大写后原样（#528）
+     * 都得认 hardwarePageDirection，不然 104 里 123. 还是「。」、AGENTS. 的点还是翻页。
+     */
+    @Test fun `paging keys also get the digit and capitals rules`() {
+        val router = java.io.File("src/main/java/com/kingzcheung/xime/service/ImeKeyRouter.kt").readText()
+        val body = router.substringAfter("private fun routeKeyPress(")
+        val physical = body.indexOf("val physical = hardwareEvent != null || hardwarePageDirection != 0")
+        assertTrue(physical > 0)
+        assertTrue(physical < body.indexOf("compositionIsAllCapitals("))
+        val pagedDigit = body.indexOf("if (hardwareEvent == null && hardwarePageDirection != 0 && !zhuyinHardwareActive() &&")
+        assertTrue(pagedDigit > 0)
+        assertTrue("要在翻页之前", pagedDigit < body.indexOf("if (hardwarePageDirection != 0 &&"))
+        val service = java.io.File("src/main/java/com/kingzcheung/xime/service/XimeInputMethodService.kt").readText()
+        assertTrue("翻页分支仍然不带 hardwareEvent，规则靠方向认",
+            "keyRouter.handleKeyPress(symbol, e.isShiftPressed, hardwarePageDirection = pageDirection)" in service)
+        assertTrue(digitSeparatorStaysHalfWidth(".", "3"))
+        assertTrue(digitSeparatorStaysHalfWidth(",", "1"))
+    }
 }

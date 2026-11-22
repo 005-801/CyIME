@@ -639,6 +639,13 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
         return true
     }
 
+    /** 实体键盘：中文、没在打字、光标前是数字时，. , : 照半角上屏（#527、#548）。 */
+    private suspend fun keepsDigitSeparatorHalfWidth(key: String): Boolean =
+        !service.uiState.value.isAsciiMode && service.t9PartialSegments.isEmpty() &&
+            service.rimeEngine.readQueuedComposition()?.input.isNullOrEmpty() &&
+            digitSeparatorStaysHalfWidth(key, withEditor {
+                runCatching { service.editorConnection()?.getTextBeforeCursor(1, 0) }.getOrNull() })
+
     private suspend fun <T> withEditor(block: suspend CoroutineScope.() -> T): T =
         withContext(Dispatchers.Main) {
             InputCommandOwner.requireOwner().requireCurrent(service.inputReadiness, service.uiState.value.inputSessionId)
@@ -1289,10 +1296,19 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
             if (englishAutoSpace.isArmed && consumeEnglishAutoSpace(key)) return@command
             // 实体键盘：大写字母组字（N、AGENTS）后打数字、点，原样接在后面上屏，不选词、不翻页（#528）。
             // 屏幕键盘的数字、点本来就把字母原样上屏（literalSubmission），不走这里。
-            if (hardwareEvent != null && capitalsKeepLiteralKey(key) && !service.uiState.value.isAsciiMode &&
+            // 点是翻页键，从翻页那条路进来时不带 hardwareEvent（#548），按 [hardwarePageDirection] 认。
+            val physical = hardwareEvent != null || hardwarePageDirection != 0
+            if (physical && capitalsKeepLiteralKey(key) && !service.uiState.value.isAsciiMode &&
                 service.t9PartialSegments.isEmpty() &&
-                !(hardwareEvent.isCtrlPressed || hardwareEvent.isAltPressed || hardwareEvent.isMetaPressed) &&
+                hardwareEvent?.let { it.isCtrlPressed || it.isAltPressed || it.isMetaPressed } != true &&
                 compositionIsAllCapitals(service.rimeEngine.readQueuedComposition()?.input)) {
+                commitHardwareLiteral(key)
+                return@command
+            }
+            // 数字后的 , .（3.14、1,000）：这两个是翻页键，走翻页那条路，不经过下面实体键盘那段 #527 的判断，
+            // 104 里只有 : 变半角（#548）。没在打字、光标前是数字时照半角上屏；打字中照旧翻页。
+            if (hardwareEvent == null && hardwarePageDirection != 0 && !zhuyinHardwareActive() &&
+                keepsDigitSeparatorHalfWidth(key)) {
                 commitHardwareLiteral(key)
                 return@command
             }
@@ -1368,10 +1384,7 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 }
                 // 数字后的 . , :（3.14、12:30）：上面的数字是直接上屏的，没进 Rime，Rime 的数字后半角规则管不到，
                 // 中文模式句号会成「。」（#527）。没在打字、光标前是数字时照半角上屏。
-                if (!service.uiState.value.isAsciiMode && service.t9PartialSegments.isEmpty() &&
-                    service.rimeEngine.readQueuedComposition()?.input.isNullOrEmpty() &&
-                    digitSeparatorStaysHalfWidth(key, withEditor {
-                        runCatching { service.editorConnection()?.getTextBeforeCursor(1, 0) }.getOrNull() })) {
+                if (keepsDigitSeparatorHalfWidth(key)) {
                     commitHardwareLiteral(key)
                     return@command
                 }
