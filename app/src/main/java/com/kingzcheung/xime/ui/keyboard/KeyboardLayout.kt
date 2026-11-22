@@ -303,6 +303,10 @@ fun KeyboardLayout(
             if (key.length == 2 && key.all { it.lowercaseChar() in 'a'..'z' }) listOf(key.take(1), key.drop(1)) else listOf(key)
         }
     } else pairedRows
+    // 导入的键盘把下滑标签写成长助记（乱序十七的 "a ia ua"）：整块键盘的下滑标签改写在键底部一行，见 [LocalLongSwipeDownLabels]。
+    val longSwipeDownLabels = remember(cfgVer, isAsciiMode, uiState.currentSchemaId, keyRows) {
+        KeysConfigHelper.hasLongSwipeDownLabels(keyRows, isAsciiMode)
+    }
     // 「合并键均匀排布」：自建字母排列和 14 键（默认关）；分体按 26 键中线拆左右，仍严格对齐。
     val evenMergedKeys = (letterLayout != null || fourteenKey) && !splitKeyboard &&
         LocalKeyboardInputPreferences.current.evenMergedKeys
@@ -607,6 +611,7 @@ fun KeyboardLayout(
         LocalLetterGeometry provides geometry,
         LocalCustomLayout provides letterLayout,
         LocalEvenMergedKeys provides evenMergedKeys,
+        LocalLongSwipeDownLabels provides longSwipeDownLabels,
         LocalHoneycombKeys provides honeycomb,
         LocalCustomAccent provides KeyboardThemes.getPrimaryColor(uiState.themeId, uiState.isDarkTheme),
         LocalShiftSlideTargets provides shiftSlideTargets,

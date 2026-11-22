@@ -655,6 +655,7 @@ fun SwipeableKeyButton(
     val dpHidesCorners = doublePinyinHints?.hidesCornerLabels(letterGroup ?: text) == true
     // 开着上方或下方角标提示时，角标不藏，和键位提示分层排开，由 DoublePinyinCornerFace 一起画（用户 11-01 去掉了
     // 「和角标一起显示」开关；以前打开过它的照旧分层）。紧凑键面不支持，照旧藏角标。
+    val longSwipeDownLabels = LocalLongSwipeDownLabels.current && layoutMode != ButtonLayout.COMPACT
     val dpWithCorners = dpHidesCorners && layoutMode != ButtonLayout.COMPACT &&
         LocalKeyboardInputPreferences.current.let { it.doublePinyinKeyHintsWithCorners || it.swipeUpHints || it.swipeDownHints }
 
@@ -752,6 +753,11 @@ fun SwipeableKeyButton(
         val dpHint = doublePinyinHint?.takeIf { hintsVisible && dpCornerLayout == null }
         val dpFinals = dpHint?.let { fitDoublePinyinFinals(it.finals, maxWidth.value - 6f, maxHeight.value * 0.42f,
             effectiveSwipeFontSize.value, density.fontScale) }
+        // 下滑标签写得长的键盘（导入的乱序十七的韵母助记）：下滑标签写在键底部一行，主标签上移半行，见 [LocalLongSwipeDownLabels]。
+        // 排法不看滑动预览，滑动时那一行照角标一样淡出，主标签不跳。
+        val downLine = if (longSwipeDownLabels && hintsVisible && !dpHidesCorners && dpHint == null &&
+            !downCornerLabel.isNullOrBlank()) fitSwipeDownLine(downCornerLabel, maxWidth.value - 6f, maxHeight.value * 0.42f,
+            effectiveSwipeFontSize.value, density.fontScale) else null
         Box(Modifier.fillMaxSize().graphicsLayer {
             alpha = (1f - if (ctrlLetter != null) ctrlFade.value else 0f) * (if (showDisc) 1f else 1f - flickFade.strongest)
         }, contentAlignment = if (layoutMode == ButtonLayout.COMPACT) Alignment.TopStart else Alignment.Center) {
@@ -843,6 +849,7 @@ fun SwipeableKeyButton(
                         // 双拼键位提示的韵母在字母下面：字母上移半个提示高，两者一起居中。
                         modifier = Modifier.fillMaxWidth().offset(y = if (dpCornerLayout != null) dpCornerLayout.letterOffsetDp.dp
                             else if (dpHint != null) (-(dpFinals?.heightDp ?: 0f) / 2f).dp
+                            else if (downLine != null) (-downLine.heightDp / 2f).dp
                             else if (hintsVisible && !upCornerLabel.isNullOrEmpty() && keyHeight >= 40.dp) 2.dp else 0.dp)
                             // 和角标一起显示：字母框固定为 1.2 倍字号高、居中、超出裁掉，备用字体（全角分号等）不会伸进上下层。
                             .then(if (dpCornerLayout != null) Modifier
@@ -876,7 +883,7 @@ fun SwipeableKeyButton(
                     )
                 }
 
-                if (hintsVisible && !dpHidesCorners && flickPreview?.fromTop != false && !downCornerLabel.isNullOrEmpty()) {
+                if (downLine == null && hintsVisible && !dpHidesCorners && flickPreview?.fromTop != false && !downCornerLabel.isNullOrEmpty()) {
                     val displayText = if (downCornerLabel.length <= 4) downCornerLabel else downCornerLabel.take(4)
                     Text(
                         text = punctuationKeyLabel(displayText),
@@ -913,6 +920,10 @@ fun SwipeableKeyButton(
                 finalsColor = keyHintColor(resolvedText, frostedGlass, 0.6f, LocalKeyboardInputPreferences.current.cornerHintOpacity),
                 upColor = keyHintColor(resolvedText, frostedGlass, 0.6f, LocalKeyboardInputPreferences.current.cornerHintOpacity),
                 downColor = keyHintColor(resolvedText, frostedGlass, 0.5f, LocalKeyboardInputPreferences.current.cornerHintOpacity), fontFamily = keyLabelFontFamily)
+            if (downLine != null && flickPreview?.fromTop != false) DoublePinyinKeyHintFace(DoublePinyinKeyHint(null, emptyList()),
+                downLine, effectiveSwipeFontSize, initialColor = Color.Unspecified,
+                finalsColor = keyHintColor(resolvedText, frostedGlass, 0.5f, LocalKeyboardInputPreferences.current.cornerHintOpacity),
+                fontFamily = keyLabelFontFamily)
             if (dpHint != null) DoublePinyinKeyHintFace(dpHint, dpFinals, effectiveSwipeFontSize,
                 initialColor = keyHintColor(resolvedText, frostedGlass, 0.7f, LocalKeyboardInputPreferences.current.cornerHintOpacity),
                 finalsColor = keyHintColor(resolvedText, frostedGlass, 0.6f, LocalKeyboardInputPreferences.current.cornerHintOpacity), fontFamily = keyLabelFontFamily)
