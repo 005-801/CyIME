@@ -57,11 +57,9 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
         .filter { it.schemaId in profilesState.enabledSchemas }.map { it.toSchemaInfo() })
     // 一步选方案（用户 11-01 批准）：关着的内置方案（全拼 14 键、内置双拼）和它们的组合（如小鹤 14 键）也列在
     // 布局、方案里，点了自动启用并部署，不用先去「已安装的方案」打开再回来。
-    val installedIds = profilesState.allSchemas.map { it.schemaId }.toSet()
-    val offeredIds = CyimeInputDefaults.withCompanions(
-        (profilesState.enabledSchemas + CyimeInputDefaults.listedWhenOff).filter { it in installedIds }.distinct(), installedIds).toSet()
-    val pickableProfiles = InputModes.ordered(context, profilesState.allSchemas
-        .filter { it.schemaId in offeredIds || it.schemaId in profilesState.enabledSchemas }.map { it.toSchemaInfo() })
+    // 键盘里的方案面板用同一个 [SchemaPicking.offered]，两边列的方案一样（11-22）。
+    val pickableProfiles = InputModes.ordered(context,
+        SchemaPicking.offered(profilesState.allSchemas.map { it.toSchemaInfo() }, profilesState.enabledSchemas))
     val dragOrder = rememberDragOrder(orderedLanguages.map { it.id }) { ids ->
         InputModes.saveLanguageOrder(context, ids)
         orderedLanguages = InputModes.languageOrder(context)
@@ -174,12 +172,8 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
                             } else if (!saving) scope.launch {
                                 saving = true
                                 try {
-                                    withContext(Dispatchers.IO) {
-                                        // 组合（如小鹤 14 键）启用它需要的双拼和 14 键，组合本身由 setEnabledSchemas 补上。
-                                        val needs = CyimeInputDefaults.companionNeeds(entry.schemaId) ?: listOf(entry.schemaId)
-                                        SchemaManager.setEnabledSchemas(context, (SchemaManager.getEnabledSchemas(context) + needs).distinct())
-                                        LanguagePreferences.enableForSchema(context, entry.schemaId)
-                                    }
+                                    // 组合（如小鹤 14 键）启用它需要的双拼和 14 键，组合本身由 setEnabledSchemas 补上。
+                                    withContext(Dispatchers.IO) { SchemaPicking.enable(context, entry.schemaId) }
                                     profilesModel.refresh()
                                     // 关着的方案（笔画、仓颉等）点了也要像开着的一样换上：以前只启用不换，键盘还是拼音，
                                     // 以为点的是笔画、其实在拼音键盘上打（11-06）。部署完再换，没编译好的方案键盘会退回第一个方案。

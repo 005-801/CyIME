@@ -2579,6 +2579,8 @@ fun KeyboardView(
                             (callbacks.onSwitchSchemaForLayout ?: callbacks.onSwitchSchema)?.invoke(schemaId)
                             viewModel.closeOverlay()
                         },
+                        listInstalled = true,
+                        onClose = { viewModel.closeOverlay() },
                         modifier = panelMaterial.fillMaxSize().padding(bottom = renderedBottomPaddingDp.dp)
                     )
                     is OverlayRoute.Clipboard -> ClipboardView(

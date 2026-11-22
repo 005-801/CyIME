@@ -40,7 +40,8 @@ internal fun InputProfileSelectors(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val profile = selected.profile
-    val schemes = InputProfileSelection.schemeEntries(entries, selected)
+    // 键盘的方案面板用同一个函数（11-22：两边列的方案要一样）。
+    val schemes = SchemaPicking.schemeRow(entries, selected)
     val layouts = InputProfileSelection.languageLayouts(entries, selected)
     val switches = layouts.associate { it.id to InputProfileSelection.switchLayout(entries, selected, it.id) }
     Column(modifier.fillMaxWidth().testTag("profile-settings-selectors")) {
