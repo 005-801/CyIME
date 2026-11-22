@@ -137,14 +137,14 @@ class CandidatePullExpandTest {
     }
 
     /**
-     * 候选多、能左右滑时（真机上打字几乎都是这样）：滑到一屏的尾巴再往左拉就展开，不会在滑近尾巴时接上整张展开列表、
-     * 让尾巴越滑越远（11-22 他在手机上开着开关：「展不开」）；滑一下也不收起展开页，收回靠往右拉。
+     * 候选多、能左右滑时（真机上打字几乎都是这样）：滑到一屏的尾巴再往左拉就展开，尾巴不会越滑越远
+     * （11-22 他在手机上开着开关：「展不开」）；滑一下也不收起展开页，收回靠往右拉。
+     * 一屏没排满时会接上展开列表（见 CandidateFirstScreenWideTest），这里用的是默认的假字宽，排没排满量不准，不数接了几次。
      */
     @Test fun manyCandidatesReachTheEndAndExpand() {
         val many = (1..12).map { "候选$it" }
         val expanded = mutableStateOf(false)
         var opens = 0
-        var extends = 0
         var scrolled = 0
         rule.setContent {
             CandidateBar(state = CandidateBarState.ChineseCandidates(many, inputText = "houxuan", hasMore = true),
@@ -153,14 +153,13 @@ class CandidatePullExpandTest {
                     onShowMoreCandidates = { opens++; expanded.value = true },
                     onCollapseCandidates = { expanded.value = false },
                     onCandidateStripScrolled = { scrolled++ },
-                    onCandidateStripNearEnd = { extends++ }),
+                    onCandidateStripNearEnd = {}),
                 showPreeditPreview = false, modifier = Modifier.width(360.dp))
         }
         val pull = rule.onNodeWithTag("candidate-pull-expand", useUnmergedTree = true)
         repeat(6) { if (opens == 0) pull.pullAcross() }
         rule.runOnIdle {
             assertEquals("滑到头再拉就展开", 1, opens)
-            assertEquals("一屏排得满就不接展开列表", 0, extends)
             assertEquals("开关开着滑一下不收起展开页", 0, scrolled)
         }
     }
