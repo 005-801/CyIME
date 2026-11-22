@@ -132,6 +132,7 @@ object SettingsPreferences {
     const val KEY_STT_ENGINE_IDLE_MINUTES = "stt_engine_idle_minutes"
     const val KEY_STT_DEBUG_RECORD = "stt_debug_record"
     const val KEY_STT_WHOLE_SENTENCE = "stt_whole_sentence"
+    const val KEY_STT_WHOLE_FINALIZER = "stt_whole_finalizer"
     const val KEY_STT_AUTO_PUNCTUATION = "stt_auto_punctuation"
     const val KEY_STT_PUNCTUATION_COMMA = "stt_punctuation_comma"
     const val KEY_STT_PUNCTUATION_PERIOD = "stt_punctuation_period"
@@ -1135,6 +1136,15 @@ object SettingsPreferences {
 
     fun setSttWholeSentence(context: Context, enabled: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_STT_WHOLE_SENTENCE, enabled).apply()
+    }
+
+    /** 整句定稿用哪个模型：SenseVoice 或 X-ASR（X-ASR 下载了才有得选）；没选过时见 [SpeechModelSelection.DEFAULT_WHOLE_FINALIZER]。 */
+    fun getSttWholeFinalizer(context: Context): String =
+        com.kingzcheung.xime.speech.SpeechModelSelection.wholeFinalizer(getPrefs(context).getString(KEY_STT_WHOLE_FINALIZER, null))
+
+    fun setSttWholeFinalizer(context: Context, model: String) {
+        getPrefs(context).edit().putString(KEY_STT_WHOLE_FINALIZER,
+            com.kingzcheung.xime.speech.SpeechModelSelection.wholeFinalizer(model)).apply()
     }
 
     /**
