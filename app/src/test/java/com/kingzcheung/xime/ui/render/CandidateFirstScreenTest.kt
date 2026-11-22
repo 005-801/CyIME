@@ -1,7 +1,9 @@
 package com.kingzcheung.xime.ui.render
 
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -17,6 +19,8 @@ import com.kingzcheung.xime.ui.keyboard.CandidateBar
 import com.kingzcheung.xime.ui.keyboard.CandidateBarCallbacks
 import com.kingzcheung.xime.ui.keyboard.CandidateBarState
 import com.kingzcheung.xime.ui.keyboard.CandidateBarVisuals
+import com.kingzcheung.xime.ui.keyboard.LocalSplitKeyboardGap
+import com.kingzcheung.xime.ui.keyboard.SplitKeyboardGap
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -109,6 +113,21 @@ class CandidateFirstScreenTest {
         pullLeft()
         rule.runOnIdle { assertEquals("联想一屏到头，拉一下就展开", 1, opens) }
     }
+
+    /** 联想少、栏里全放得下（11-22 平板：上屏「你好」后 6 个联想）：拉不开，不出一个空的展开页。 */
+    @Test fun fewAssociationsDoNotOpenAnEmptyPage() {
+        SettingsPreferences.setCandidateSwipeExpand(context, true)
+        var opens = 0
+        rule.setContent {
+            CandidateBar(state = CandidateBarState.AssociationOnly(listOf("吗", "啊", "世", "了"), hasMore = true), visuals = visuals,
+                callbacks = CandidateBarCallbacks(onCandidateSelect = {}, onCancelInput = {}, onAssociationSelect = {},
+                    onShowMoreCandidates = { opens++ }),
+                showPreeditPreview = false, modifier = Modifier.width(400.dp))
+        }
+        rule.waitForIdle()
+        pullLeft()
+        rule.runOnIdle { assertEquals("联想全在栏里，不该拉开", 0, opens) }
+    }
 }
 
 /** 平板宽屏：一页的候选一屏还排不满时接上后面的把这一屏填满（不会因为「每页候选词数」少而空着半条）。 */
@@ -134,5 +153,36 @@ class CandidateFirstScreenWideTest {
                 showPreeditPreview = false, modifier = Modifier.width(1000.dp))
         }
         rule.runOnIdle { assertTrue("一屏没排满要接上后面的：$extends", extends >= 1) }
+    }
+
+    /**
+     * 平板分体（11-22 真机）：上屏「你好」后联想只有 6 个（吗 啊 世 了 美 你好），中缝两边全放得下，往左拉不展开；
+     * 联想多、放不下时照样拉开。
+     */
+    @Test fun splitBarWithAllAssociationsShownDoesNotOpen() {
+        SettingsPreferences.setCandidateSwipeExpand(context, true)
+        val px = rule.density.density
+        val gap = SplitKeyboardGap().apply { reportRow(0, Rect(450f * px, 300f * px, 550f * px, 360f * px)) }
+        val few = listOf("吗", "啊", "世", "了", "美", "你好")
+        val many = (1..40).map { "联想词$it" }
+        val words = androidx.compose.runtime.mutableStateOf(few)
+        var opens = 0
+        rule.setContent {
+            CompositionLocalProvider(LocalSplitKeyboardGap provides gap) {
+                CandidateBar(state = CandidateBarState.AssociationOnly(words.value, hasMore = true),
+                    visuals = CandidateBarVisuals(Color.White, Color.Black, Color.Gray),
+                    callbacks = CandidateBarCallbacks(onCandidateSelect = {}, onCancelInput = {}, onAssociationSelect = {},
+                        onShowMoreCandidates = { opens++ }),
+                    showPreeditPreview = false, modifier = Modifier.width(1000.dp))
+            }
+        }
+        rule.waitForIdle()
+        val pull = rule.onNodeWithTag("candidate-pull-expand", useUnmergedTree = true)
+        pull.performTouchInput { swipe(Offset(width * 0.95f, centerY), Offset(width * 0.6f, centerY), durationMillis = 300) }
+        rule.runOnIdle { assertEquals("6 个联想全在栏里，不该拉开", 0, opens) }
+        rule.runOnIdle { words.value = many }
+        rule.waitForIdle()
+        pull.performTouchInput { swipe(Offset(width * 0.95f, centerY), Offset(width * 0.6f, centerY), durationMillis = 300) }
+        rule.runOnIdle { assertEquals("联想放不下时照样拉开", 1, opens) }
     }
 }

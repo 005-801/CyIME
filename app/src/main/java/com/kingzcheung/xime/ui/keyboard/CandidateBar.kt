@@ -443,7 +443,19 @@ fun CandidateBar(
     // 在候选栏上往左拉开展开页：有更多候选、还没展开、不是滑行预览时才拉得动；展开着往右拉收回（11-21，合并后方向反了改回）。
     // 只在设置「候选滑到头回弹展开」打开时有（11-21 他：默认关，关着时和 1.15.101 一样只有 ▾/▴）。
     val pullExpand = callbacks.onShowMoreCandidates
-    val pullExpands = swipeExpand && pullExpand != null && !candidatePageExpanded && hasAnyMore && !isGlidePreview
+    // 栏里已经全部露全、后面也没有了：不让拉开一个空的展开页（11-22 平板分体：上屏「你好」后联想只有 6 个，全在栏里，
+    // 往左一拉展开页是空的）。露全了几个由候选行报上来（-1 是还没报），换一组候选就重新算。只管开关打开时，▾ 照旧。
+    var barShownCandidates by remember(state) { mutableStateOf(-1) }
+    var barShownAssociations by remember(state) { mutableStateOf(-1) }
+    var associationsAllFit by remember(state) { mutableStateOf(false) }
+    val barShowsAll = swipeExpand && when (state) {
+        is CandidateBarState.ChineseCandidates -> !state.hasMore && barShownCandidates >= displayCandidates.size &&
+            (displayAssociation.isEmpty() || barShownAssociations >= displayAssociation.size)
+        is CandidateBarState.AssociationOnly -> associationsAllFit ||
+            (barShownAssociations >= 0 && barShownAssociations >= displayAssociation.size)
+        else -> false
+    }
+    val pullExpands = swipeExpand && pullExpand != null && !candidatePageExpanded && hasAnyMore && !barShowsAll && !isGlidePreview
     val pullCollapse = callbacks.onCollapseCandidates?.takeIf { swipeExpand && candidatePageExpanded && !isGlidePreview }
     val associationHighlight = (state as? CandidateBarState.AssociationOnly)?.highlightIndex
         ?.takeIf { it in displayAssociation.indices }
@@ -687,6 +699,10 @@ fun CandidateBar(
                     onVisibleAssociationsChanged = null,
                     onCandidateSelect = if (previewAssociations) { index -> callbacks.onAssociationSelect?.invoke(index); Unit }
                         else callbacks.onCandidateSelect,
+                ) else if (swipeExpand) callbacks.copy(
+                    // 记下栏里露全了几个（见 barShowsAll），再照常往上报。
+                    onVisibleCandidatesChanged = { shown -> barShownCandidates = shown.size; callbacks.onVisibleCandidatesChanged?.invoke(shown) },
+                    onVisibleAssociationsChanged = { shown -> barShownAssociations = shown.size; callbacks.onVisibleAssociationsChanged?.invoke(shown) },
                 ) else callbacks
                 PullToExpandCandidates(pullExpands, { pullExpand?.invoke() }, protectedVisuals.textColor,
                     Modifier.weight(1f).fillMaxHeight(), onCollapse = pullCollapse, leadingGap = pullLeadingGap) {
@@ -726,10 +742,14 @@ fun CandidateBar(
                 val itemDividerColor = candidateDividerColor(protectedVisuals.textColor)
                 // 开了「候选滑到头回弹展开」，上屏后的纯联想也只排一屏（11-22 他）：露全的几个加栏尾露半截的那一个，
                 // 露全它就到头，再往左拉就展开。键盘「下一项」在联想里走时照旧全排。
-                val associationShown = rememberFirstScreenCount(displayAssociation,
-                    swipeExpand && displayCandidates.isEmpty() && associationHighlight == null,
+                val capAssociations = swipeExpand && displayCandidates.isEmpty() && associationHighlight == null
+                val associationFitting = rememberFirstScreenCount(displayAssociation, capAssociations,
                     constraints.maxWidth, candidateTextSize.sp, candidateFontFamily, candidateItemPadding, 4.dp,
                     numbered = showNumberLabels && state is CandidateBarState.AssociationOnly)
+                val associationShown = (associationFitting + 1).coerceAtMost(displayAssociation.size)
+                // 联想全都放得下：拉不开（见 barShowsAll）。
+                val allFit = capAssociations && displayAssociation.isNotEmpty() && associationFitting >= displayAssociation.size
+                SideEffect { associationsAllFit = allFit }
                 val rowAssociation = if (associationShown < displayAssociation.size)
                     displayAssociation.subList(0, associationShown) else displayAssociation
                 LazyRow(
@@ -2048,8 +2068,8 @@ private class CandidateStripWindow(val split: CandidateWindowSplit, val complete
     val shownCount: Int = Int.MAX_VALUE)
 
 /**
- * 一屏排几个（[enabled] 为假时全排）：放得下的几个，再加栏尾露半截的那一个。按字宽估，不等排版。
- * 用在「候选滑到头回弹展开」打开时的联想行，露全最后那个就到头。
+ * 一屏完整放得下几个（[enabled] 为假时返回全部个数）。按字宽估，不等排版。
+ * 用在「候选滑到头回弹展开」打开时的联想行：再加栏尾露半截的那一个就是一屏，露全它就到头。
  */
 @Composable
 private fun rememberFirstScreenCount(texts: List<String>, enabled: Boolean, availablePx: Int,
@@ -2068,7 +2088,7 @@ private fun rememberFirstScreenCount(texts: List<String>, enabled: Boolean, avai
             val fitting = candidatePrefixCount(texts.size, availablePx, with(density) { spacing.roundToPx() }) { index ->
                 textWidths.of(candidateNumberedText(texts[index], index, numbered), style) + padding
             }
-            (fitting + 1).coerceAtMost(texts.size)
+            fitting.coerceAtMost(texts.size)
         }
     }
 }
