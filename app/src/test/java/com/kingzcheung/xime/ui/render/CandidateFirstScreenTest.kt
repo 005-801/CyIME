@@ -89,6 +89,35 @@ class CandidateFirstScreenTest {
         assertTrue("栏里排到第 ${seen.maxOrNull()} 个，应只有一屏", seen.size >= 2 && seen.max() < 12)
     }
 
+    /**
+     * 拖着候选栏露出最后一个、把第一个拖出去，展开页跳过的还是这一屏，不跟着少一格、多一格（11-22 他平板九键 ce'shi：
+     * 拖开以后展开页从「测试」重新排起，拖回来又从「侧」开始，一直跳）。
+     */
+    @Test fun expandedPageStartDoesNotFollowTheDrag() {
+        SettingsPreferences.setCandidateSwipeExpand(context, true)
+        val reports = mutableListOf<Int>()
+        rule.setContent {
+            CandidateBar(state = typing, visuals = visuals,
+                callbacks = CandidateBarCallbacks(onCandidateSelect = {}, onCancelInput = {}, onShowMoreCandidates = {},
+                    onVisibleCandidatesChanged = { reports += it.size }),
+                showPreeditPreview = false, modifier = Modifier.width(400.dp))
+        }
+        rule.waitForIdle()
+        val atRest = reports.last()
+        val before = reports.size
+        assertTrue("停在开头时这一屏有 $atRest 个", atRest in 2..11)
+        val row = rule.onNodeWithTag("candidate-scroll-row", useUnmergedTree = true)
+        // 拖住不放：拖到露出最后一个、第一个出了栏边，但不拉过展开门槛。
+        row.performTouchInput { down(Offset(width * 0.8f, centerY)); repeat(8) { moveBy(Offset(-width * 0.02f, 0f)) } }
+        rule.waitForIdle()
+        row.performTouchInput { up() }
+        rule.waitForIdle()
+        row.performTouchInput { swipe(Offset(width * 0.3f, centerY), Offset(width * 0.7f, centerY), durationMillis = 300) }
+        rule.waitForIdle()
+        val after = reports.drop(before)
+        assertTrue("拖动中、拖回来报给展开页的都该是 $atRest：$after", after.all { it == atRest })
+    }
+
     /** 开关关着（默认）：和 1.15.101 一样，整页 20 个都排在栏里，能滑到第 20 个。 */
     @Test fun switchOffKeepsTheWholePage() {
         rule.setContent {

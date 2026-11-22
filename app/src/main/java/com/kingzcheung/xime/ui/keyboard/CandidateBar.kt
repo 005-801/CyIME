@@ -2354,7 +2354,8 @@ internal fun FixedCandidateStrip(
                 corrections = correctedCandidates,
                 selectionFill = shiftDragFree && !highlightShown,
                 onFocusedBounds = { focusedBounds = it; focusedOnScreen = true },
-                onFocusedGone = { focusedOnScreen = false })
+                onFocusedGone = { focusedOnScreen = false },
+                firstScreenOnly = firstScreenOnly)
             return@BoxWithConstraints
         }
         val showDividers = candidateDividersShown(itemSpacing, itemPadding)
@@ -2417,6 +2418,7 @@ private fun ScrollableCandidateRow(
     selectionFill: Boolean,
     onFocusedBounds: (androidx.compose.ui.geometry.Rect) -> Unit,
     onFocusedGone: () -> Unit,
+    firstScreenOnly: Boolean = false,
 ) {
     val start = shown.first.takeUnless { shown.isEmpty() } ?: 0
     val showDividers = candidateDividersShown(itemSpacing, itemPadding)
@@ -2466,12 +2468,20 @@ private fun ScrollableCandidateRow(
             }
         }
     }.value
+    // 只排一屏时，展开页跳过的固定是这一屏：停在开头时量出来记住，拖动中、拖到栏尾都照这个数，
+    // 不然露出最后一个、把第一个拖出去时展开页的起点和格数跟着跳（11-22 他：「拖回左边又多一个 一直在跳变」）。
+    val restingPrefix = remember(listState, all) { intArrayOf(-1) }
     SideEffect {
         val layout = listState.layoutInfo
         if (all.isEmpty() || (layout.viewportEndOffset > layout.viewportStartOffset && layout.visibleItemsInfo.isNotEmpty())) {
-            callbacks.onVisibleCandidatesChanged?.invoke(candidates.take(readablePrefix))
-            callbacks.onVisibleAssociationsChanged?.invoke(if (readablePrefix > candidates.size)
-                all.subList(candidates.size, readablePrefix.coerceAtMost(all.size)) else emptyList())
+            val prefix = if (!firstScreenOnly) readablePrefix else {
+                if (!listState.isScrollInProgress && listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0)
+                    restingPrefix[0] = readablePrefix
+                restingPrefix[0].takeIf { it >= 0 } ?: readablePrefix
+            }
+            callbacks.onVisibleCandidatesChanged?.invoke(candidates.take(prefix))
+            callbacks.onVisibleAssociationsChanged?.invoke(if (prefix > candidates.size)
+                all.subList(candidates.size, prefix.coerceAtMost(all.size)) else emptyList())
         }
     }
     // 露出长候选时不对齐，停在手指松开的地方，才能看到长候选中间的字。
