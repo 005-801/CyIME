@@ -79,7 +79,8 @@ def adb(serial, *args, check=True):
 
 
 def uid_of(serial):
-    out = adb(serial, "shell", "cmd", "package", "list", "packages", "-U", PACKAGE)
+    out = adb(serial, "shell", "cmd", "package", "list", "packages", "--user", "0", "-U", PACKAGE)
+    # --user 0: on a device with a Secure Folder (Samsung user 150) the plain listing is refused for the shell.
     match = re.search(rf"package:{re.escape(PACKAGE)} uid:(\d+)", out)
     if not match:
         raise SystemExit(f"{PACKAGE} not installed")
@@ -461,7 +462,7 @@ def main():
             other_keys = pcb.keys_for(args.other_layouts, args.other_layout)
             action, count, seconds = typing_action(args, other_keys, other_package)
             # The other keyboard's own CPU: count its processes instead of CyIME's.
-            other_uid = re.search(r"uid:(\d+)", adb(args.serial, "shell", "cmd", "package", "list", "packages", "-U",
+            other_uid = re.search(r"uid:(\d+)", adb(args.serial, "shell", "cmd", "package", "list", "packages", "--user", "0", "-U",
                                                      other_package))
             if not other_uid:
                 raise SystemExit(f"{other_package} not installed")
