@@ -3138,7 +3138,8 @@ CPU 实测 	CPU benchmark
 小米 / 红米（HyperOS、MIUI）：在系统设置 › 应用 › CyIME › 省电策略里选「无限制」，并允许自启动。	Xiaomi / Redmi (HyperOS, MIUI): in Settings › Apps › CyIME › Battery saver choose "No restrictions" and allow autostart.
 在系统设置 › 应用 › CyIME 里把电池 / 耗电管理设为「允许后台运行」或「不限制」。	In Settings › Apps › CyIME set battery management to "Allow background activity" or "Unrestricted".
 在系统设置 › 应用 › CyIME › 电池里选「不限制」。	In Settings › Apps › CyIME › Battery choose "Unrestricted".
-然后从最近任务里划掉 CyIME 再打开，会重新开始准备。	Then swipe CyIME away from recent apps and open it again; preparation starts over.
+然后点下面的「重新开始准备」：CyIME 会关掉重开再接着准备，已经编好的词库一般不用重编。	Then tap "Restart preparation" below: CyIME closes, reopens and carries on; dictionaries already built usually aren't rebuilt.
+重新开始准备	Restart preparation
 还是不动，点「导出日志」发给我们，日志里有停在哪一步。	If it still doesn't move, tap "Export log" and send it to us; the log shows which step it stopped at.
 重试准备	Retry preparation
 用全拼、双拼还是五笔，26 键、14 键还是九键，完成后下一页会问你。	Full pinyin, Shuangpin or Wubi, QWERTY, 14-key or 9-key: the next page asks once this is done.

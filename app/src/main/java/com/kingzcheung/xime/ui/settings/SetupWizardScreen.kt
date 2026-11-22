@@ -20,6 +20,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.kingzcheung.xime.rime.PreparationProgress
+import com.kingzcheung.xime.rime.PreparationService
 import com.kingzcheung.xime.rime.RimeConfigHelper
 import com.kingzcheung.xime.rime.RimeEngine
 import com.kingzcheung.xime.settings.ChineseSchemas
@@ -94,6 +95,20 @@ private fun exportPreparationLog(context: Context) {
         Log.e("SetupWizard", "Could not export the log", e)
         android.widget.Toast.makeText(context, "导出日志失败：${e.message}", android.widget.Toast.LENGTH_LONG).show()
     }
+}
+
+/**
+ * 超时提示里的「重新开始准备」：关掉 CyIME 再打开，和从最近任务里划掉重开一样。
+ * 原生编译卡住时没法在进程里打断，只有重开进程；librime 按校验和判断，已经编完的词库一般不重编。
+ */
+private fun restartForPreparation(context: Context) {
+    com.kingzcheung.xime.util.FileLogger.w("SetupWizard", "User restarted CyIME after preparation stalled")
+    com.kingzcheung.xime.util.FileLogger.flushNow()
+    val launch = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) ?: return
+    PreparationService.stop(context)
+    context.startActivity(launch)
+    android.os.Process.killProcess(android.os.Process.myPid())
 }
 
 /**
@@ -199,6 +214,19 @@ fun SetupWizardScreen(
     LaunchedEffect(visible, status.preparing) {
         while (visible && status.preparing) { now = android.os.SystemClock.elapsedRealtime(); delay(1_000L) }
     }
+    // 等准备时开前台服务、亮着屏幕（11-22 用户卡了半小时）：以前准备只是后台线程，切到系统设置去启用、熄屏时
+    // 系统会冻结或先杀掉这个占着近 1 GB 内存的进程，回来再从头编。等 1 秒再开：早已准备好的不闪一下通知。
+    // 只能在界面在前台时开（系统不许后台开前台服务），所以每次回到这一页都再开一次；已开着时只是刷新通知。
+    LaunchedEffect(status.preparing, lifecycle) {
+        if (!status.preparing) { PreparationService.stop(context); return@LaunchedEffect }
+        delay(1_000L)
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { PreparationService.start(context) }
+    }
+    val view = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(view, visible && status.preparing) {
+        view.keepScreenOn = visible && status.preparing
+        onDispose { view.keepScreenOn = false }
+    }
     val lastChange = maxOf(progress.lastChangeAt, preparingSince)
     val quiet = status.preparing && now - lastChange >= PREPARATION_STALL_MS
     LaunchedEffect(quiet, lastChange) {
@@ -220,6 +248,7 @@ fun SetupWizardScreen(
         stepElapsedMs = if (progress.stepStartedAt > 0) now - progress.stepStartedAt else now - preparingSince,
         stall = stall?.takeIf { status.preparing }?.copy(seconds = (now - lastChange) / 1000),
         onExportLog = { exportPreparationLog(context) },
+        onRestart = { restartForPreparation(context) },
         onEnable = { visitedSystemSettings = true; openImeSettings(context) },
         onSchemas = onNavigateToSchemaSettings,
         onRetry = { attempt++ },
@@ -264,6 +293,7 @@ internal fun SetupWizardContent(
     stepElapsedMs: Long = 0L,
     stall: PreparationStall? = null,
     onExportLog: () -> Unit = {},
+    onRestart: () -> Unit = {},
     showSkipDetection: Boolean = false,
     onSkipDetection: () -> Unit = {},
 ) {
@@ -301,7 +331,7 @@ internal fun SetupWizardContent(
                             Text(it, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        stall?.let { PreparationStallNotice(it, onExportLog) }
+                        stall?.let { PreparationStallNotice(it, onExportLog, onRestart) }
                     }
                     status.error != null -> {
                         Text(status.error, color = MaterialTheme.colorScheme.error)
@@ -347,7 +377,7 @@ internal fun SetupWizardContent(
 }
 
 @Composable
-private fun PreparationStallNotice(stall: PreparationStall, onExportLog: () -> Unit) {
+private fun PreparationStallNotice(stall: PreparationStall, onExportLog: () -> Unit, onRestart: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val minutes = stall.seconds / 60
@@ -368,7 +398,10 @@ private fun PreparationStallNotice(stall: PreparationStall, onExportLog: () -> U
                     Text(line, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
                 }
             }
-            OutlinedButton(onClick = onExportLog) { Text("导出日志") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onRestart) { Text("重新开始准备") }
+                OutlinedButton(onClick = onExportLog) { Text("导出日志") }
+            }
         }
     }
 }
