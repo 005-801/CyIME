@@ -7,12 +7,12 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.kingzcheung.xime.platform.AndroidPlatform
 import com.kingzcheung.xime.util.FileLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +46,7 @@ class PreparationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         try {
             ServiceCompat.startForeground(this, NOTIFICATION_ID, notification(PreparationProgress.state.value),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0)
+                if (AndroidPlatform.foregroundServiceType) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0)
         } catch (e: Exception) {
             // 系统不让开前台服务（应用已在后台等）：准备照常进行，只是没有这层保护。
             FileLogger.w(TAG, "Cannot start the preparation foreground service: ${e.message}")
@@ -105,7 +105,7 @@ class PreparationService : Service() {
 
     private fun notification(state: PreparationProgress.State): Notification {
         val manager = getSystemService(NotificationManager::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager?.getNotificationChannel(CHANNEL) == null)
+        if (manager?.getNotificationChannel(CHANNEL) == null)
             manager?.createNotificationChannel(NotificationChannel(CHANNEL, "准备词库", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "首次使用时准备词库，完成后通知自动消失"
                 setShowBadge(false)

@@ -60,6 +60,7 @@ enum class PlatformFeature(val minSdk: Int, val label: String) {
     TILE_PENDING_INTENT(Build.VERSION_CODES.UPSIDE_DOWN_CAKE, "快捷开关用 PendingIntent 打开页面"),
     INSTALL_SOURCE(Build.VERSION_CODES.R, "读安装来源（F-Droid 装的不在应用里更新）"),
     CURRENT_INPUT_METHOD(Build.VERSION_CODES.UPSIDE_DOWN_CAKE, "默认输入法设置读不到时问系统当前输入法"),
+    FOREGROUND_SERVICE_TYPE(Build.VERSION_CODES.Q, "前台服务声明类型（首次准备词库的 dataSync 服务）"),
 
     // —— 调试测量（只在调试工具里用） ——
     ASYNC_TRACE(Build.VERSION_CODES.Q, "异步 Trace 段"),
@@ -192,6 +193,8 @@ object AndroidPlatform {
     val installSource: Boolean = has(PlatformFeature.INSTALL_SOURCE)
     @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     val currentInputMethod: Boolean = has(PlatformFeature.CURRENT_INPUT_METHOD)
+    @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.Q)
+    val foregroundServiceType: Boolean = has(PlatformFeature.FOREGROUND_SERVICE_TYPE)
 
     // —— 调试测量 ——
     @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.Q)
