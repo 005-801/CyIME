@@ -22,7 +22,8 @@ internal data class SliderMark(val value: Float, val label: String, val note: St
 /**
  * 滑条下面的刻度尺（用户 11-22：「候选字大小没有任何刻度，我甚至都不知道原来默认在哪里」）。
  * 刻度线按值在轨道上的位置画；[highlight] 那一格（默认值）用主题色加粗。
- * [trackInset]：Material3 滑条轨道两端相对组件边缘缩进的距离（新版竖条滑块宽 4dp，轨道从 2dp 起）。
+ * [trackInset]：滑条两端的值（最小、最大）离组件边缘多远。平板实测（11-22，300dpi）12 和 44 两个端点的刻点离边缘约 10dp，
+ * 原来按 2dp 算，19 默认那一格偏了约 5dp。
  */
 @Composable
 internal fun SliderScaleMarks(
@@ -30,7 +31,7 @@ internal fun SliderScaleMarks(
     marks: List<SliderMark>,
     highlight: Float?,
     modifier: Modifier = Modifier,
-    trackInset: Dp = 2.dp,
+    trackInset: Dp = 10.dp,
 ) {
     val normal = MaterialTheme.colorScheme.onSurfaceVariant
     val accent = MaterialTheme.colorScheme.primary
