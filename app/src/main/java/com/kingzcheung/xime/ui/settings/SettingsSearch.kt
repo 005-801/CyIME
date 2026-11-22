@@ -314,7 +314,7 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         SettingsSearchEntry("编码显示", candidates, candidatePage, "预编辑 输入框 候选栏 编码位置 拼音显示 拼音框 拼音浮框 拼音气泡"),
         SettingsSearchEntry("双拼编码显示全拼", candidates, candidatePage, "编码 显示 双拼键 原始按键 按键 字母 全拼 拼音 ul pb 小鹤 九键", section = "拼音显示"),
         SettingsSearchEntry("显示拼音编辑栏", candidates, candidatePage, "关闭 隐藏 顶部 拼音浮条 编码"),
-        SettingsSearchEntry("拼音位置", candidates, candidatePage, "拼音放在键盘内 候选上方 紧贴 小签 气泡 浮在上方 贴边 方块 顶上一行 微信 拼音 编辑 遮挡 底栏 抢戏"),
+        SettingsSearchEntry("拼音位置", candidates, candidatePage, "拼音放在键盘内 候选上方 紧贴 小签 小标签 标签 气泡 浮在上方 贴边 方块 顶上一行 整行 微信 拼音 编辑 遮挡 挡住 输入框 底栏 抢戏"),
         SettingsSearchEntry("拼音靠哪边", candidates, candidatePage, "拼音 小签 气泡 方块 靠左 居中 靠右 左边 中间 右边 位置 光标"),
         SettingsSearchEntry("拼音显示声调", candidates, candidatePage, "声调 标调 调号 读音 四声 注音 拼音"),
         SettingsSearchEntry("拼音气泡不透明度", candidates, candidatePage, "拼音 气泡 透明度 不透明度 透明 看不清 实底 浮条"),

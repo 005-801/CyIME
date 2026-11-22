@@ -650,10 +650,10 @@ private fun LayoutDisplayPage(
                             var preeditStyle by remember { mutableStateOf(SettingsPreferences.preeditStyle(context)) }
                             var preeditAlign by remember { mutableStateOf(SettingsPreferences.preeditAlign(context)) }
                             val styles = listOf(
-                                Triple(SettingsPreferences.PREEDIT_STYLE_BUBBLE, "浮在键盘上方", "气泡浮在应用上，点开编辑前后位置不变，透明度可调；会挡住一点输入内容。"),
-                                Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "紧贴候选上方", "圆角小签贴在键盘边框上，和键盘同色，不容易挡住输入内容。"),
-                                Triple(SettingsPreferences.PREEDIT_STYLE_BLOCK, "贴边方块", "直角方块贴在键盘边框上，和键盘同色，字和气泡一样大。"),
-                                Triple(SettingsPreferences.PREEDIT_STYLE_STRIP, "键盘顶上一行", "和键盘连成一体，像键盘往上多出一行；键盘本身不变高。"),
+                                Triple(SettingsPreferences.PREEDIT_STYLE_BUBBLE, "气泡", "拼音浮在键盘上面，会挡住一点输入框。透明度可调。"),
+                                Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "小标签", "拼音贴在键盘上边，只有拼音那么宽。输入框往上让开，不会被挡住。"),
+                                Triple(SettingsPreferences.PREEDIT_STYLE_BLOCK, "方块", "和小标签一样贴着键盘，但更高、字更大，四角是直角。输入框往上让开，不会被挡住。"),
+                                Triple(SettingsPreferences.PREEDIT_STYLE_STRIP, "整行", "拼音占满键盘上面一整行。输入框往上让开，不会被挡住。"),
                             )
                             val aligns = listOf(
                                 SettingsPreferences.PREEDIT_ALIGN_LEFT to "靠左",
