@@ -457,12 +457,41 @@ private fun LayoutDisplayPage(
                     Column(
                         modifier = Modifier.settingsSearchAnchor("候选字大小").padding(16.dp)
                     ) {
-                        Text(
-                            text = "候选字大小",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        // 当前字号、默认位置和恢复默认（用户 11-22：「没有任何刻度，我甚至都不知道原来默认在哪里」）。
+                        val defaultSp = SettingsPreferences.DEFAULT_CANDIDATE_TEXT_SIZE
+                        val shownSp = kotlin.math.round(candidateTextSize).toInt()
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "候选字大小",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "$shownSp sp",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.testTag("candidate-text-size-value")
+                            )
+                            if (shownSp == defaultSp) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "默认",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            TextButton(
+                                onClick = {
+                                    candidateTextSize = defaultSp.toFloat()
+                                    SettingsPreferences.setCandidateTextSize(context, defaultSp)
+                                },
+                                enabled = shownSp != defaultSp,
+                                modifier = Modifier.testTag("candidate-text-size-reset")
+                            ) { Text("恢复默认") }
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         CandidateTextSizeCard(
                             candidateTextSize = candidateTextSize,
                             modifier = Modifier.fillMaxWidth()
@@ -479,6 +508,24 @@ private fun LayoutDisplayPage(
                                 com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MAX_SP.toFloat(),
                             steps = com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MAX_SP -
                                 com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MIN_SP - 1
+                        )
+                        SliderScaleMarks(
+                            range = com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MIN_SP.toFloat()..
+                                com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MAX_SP.toFloat(),
+                            marks = listOf(
+                                SliderMark(com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MIN_SP.toFloat(), "12"),
+                                SliderMark(defaultSp.toFloat(), "$defaultSp", "默认"),
+                                SliderMark(com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_FIT_SP.toFloat(), "22"),
+                                SliderMark(33f, "33"),
+                                SliderMark(com.kingzcheung.xime.ui.keyboard.CANDIDATE_TEXT_SIZE_MAX_SP.toFloat(), "44"),
+                            ),
+                            highlight = defaultSp.toFloat(),
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "超过 22 候选栏会整条变高",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
