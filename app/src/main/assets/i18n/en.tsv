@@ -3664,7 +3664,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 「字幕」把身边的人说的话实时变成大字，适合开会、上课或和听力不好的人交流。	“Captions” shows what people around you say in large text, in real time, for meetings, classes or talking with hard-of-hearing people.
 「智能联想」关着，这项不起作用。	“Smart prediction” is off, so this has no effect.
 一个字符一格，从左到右对应这一排的键，空格写 {0}。	One character per key, left to right; use {0} for an empty key.
-一个字符一格，从左到右对应这一排的键；打空格就是空着的格子。几个字的短语用「」括起来算一格。	One character per key, left to right; a space leaves that key empty. Wrap a multi-character phrase in 「」 to put it on one key.
+一个字符一格，从左到右对应这一排的键；打空格就是空着的格子。几个字的短语用「」括起来算一格，结尾要带空格就写在」前面，比如「, 」。	One character per key, left to right; a space leaves that key empty. Wrap a multi-character phrase in 「」 to put it on one key; for a trailing space, put it before 」, like 「, 」.
 多写了 {0} 格，最后 {1} 格不放	{0} too many; the last {1} are left out
 改的还没保存	Unsaved changes
 要保存这次的修改吗？	Save these changes?
