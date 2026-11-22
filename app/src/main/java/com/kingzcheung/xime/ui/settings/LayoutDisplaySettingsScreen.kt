@@ -103,6 +103,8 @@ private fun LayoutDisplayPage(
 ) {
     val context = LocalContext.current
     val pageTitle = LayoutDisplayPages.firstOrNull { it.first == page }?.second
+    // 「候选滑到头回弹展开」放在这一层：「候选栏按钮」里开关它，「候选样式」里的「每页候选词数」跟着改说法（11-22 他：两个要配套）。
+    var swipeExpand by remember { mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context)) }
 
     KeyboardSettingsScaffold(pageTitle ?: "键盘布局", { if (page != null) closePage() else onBack() },
         preview = true, example = if (page == "candidates") com.kingzcheung.xime.keyboard.KeyboardPanelLaunch.Example.Candidates
@@ -372,6 +374,8 @@ private fun LayoutDisplayPage(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
+                    // 开了「候选滑到头回弹展开」：候选栏只排一屏，露全最后半截那个再往左拉就展开全部，用不上这个数（11-22 他：
+                    // 「一个屏幕就是一页」）。存的数不动，关掉开关后照旧按它。
                     val pageSizePref = SettingsPreferences.getPageSize(context)
                     val effectiveValue = if (pageSizePref == 0) 20f else pageSizePref.toFloat()
                     var pageSizeSlider by remember(effectiveValue) {
@@ -392,7 +396,7 @@ private fun LayoutDisplayPage(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "${pageSizeSlider.toInt()} 个",
+                                text = if (swipeExpand) "一屏" else "${pageSizeSlider.toInt()} 个",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -406,11 +410,13 @@ private fun LayoutDisplayPage(
                                 SettingsPreferences.setPageSize(context, intValue)
                             },
                             valueRange = 20f..50f,
-                            steps = 29
+                            steps = 29,
+                            enabled = !swipeExpand,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "下次打字时生效",
+                            text = if (swipeExpand) "已开「候选滑到头回弹展开」：候选栏显示多少就是一页，把最后露半截的那个露全，再往左拉就展开全部。关掉那个开关后按这里的数"
+                                else "下次打字时生效",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
@@ -497,9 +503,8 @@ private fun LayoutDisplayPage(
                             pressPrefs.edit().putBoolean(SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT, it).apply()
                         })
                     // 11-21 他：滑到头回弹展开只在打开这个开关后才有，默认关；关着时候选栏和 1.15.101 一样。
-                    var swipeExpand by remember { mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context)) }
                     SettingsToggleItem(Icons.TwoTone.SwipeLeft, "候选滑到头回弹展开",
-                        "候选滑到头再拉一下就展开，展开后往回划收起；右边那一格不再展开，用来关闭和收起键盘", swipeExpand, {
+                        "候选栏只排一屏，露全最后一个再往左拉就展开，展开后往回划收起；右边那一格不再展开，用来关闭和收起键盘", swipeExpand, {
                             swipeExpand = it
                             SettingsPreferences.setCandidateSwipeExpand(context, it)
                         })

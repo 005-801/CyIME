@@ -707,10 +707,13 @@ fun CandidateBar(
                     showNumberLabels = showNumberLabels,
                     gapWindowX = splitGapX,
                     scrollable = state is CandidateBarState.ChineseCandidates && !isGlidePreview,
-                    // 开了「候选滑到头回弹展开」：栏里只放引擎这一页，不在滑近尾巴时接上整张展开列表，也不因为滑了一下收起展开页，
-                    // 不然尾巴越滑越远、永远滑不到头，往左拉展不开（11-22 他在手机上：「没用」「展不开」）。展开、收回只靠拉。
+                    // 开了「候选滑到头回弹展开」：栏里只排一屏（11-22 他：「一个屏幕就是一页」）——一开始露出来的候选，
+                    // 加上栏尾露半截的那一个；把它露全就到头，再往左拉就展开。不用滑完「每页候选词数」那 20 个（群里：「划到头太费时间」）。
+                    // 一屏没排满（平板宽屏）时接上展开列表把这一屏填满，多出来的照样不排，尾巴不会越滑越远。
+                    // 也不因为滑了一下收起展开页：展开、收回只靠拉。
+                    firstScreenOnly = swipeExpand,
                     onUserScroll = callbacks.onCandidateStripScrolled.takeUnless { swipeExpand },
-                    onNearEnd = callbacks.onCandidateStripNearEnd.takeUnless { swipeExpand },
+                    onNearEnd = callbacks.onCandidateStripNearEnd,
                     scrollKey = (state as? CandidateBarState.ChineseCandidates)?.let { it.inputText to it.candidates.firstOrNull() },
                     itemPadding = candidateItemPadding,
                 )
@@ -721,6 +724,14 @@ fun CandidateBar(
                     candidateTextSize.toFloat(), commentsAllowed)
                 val showDividers = candidateDividersShown(4.dp, candidateItemPadding)
                 val itemDividerColor = candidateDividerColor(protectedVisuals.textColor)
+                // 开了「候选滑到头回弹展开」，上屏后的纯联想也只排一屏（11-22 他）：露全的几个加栏尾露半截的那一个，
+                // 露全它就到头，再往左拉就展开。键盘「下一项」在联想里走时照旧全排。
+                val associationShown = rememberFirstScreenCount(displayAssociation,
+                    swipeExpand && displayCandidates.isEmpty() && associationHighlight == null,
+                    constraints.maxWidth, candidateTextSize.sp, candidateFontFamily, candidateItemPadding, 4.dp,
+                    numbered = showNumberLabels && state is CandidateBarState.AssociationOnly)
+                val rowAssociation = if (associationShown < displayAssociation.size)
+                    displayAssociation.subList(0, associationShown) else displayAssociation
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     state = candidateListState,
@@ -776,7 +787,7 @@ fun CandidateBar(
                         }
                     }
 
-                    itemsIndexed(displayAssociation, key = { index, _ -> "assoc-$index" }) { index, candidate ->
+                    itemsIndexed(rowAssociation, key = { index, _ -> "assoc-$index" }) { index, candidate ->
                         val assocState = state as? CandidateBarState.AssociationOnly
                         CandidateItem(
                             text = candidateNumberedText(candidate, index, showNumberLabels && assocState != null),
@@ -2032,7 +2043,35 @@ private class CandidateStripViewport { var firstIndex: Int = 0 }
 /** [completeCount] 个候选连同注释完整可读，展开页从它们之后接着排。
  * [tailPadding]：能滑的候选行末尾补的空白（像素），滑到最末时最后一屏也从一个完整的候选开始。 */
 private class CandidateStripWindow(val split: CandidateWindowSplit, val completeCount: Int, val tailPadding: Int = 0,
-    val glossBodyWidthAt: ((Int) -> Int?)? = null, val fits: Map<Int, CandidateFit> = emptyMap())
+    val glossBodyWidthAt: ((Int) -> Int?)? = null, val fits: Map<Int, CandidateFit> = emptyMap(),
+    /** 能滑的那一行排前几个；只排一屏时比 all 少。 */
+    val shownCount: Int = Int.MAX_VALUE)
+
+/**
+ * 一屏排几个（[enabled] 为假时全排）：放得下的几个，再加栏尾露半截的那一个。按字宽估，不等排版。
+ * 用在「候选滑到头回弹展开」打开时的联想行，露全最后那个就到头。
+ */
+@Composable
+private fun rememberFirstScreenCount(texts: List<String>, enabled: Boolean, availablePx: Int,
+    fontSize: androidx.compose.ui.unit.TextUnit, fontFamily: androidx.compose.ui.text.font.FontFamily,
+    itemPadding: androidx.compose.ui.unit.Dp, spacing: androidx.compose.ui.unit.Dp, numbered: Boolean): Int {
+    val density = LocalDensity.current
+    val fontFamilyResolver = androidx.compose.ui.platform.LocalFontFamilyResolver.current
+    val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
+    val textWidths = remember(density, fontFamilyResolver, layoutDirection) {
+        candidateTextWidths(density, fontFamilyResolver, layoutDirection)
+    }
+    return remember(texts, enabled, availablePx, fontSize, fontFamily, itemPadding, spacing, numbered, textWidths) {
+        if (!enabled || texts.isEmpty()) texts.size else {
+            val padding = with(density) { 2 * itemPadding.roundToPx() }
+            val style = candidatePrimaryTextStyle(fontSize, fontFamily, false)
+            val fitting = candidatePrefixCount(texts.size, availablePx, with(density) { spacing.roundToPx() }) { index ->
+                textWidths.of(candidateNumberedText(texts[index], index, numbered), style) + padding
+            }
+            (fitting + 1).coerceAtMost(texts.size)
+        }
+    }
+}
 
 /**
  * 比整条候选栏还宽的长候选（多为整句）怎么放下：先缩小字号，最小到原字号的 3/4；还放不下就缩到两行。
@@ -2078,6 +2117,11 @@ internal fun FixedCandidateStrip(
      * 不算的话每画一次少报一个，下一组少给一个，一路缩到只剩一个（用户 11-19：开「拼音显示英文」只剩一个候选）。
      */
     glossEdgeCounts: Boolean = false,
+    /**
+     * 只排一屏（「候选滑到头回弹展开」打开时）：能滑的那一行只放一开始露出来的候选和栏尾露半截的那一个，
+     * 露全它就滑到头了；一屏没排满时调 [onNearEnd] 接上后面的。
+     */
+    firstScreenOnly: Boolean = false,
 ) {
     val measurer = rememberTextMeasurer()
     var stripOriginX by remember { mutableStateOf(Float.NaN) }
@@ -2147,7 +2191,7 @@ internal fun FixedCandidateStrip(
         val correctedCandidates = shownCorrections(LocalCorrectedCandidates.current, commentsShown)
         val fullCorrectionScheme = LocalCorrectionFullScheme.current
         val twoLineHeight = LocalCandidateRowHeight.current - 4.dp
-        val window = remember(twoLineHeight, viewport, all, candidates.size, shownComments, commentsAreGlosses, scrollable, focused, selectedIndex, fontSize, density, measurer, textWidths, inheritedTextStyle, showNumberLabels, itemSpacing, itemPadding, constraints.maxWidth, AppFonts.candidateFontFamily, AppFonts.commentFontFamily, localGap, learnedCandidates, correctedCandidates, fullCorrectionScheme) {
+        val window = remember(twoLineHeight, viewport, all, candidates.size, shownComments, commentsAreGlosses, scrollable, focused, selectedIndex, fontSize, density, measurer, textWidths, inheritedTextStyle, showNumberLabels, itemSpacing, itemPadding, constraints.maxWidth, AppFonts.candidateFontFamily, AppFonts.commentFontFamily, localGap, learnedCandidates, correctedCandidates, fullCorrectionScheme, firstScreenOnly) {
             val bodyWidths = HashMap<Int, Int>()
             fun bodyWidth(index: Int): Int = bodyWidths.getOrPut(index) {
                 val numbered = index < candidates.size
@@ -2234,9 +2278,12 @@ internal fun FixedCandidateStrip(
                 }
                 count
             }
+            // 只排一屏：露全的这些再加栏尾露半截的那一个（见 firstScreenOnly）。
+            val shownCount = if (firstScreenOnly && canScroll && !split.range.isEmpty())
+                (split.range.last + 2).coerceAtMost(all.size) else all.size
             CandidateStripWindow(split, completeCount, if (canScroll)
-                candidateTailPadding(all.size, constraints.maxWidth, spacing, ::shownWidth) else 0, glossBodyWidthAt,
-                fits.mapNotNull { (index, fit) -> fit?.let { index to it } }.toMap())
+                candidateTailPadding(shownCount, constraints.maxWidth, spacing, ::shownWidth) else 0, glossBodyWidthAt,
+                fits.mapNotNull { (index, fit) -> fit?.let { index to it } }.toMap(), shownCount)
         }
         val visibleIndices = window.split.range
         val splitLeftCount = window.split.leftCount
@@ -2260,7 +2307,13 @@ internal fun FixedCandidateStrip(
         // Shift 拖动指着候选时，选中底色改由候选栏画在手指指着的那个上，原来的先不画。
         val shiftDragFree = CandidateDropTargets.shared.hoveredBounds == null
         if (scrollable && localGap == null) {
-            ScrollableCandidateRow(candidates, all, shownComments, visuals, callbacks, fontSize, focused, showNumberLabels,
+            // 只排一屏而这一屏没排满（候选都放得下、后面还有）：接上展开列表填满这一屏。
+            if (firstScreenOnly && all.isNotEmpty() && visibleIndices.last >= all.size - 1) {
+                val fill by rememberUpdatedState(onNearEnd)
+                LaunchedEffect(all.size) { fill?.invoke() }
+            }
+            val rowItems = if (window.shownCount < all.size) all.subList(0, window.shownCount) else all
+            ScrollableCandidateRow(candidates, rowItems, shownComments, visuals, callbacks, fontSize, focused, showNumberLabels,
                 itemSpacing, itemPadding, visibleIndices, window.tailPadding, window.glossBodyWidthAt, window.fits, scrollKey, onUserScroll, onNearEnd,
                 corrections = correctedCandidates,
                 selectionFill = shiftDragFree && !highlightShown,

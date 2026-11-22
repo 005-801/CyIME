@@ -137,7 +137,7 @@ class CandidatePullExpandTest {
     }
 
     /**
-     * 候选多、能左右滑时（真机上打字几乎都是这样）：滑到这一页的尾巴再往左拉就展开，不会在滑近尾巴时接上整张展开列表、
+     * 候选多、能左右滑时（真机上打字几乎都是这样）：滑到一屏的尾巴再往左拉就展开，不会在滑近尾巴时接上整张展开列表、
      * 让尾巴越滑越远（11-22 他在手机上开着开关：「展不开」）；滑一下也不收起展开页，收回靠往右拉。
      */
     @Test fun manyCandidatesReachTheEndAndExpand() {
@@ -160,7 +160,7 @@ class CandidatePullExpandTest {
         repeat(6) { if (opens == 0) pull.pullAcross() }
         rule.runOnIdle {
             assertEquals("滑到头再拉就展开", 1, opens)
-            assertEquals("开关开着不接展开列表", 0, extends)
+            assertEquals("一屏排得满就不接展开列表", 0, extends)
             assertEquals("开关开着滑一下不收起展开页", 0, scrolled)
         }
     }
