@@ -157,7 +157,7 @@ private fun toolPanelEditText(
     onFocusChange: (Boolean) -> Unit,
     onTextChange: ((String) -> Unit)?,
     keepFocusOnBlur: Boolean = false,
-): android.widget.EditText = android.widget.EditText(context).apply {
+): android.widget.EditText = (if (singleLine) DragScrollEditText(context) else android.widget.EditText(context)).apply {
     setBackgroundColor(android.graphics.Color.TRANSPARENT)
     setTextColor(textColor.hashCode())
     setHintTextColor((textColor.copy(alpha = 0.4f)).hashCode())
