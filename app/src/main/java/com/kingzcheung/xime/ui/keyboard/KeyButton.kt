@@ -446,10 +446,9 @@ fun SwipeableKeyButton(
     val downCornerLabel = swipeDownKeyLabel.takeUnless { reserveDragForGlide && !letterGlideOwnsDrag || downCornerOff }
     val keyOnSwipe = onSwipe.takeUnless { !cornerSymbols && upSymbol != null }
     val keyOnSwipeDown = onSwipeDown.takeUnless { !cornerSymbols && downSymbol != null }
-    // 角标提示关着时键上不画角标，滑动时改用气泡显示要输入的符号（用户 11-14：长按有气泡，上下滑没有）。
+    // 角标提示关着时键上不画角标，滑动时照样提示要输入的符号（用户 11-14：长按有提示，上下滑没有）。
     val upHint = swipeText?.takeIf { it.isNotEmpty() } ?: upSymbol?.takeIf { keyOnSwipe != null }
     val downHint = swipeDownText?.takeIf { it.isNotEmpty() } ?: downSymbol?.takeIf { keyOnSwipeDown != null }
-    val cornerShown = !upCornerLabel.isNullOrEmpty() || !downCornerLabel.isNullOrEmpty()
     // 滑到哪个键按哪个键（用户 11-14，像三星键盘）：滑行和「上下滑输入符号」都关着、整个键盘滑动移光标也关着时才有。
     val slideTaps = !cornerSymbols && !reserveDragForGlide && !LocalLetterGlide.current && LocalT9GlideKeys.current == null &&
         inputPreferences.cursorGesture != CursorGestureMode.KEYBOARD && ctrlTargets != null
@@ -498,8 +497,10 @@ fun SwipeableKeyButton(
         onRelease = { isPressed = false; onRelease?.invoke() },
         // 长按到点后（角标已输入或弹出菜单）方向盘收起，和拂动键一样只留长按气泡。
         onPreview = { flickPreview = keyPreview(it); longPressShown = it.isLongPress; forwardPreview(it) },
-        // 键上画着角标时在键内渐变预览；角标符号都没画出来时弹气泡（和长按一样）。
-        inlineVerticalPreview = cornerShown || (upSymbol == null && downSymbol == null),
+        // 上下滑一律在键内渐变：要输入的符号从它那一角随手指拖到键中间（用户 11-22）。
+        // 「上方/下方角标提示」只管平时键上画不画角标，不再决定滑动时是渐变还是气泡；没画角标时从那一角淡入。
+        // 气泡只给长按（长按输入、长按菜单）。
+        inlineVerticalPreview = true,
         upText = upHint,
         downText = downHint,
         upPreviewText = swipeUpKeyLabel?.takeIf { it.isNotEmpty() } ?: upHint,

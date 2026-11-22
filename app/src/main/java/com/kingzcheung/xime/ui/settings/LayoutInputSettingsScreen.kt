@@ -242,7 +242,7 @@ internal fun LayoutInputSettingsContent(category: LayoutInputCategory, onBack: (
                     ExternalGlideSchemeItems(settings) { settings = it; it.save(context) }
                     HorizontalDivider()
                     SettingsToggleItem(Icons.TwoTone.Gesture, "九键滑行",
-                        "在九键上一笔划过几个键输入词语",
+                        "在九键上一笔划过几个键输入词语。开着时 2～9 键的拖动归滑行，这些键的角标改为长按输入",
                         checked = settings.t9GlideTyping, onCheckedChange = {
                             settings = settings.copy(t9GlideTyping = it); settings.save(context)
                         },
