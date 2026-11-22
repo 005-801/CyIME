@@ -72,6 +72,22 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
         profilesModel.refresh()
         remembered = InputModes.rememberedModes(context)
     }
+    // 开关日语这类带方案的语言后，方案在后台编译：开关当下读到的方案列表还不全，日语一直显示「正在准备可用组合」、
+    // 中文摘要也读成别的布局，要退出再进才对（105 平板 11-22）。后台准备好、部署完时再读一次。
+    DisposableEffect(Unit) {
+        val prefs = SettingsPreferences.getPrefsPublic(context)
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == LanguagePreferences.SCHEMAS_READY_KEY || key == com.kingzcheung.xime.rime.RimeConfigHelper.DEPLOYMENT_REVISION ||
+                key == LanguagePreferences.KEY) {
+                languages = LanguagePreferences.enabled(context)
+                orderedLanguages = InputModes.languageOrder(context)
+                profilesModel.refresh()
+                remembered = InputModes.rememberedModes(context)
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
     KeyboardSettingsScaffold("语言与方案", onBack, preview = true, modifier = Modifier.testTag("language-settings")) { modifier ->
         SettingsSearchAutoScroll(dragOrder.list)
         LazyColumn(modifier = modifier.settingsGutterScroll(dragOrder.list).testTag("language-settings-list")
@@ -125,6 +141,7 @@ fun LanguageSettingsContent(onOpenSchemaResources: () -> Unit = {}, onOpenDouble
                                         languages = LanguagePreferences.enabled(context)
                                         orderedLanguages = InputModes.languageOrder(context)
                                         profilesModel.refresh()
+                                        remembered = InputModes.rememberedModes(context)
                                         if (enabled) expandedLanguage = language
                                         message = if (enabled) "已开启" else "已关闭，已下载词库保留"
                                     } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
