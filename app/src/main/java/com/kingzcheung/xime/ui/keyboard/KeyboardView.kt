@@ -1312,6 +1312,7 @@ fun KeyboardView(
                         callbacks.onToolPanelAction?.invoke(com.kingzcheung.xime.service.toolPanelSelectAction(key, option))
                     },
                     onSwap = { swap?.key?.let { callbacks.onToolPanelAction?.invoke(it) } },
+                    downloadProgress = state.toolPanelDownloadProgress,
                 )
             } else if (state.toolPanelVisible && state.toolPanelDisplay != "PASSIVE") {
                 ToolPanel(

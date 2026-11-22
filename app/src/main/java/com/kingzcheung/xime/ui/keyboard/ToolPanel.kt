@@ -223,6 +223,8 @@ fun ToolPanelBar(
     showSwap: Boolean = false,
     onSelect: (key: String, option: String) -> Unit = { _, _ -> },
     onSwap: () -> Unit = {},
+    /** 离线翻译模型的下载进度 0~1：输入框底下画一条细线，栏里有字、看不到提示时也知道下到哪了。 */
+    downloadProgress: Float? = null,
 ) {
     // 圆钮用按键底色和按键字色，跟着键盘主题走（原来取应用主题的浅紫，深色下白字看不清）
     val circleBg = cardBgColor
@@ -285,6 +287,15 @@ fun ToolPanelBar(
                     modifier = Modifier.align(Alignment.CenterEnd).size(14.dp),
                     color = textColor.copy(alpha = 0.5f),
                     strokeWidth = 1.5.dp,
+                )
+            }
+            if (downloadProgress != null) {
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { downloadProgress.coerceIn(0f, 1f) },
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(2.dp)
+                        .testTag("live-bar-download-progress"),
+                    color = textColor.copy(alpha = 0.6f),
+                    trackColor = textColor.copy(alpha = 0.12f),
                 )
             }
         }

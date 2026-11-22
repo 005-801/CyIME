@@ -1982,6 +1982,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
             toolPanelDisplay = null,
             toolPanelUiNodes = null,
             toolPanelLoading = false,
+            toolPanelDownloadProgress = null,
             enterKeyText = editorEnterKeyText(),
         )
         ToolPanelEditTextHolder.editText = null
