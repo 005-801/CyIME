@@ -61,10 +61,13 @@ internal fun OfflineModelCard() {
     val senseReady = SpeechModelCatalog.SENSEVOICE in ready
     var wholeSentence by remember { mutableStateOf(SettingsPreferences.isSttWholeSentence(context)) }
     var wholeFinalizer by remember { mutableStateOf(SettingsPreferences.getSttWholeFinalizer(context)) }
+    // 没开日语不列「日语语音」（用户 11-22）；存的日语模型选择不动，开了日语照旧。
+    val shownLanguages = remember { InputLanguage.speech.filter {
+        it != InputLanguage.JAPANESE || com.kingzcheung.xime.settings.LanguagePreferences.japaneseOn(context) } }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        InputLanguage.speech.forEachIndexed { index, language ->
+        shownLanguages.forEachIndexed { index, language ->
             SettingsSection(title = "${language.displayName}语音") {
-                val content = if (index == InputLanguage.speech.lastIndex) Modifier.testTag("speech-correction") else Modifier
+                val content = if (index == shownLanguages.lastIndex) Modifier.testTag("speech-correction") else Modifier
                 Column(content.fillMaxWidth()) {
                     SpeechPipeline(language, selected.getValue(language), ready, senseReady, xasrReady, wholeSentence,
                         wholeFinalizer, downloads, onPick = { editing = language }, onDownload = ::download,

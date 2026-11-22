@@ -117,9 +117,10 @@ private fun LayoutDisplayPage(
         ) {
             if (page == null) item {
                 SettingsSection(title = "各布局", content = {
+                    val japanese = com.kingzcheung.xime.settings.LanguagePreferences.japaneseOn(context)
                     LayoutInputCategory.entries.forEachIndexed { index, category ->
                         if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                        SettingsItem(category.icon, category.title, category.description,
+                        SettingsItem(category.icon, category.title, category.description(japanese),
                             onClick = { onOpenLayout(category.route) }, showArrow = true)
                     }
                 })

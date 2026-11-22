@@ -90,6 +90,12 @@ internal fun withCaptionPluginState(results: List<SettingsSearchEntry>, captionA
     return rest
 }
 
+/** 只对日语有用的设置项：没开日语时页面上不显示，搜索也不列（用户 11-22）。 */
+internal val JAPANESE_ONLY_SEARCH_TITLES = setOf("长音键", "假名方向提示")
+
+internal fun withJapaneseState(results: List<SettingsSearchEntry>, japaneseOn: Boolean): List<SettingsSearchEntry> =
+    if (japaneseOn) results else results.filterNot { it.title in JAPANESE_ONLY_SEARCH_TITLES }
+
 /** 布局编辑器是独立的 Activity，不在设置的导航图里。 */
 internal const val SEARCH_TARGET_CUSTOM_LAYOUT = "activity:custom_layout"
 
@@ -666,7 +672,9 @@ internal fun SettingsSearchField(query: String, onQueryChange: (String) -> Unit,
 internal fun SettingsSearchResults(query: String, onOpen: (SettingsSearchEntry) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val english = com.kingzcheung.xime.ui.i18n.LocalUiTranslations.current
-    val results = withCaptionPluginState(searchSettings(query, english = english), com.kingzcheung.xime.ui.caption.CaptionPlugin.isActive(context))
+    val results = withJapaneseState(withCaptionPluginState(searchSettings(query, english = english),
+        com.kingzcheung.xime.ui.caption.CaptionPlugin.isActive(context)),
+        com.kingzcheung.xime.settings.LanguagePreferences.japaneseOn(context))
     if (results.isEmpty()) {
         Text("没有找到「$query」相关的设置", style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))

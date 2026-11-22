@@ -41,6 +41,10 @@ internal enum class LayoutInputCategory(val route: String, val title: String, va
     Nine("layout_input_nine", "九键与 14 键", "拂动选字母、双字母键、假名提示"),
     /** 英文、中文 26 键和九键滑行原来分在 26 键、九键两页三个开关（用户 11-09「三个入口太乱」），合到这一页；存的值不变。 */
     Glide("layout_input_glide", "滑行输入", "英文、中文、九键滑行"),
+    ;
+
+    /** 没开日语时不提假名提示（那一项不显示，用户 11-22）。 */
+    fun description(japanese: Boolean): String = if (this == Nine && !japanese) "拂动选字母、双字母键" else description
 }
 
 /** 日语 26 键的长音 ー 放在哪：三张带图例的卡片，默认 L 键（见 JapaneseLongVowelKey）。 */
@@ -139,8 +143,11 @@ internal fun LayoutInputSettingsContent(category: LayoutInputCategory, onBack: (
                         lockMessage = com.kingzcheung.xime.ui.keyboard.InputGestureLocks.lockFor(settings, com.kingzcheung.xime.ui.keyboard.InputGestureLock.Option.SHIFT_SYLLABLE_SPLIT, true)
                             ?.takeIf { !settings.shiftSyllableSplit }?.message)
                     ShiftSyllableSplitLegend(settings.shiftSyllableSplit)
-                    HorizontalDivider()
-                    JapaneseLongVowelKeySettings(settings) { settings = it; it.save(context) }
+                    // 长音键只有日语 26 键用：没开日语不显示（用户 11-22）。
+                    if (com.kingzcheung.xime.settings.LanguagePreferences.japaneseOn(context)) {
+                        HorizontalDivider()
+                        JapaneseLongVowelKeySettings(settings) { settings = it; it.save(context) }
+                    }
                 })
                 }
                 LayoutInputCategory.Nine -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -208,7 +215,8 @@ internal fun LayoutInputSettingsContent(category: LayoutInputCategory, onBack: (
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     })
-                    InputExperienceSettings(setOf(InputExperiencePart.FLICK_DISC, InputExperiencePart.KANA), "拂动与假名提示")
+                    InputExperienceSettings(setOf(InputExperiencePart.FLICK_DISC, InputExperiencePart.KANA),
+                        if (com.kingzcheung.xime.settings.LanguagePreferences.japaneseOn(context)) "拂动与假名提示" else "拂动提示")
                 }
                 LayoutInputCategory.Glide -> Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 // 三个布局各一行，存的还是原来三个开关（glide_typing_v2、glide_typing_chinese、t9_glide_typing），默认值不变。
