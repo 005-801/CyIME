@@ -2474,7 +2474,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                             }
                             val hardwareExample = settingsPreviewEditor && settingsExample == KeyboardPanelLaunch.Example.Hardware
                             val position = if (hardwareExample) HardwareToolbarPosition(0.5f, 1f) else hardwareToolbarPositionFor(state.hardwareOptions)
-                            // 固定在某一边：不跟光标、不避让、不能拖，靠边按开着算（设置「浮窗位置」，默认自由拖动不变）。
+                            // 固定在某一边：工具条不跟光标、不避让、不能拖，靠边按开着算（设置「浮窗位置」，默认自由拖动不变）；
+                            // 候选卡照样跟光标、躲开正在打字的那一行（用户 11-22）。
                             val fixedEdge = state.hardwareOptions.fixedEdge.takeUnless { hardwareExample }
                             val docksAtEdge = if (hardwareExample) state.hardwareOptions.dockAtEdge else hardwareDocksAtEdge(state.hardwareOptions)
                             val bottomDocked = position.isBottomDocked(docksAtEdge) && maxWidth >= 336.dp
@@ -2502,7 +2503,9 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     // 释义只换显示用注释，与屏幕候选栏同一规则。
                                     if (hardwareEnglish || shown.association ||
                                         state.inputProfile.language != com.kingzcheung.xime.settings.InputLanguage.CHINESE) shown
-                                    else if (com.kingzcheung.xime.gloss.CandidateGlossary.physicalShiftHeld.value) {
+                                    // 注音按住 Shift 是在选字（Shift+数字），不对调成英文，免得按下去整排候选变样。
+                                    else if (com.kingzcheung.xime.gloss.CandidateGlossary.physicalShiftHeld.value &&
+                                        !keyRouter.zhuyinHardwareActive()) {
                                         val (words, notes) = com.kingzcheung.xime.gloss.CandidateGlossary.swapped(shown.words, shown.comments)
                                         shown.copy(words = words, comments = notes)
                                     }
@@ -2566,7 +2569,8 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     candidates = hardwareCandidates.windowWords(state.hardwareOptions.associationInWindow),
                                     hasNextPage = hardwareCandidates.hasNextPage,
                                     hasPrevPage = hardwareCandidates.hasPreviousPage,
-                                    cursorAnchor = state.cursorAnchor.takeIf { state.hardwareOptions.followCursor && fixedEdge == null },
+                                    // 固定在某一边只固定工具条，候选卡照「候选跟随光标」跟到正在打字的那一行旁边（用户 11-22）。
+                                    cursorAnchor = state.cursorAnchor.takeIf { state.hardwareOptions.followCursor },
                                     highlightIndex = hardwareHighlight,
                                     cardBackgroundColor = cardBg,
                                     candidateTextColor = hardwarePalette.candidateText,
@@ -2585,7 +2589,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     onPreeditBoundsChanged = { updateHardwarePreeditBounds(it) },
                                     onBoundsChanged = { updateHardwareSurfaceBounds(toolbar = false, it) },
                                     avoidBoundsInWindow = hardwareToolbarBounds.value,
-                                    avoidCaret = state.cursorAnchor.takeIf { state.hardwareOptions.avoidEditor && fixedEdge == null },
+                                    avoidCaret = state.cursorAnchor.takeIf { state.hardwareOptions.avoidEditor },
                                     onShown = { words, count -> keyRouter.reportHardwareShown(words, count) },
                                     fixedEdge = fixedEdge,
                                     typingCaret = state.cursorAnchor,
@@ -3591,6 +3595,19 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 shiftEnter()
                 ctrlEnterKeys += keyCode
                 return true
+            }
+            // 注音（大千）打字中：Shift+数字（Rime 注音）或 Ctrl+数字（微软注音）选第 N 个候选，光按数字照旧是注音和声调（用户 11-22）。
+            // 没在打字时不接：Shift+数字照旧打标点，Ctrl+数字照旧交给应用。按住不放的重复也吞掉，不漏成标点或应用快捷键。
+            if (keyRouter.zhuyinHardwareActive() && zhuyinChordDigitIndex(keyCode, e.isShiftPressed, e.isCtrlPressed,
+                    e.isAltPressed, e.isMetaPressed) != null) {
+                if (e.repeatCount > 0 && hardwareCandidateNavigationKeys.contains(keyCode)) return true
+                if (e.repeatCount == 0 && keyRouter.hardwareComposing()) {
+                    keyCodeToKey(keyCode, false)?.let { digit ->
+                        keyRouter.handleKeyPress(digit, false, hardwareEvent = KeyEvent(e))
+                        hardwareCandidateNavigationKeys += keyCode
+                        return true
+                    }
+                }
             }
             val continuingCandidatePress = e.repeatCount > 0 && hardwareCandidateNavigationKeys.contains(keyCode)
             if ((e.isCtrlPressed || e.isAltPressed || e.isMetaPressed) && !continuingCandidatePress && !isHardwareArrow(keyCode)) {

@@ -130,6 +130,16 @@ internal fun isZhuyinHardwarePunctuation(key: String, keyCode: Int, shift: Boole
 internal fun zhuyinKeepsPagingKey(keyCode: Int): Boolean =
     keyCode != KeyEvent.KEYCODE_COMMA && keyCode != KeyEvent.KEYCODE_PERIOD && keyCode != KeyEvent.KEYCODE_MINUS
 
+/**
+ * 注音（大千）实体键盘按组合键选候选：数字行是注音符号和声调，光按数字是接着打字，所以打字中用
+ * Shift+数字（Rime 注音的习惯）或 Ctrl+数字（微软注音的习惯）选第 N 个候选（用户 11-22）。
+ * 只认数字行；小键盘、带 Alt/Meta、Shift 和 Ctrl 一起按的都不算。返回这一组里的位置（1 → 0 … 9 → 8，0 → 9）。
+ */
+internal fun zhuyinChordDigitIndex(keyCode: Int, shift: Boolean, ctrl: Boolean, alt: Boolean, meta: Boolean): Int? {
+    if (alt || meta || shift == ctrl) return null
+    return hardwareCandidateDigitIndex(keyCode, shifted = false)
+}
+
 /** Only unshifted number-row keys select numbered candidates. */
 internal fun hardwareCandidateDigitIndex(keyCode: Int, shifted: Boolean): Int? {
     if (shifted) return null

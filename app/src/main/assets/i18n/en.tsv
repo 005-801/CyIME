@@ -3999,7 +3999,7 @@ Shift、Ctrl、空格、删除键的小技巧	Tips for Shift, Ctrl, Space and De
 需要通讯录权限，请在系统设置里允许	Contacts permission is needed; allow it in system settings
 高度、宽度、悬浮、透明度	Height, width, floating, transparency
 浮窗位置	Floating bar position
-固定后浮窗不再跟着光标走，候选贴着工具条出现。输入框在下面时选顶部，在上面时选底部。	When fixed, the bar no longer follows the cursor and candidates appear next to it. Pick Top when the input box is low on the screen, Bottom when it is high.
+固定后工具条停在这一边、不能拖；候选照样出现在正在打字的那一行旁边，不挡这一行。	When fixed, the toolbar stays on that side and cannot be dragged; candidates still appear next to the line you are typing, without covering it.
 自由拖动	Drag freely
 固定在{0}	Fixed at {0}
 顶部	Top

@@ -1296,6 +1296,20 @@ internal class ImeKeyRouter(private val service: XimeInputMethodService) {
                 commitHardwareLiteral(key)
                 return@command
             }
+            // 注音（大千）Shift+数字 / Ctrl+数字：按排在前面的注音键都处理完后的候选，选这一组的第 N 个，和光按数字选词同一条路
+            // （用户 11-22，见 zhuyinChordDigitIndex）。数字不能先送进 Rime，那是注音符号和声调。
+            if (hardwareEvent != null && zhuyinHardwareActive() && zhuyinChordDigitIndex(hardwareEvent.keyCode,
+                    hardwareEvent.isShiftPressed, hardwareEvent.isCtrlPressed, hardwareEvent.isAltPressed,
+                    hardwareEvent.isMetaPressed) != null) {
+                if (service.rimeEngine.readQueuedComposition()?.input?.isNotEmpty() == true) {
+                    processHardwareCandidateKey(KeyEvent(KeyEvent.ACTION_DOWN, hardwareEvent.keyCode))
+                    hardwareNavigation.releasePress(HardwareCandidateKey.DIGIT)
+                } else if (hardwareEvent.isShiftPressed) {
+                    // 前面的键已经把字上屏了：Shift+数字照没在打字时那样打标点。
+                    keyCodeToKey(hardwareEvent.keyCode, true)?.let { routeZhuyinPunctuation(it) }
+                }
+                return@command
+            }
             if (hardwareEvent != null && !service.uiState.value.isAsciiMode &&
                 service.uiState.value.inputProfile.scheme == com.kingzcheung.xime.settings.InputScheme.ZHUYIN &&
                 routeZhuyinHardwareKey(key)) return@command
