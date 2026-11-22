@@ -515,9 +515,10 @@ fun SwipeableKeyButton(
         rightText = letters?.second?.let { if (inputPreferences.uppercaseKeyLabels) it.uppercase() else it } ?: swipeRightText,
         horizontalThresholdDp = if (letters != null) normalizeLetterSwipeDistance(inputPreferences.fourteenLetterSwipeDp) else 50f,
         reserveHorizontalSwipe = letters != null,
-        // With the four-way disc shown, 14-key pairs re-aim freely like kana and nine-key flicks;
-        // the in-key mode keeps the 26-key axis lock.
-        freeDirection = letters != null && inputPreferences.flickDirectionDisc,
+        // 14 键双字母键四个方向都有东西：不管开不开方向盘，都按松手时落在哪个 45° 扇区算，和日语假名、九键拂动一样。
+        // 以前键内模式沿用 26 键的锁轴：先往上拖就一直算上，要先拖回中线附近才换成左右，同一个位置出什么取决于刚才怎么拖，
+        // 范围说不清、换方向时一下跳过去（用户 11-22）。现在键上画出的扇区（[KeyFlickSector]）就是判定范围。
+        freeDirection = letters != null,
         // 横滑动作（如九键 0 键左滑「上一项」）和上下滑一样在键内渐变，不再弹旧的滑动浮窗（用户 10-24）。
         inlineHorizontalPreview = true,
         longPressDrawableIds = longPressDrawableIds.orEmpty(),
@@ -924,11 +925,18 @@ fun SwipeableKeyButton(
         else if (showDisc && discLabels != null) {
             KanaDirectionIndicator(discDirection, MaterialTheme.colorScheme.primary.copy(alpha = .6f))
             DirectionDiscPreview(discLabels, discDirection, resolvedBackground, resolvedText, contentScale)
-        } else KeyFlickLabels(flickFade, resolvedText, maxWidth.value, maxHeight.value, effectiveSwipeFontSize.value, labelSize,
-            icons = buildMap {
-                swipeLeftIcon?.let { put(KeyFlickOrigin.LEFT, it) }
-                swipeRightIcon?.let { put(KeyFlickOrigin.RIGHT, it) }
-            }, iconSizeDp = mainIconSize.value)
+        } else {
+            // 四向键（14 键双字母键、九键拂动）拖动时在键上画出各方向的触发夹角，手指所在扇区随距离加深（用户 11-22）。
+            if (currentActions.freeDirection) flickPreview?.let { preview ->
+                KeyFlickSector(keyFlickDragDirection(preview, currentActions.upPreviewFromTop, currentActions.downPreviewFromTop),
+                    MaterialTheme.colorScheme.primary, preview.progress)
+            }
+            KeyFlickLabels(flickFade, resolvedText, maxWidth.value, maxHeight.value, effectiveSwipeFontSize.value, labelSize,
+                icons = buildMap {
+                    swipeLeftIcon?.let { put(KeyFlickOrigin.LEFT, it) }
+                    swipeRightIcon?.let { put(KeyFlickOrigin.RIGHT, it) }
+                }, iconSizeDp = mainIconSize.value)
+        }
     }
 }
 
