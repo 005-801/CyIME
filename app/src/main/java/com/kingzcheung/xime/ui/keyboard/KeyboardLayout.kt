@@ -1867,6 +1867,8 @@ internal fun ShiftCapsKeyButton(
     val currentSplitRedundant by rememberUpdatedState(splitRedundant)
     val suppressCursorMove = LocalSuppressCursorMove.current
     val currentPress by rememberUpdatedState(onKeyPressDown)
+    // 松手给「按键抬起震动」，和字母键一样（用户 11-23）。
+    val currentRelease by rememberUpdatedState(keyReleaseOrShared(null, onKeyPressDown != null))
     val currentKey by rememberUpdatedState(onKeyPress)
     val currentTapKey by rememberUpdatedState(tapKey)
     val currentGapLight by rememberUpdatedState(LocalKeyGapLight.current)
@@ -1974,6 +1976,7 @@ internal fun ShiftCapsKeyButton(
                         targets?.finish()
                         isPressed = false
                         suppressCursorMove.value = false
+                        currentRelease?.invoke()
                         if (tapOutput != null) {
                             // 长音键：点按送 ー；按住没打别的键松手，照 Shift 点按切换（小写→单次大写→锁定→小写）。
                             // 计时没赶上（松手事件先到）时按事件时间判断，不把长按当成点按。
