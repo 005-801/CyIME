@@ -95,7 +95,7 @@ class PerformanceCostsTest {
         assertFalse(source.device.items.getValue("glass").estimated)
         assertEquals(0.8, source.device.items.getValue("glass").keyMs!!, 1e-9)
         assertTrue(source.device.items.getValue("neighbor_correction").estimated)
-        assertEquals("性能开销：每键 +3.0 ms(慢 10%) · 内存 +2 MB", PerformanceCosts.note(source, "neighbor_correction"))
+        assertEquals("性能开销：每键约 +3.0 ms(慢 10%) · 内存约 +2 MB", PerformanceCosts.note(source, "neighbor_correction"))
         assertEquals(listOf("neighbor_correction"), PerformanceCosts.total(source.device, setOf("glass", "neighbor_correction")).estimated)
     }
 
