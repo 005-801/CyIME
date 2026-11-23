@@ -342,8 +342,12 @@ fun CandidateBar(
     val showCompositionCancel = showCancelButton && state !is CandidateBarState.Idle && callbacks.onCancelInput != null
     // 开了「候选滑到头回弹展开」又选了「关闭键位置：右边」（11-22 他）：取消／关联想画成「×」放在右边收起键盘那一格，
     // 左边不放；打字时点它取消、出联想时点它关联想、回到空闲后同一个位置是收起键盘。开关关着时和 1.15.101 一样。
-    val closeAtRight = swipeExpand && closeOnRight && showCompositionCancel
-    val cancelAtLeft = showCompositionCancel && !closeAtRight
+    // 「右边一处关」= 左右滑展开开着且关闭键放右边：右边那一格只用来关，▾/▴ 不放（展开、收回只靠滑）。
+    // 其余（「经典」，滑不滑都一样）右边照 1.15.101 放 ▾/▴（11-23 他选：左右滑单独做开关，经典也能滑）。
+    val rightCloses = swipeExpand && closeOnRight
+    // 「关闭」不看「候选栏取消按钮」开关：那个开关只管「展开」时左边的「‹」（11-23 设置改版，「关闭」下不显示它）。
+    val closeAtRight = rightCloses && state !is CandidateBarState.Idle && callbacks.onCancelInput != null
+    val cancelAtLeft = showCompositionCancel && !rightCloses
     // 「<」右边那 4dp：开了「候选滑到头回弹展开」、后面是候选行时算拉动区的一部分（11-21 平板上按在空白处拉不动）；
     // 开关关着时和 1.15.101 一样画在拉动区外面。
     val pullLeadingGap = if (swipeExpand && cancelAtLeft && inlineSuggestions.isEmpty()) 4.dp else 0.dp
@@ -948,11 +952,11 @@ fun CandidateBar(
             // 打字时候选栏只放候选：亮着的开关（悬浮、繁体、全角等）只在空闲工具栏里显示，
             // 不再挤到候选右边（11-03：悬浮键盘里一直多一个蓝色悬浮按钮，候选只剩一个）。
             // 右边 ▾ 展开、▴ 收回，同 1.15.101（11-21 恢复）。
-            // 打开「候选滑到头回弹展开」后（11-21 他定）：右边在所有状态都是收起键盘，不放 ▾/▴；展开、收回只靠滑，
-            // 取消靠左边「<」，收键盘靠右边，各只有一种办法。别的宿主（没有「<」时）右边放「清空」，这时不再放收起。
+            // 「右边一处关」（11-22 他定）：右边那一格先是 ×，关掉候选或联想后同一格是收起键盘，不放 ▾/▴，展开、收回只靠滑。
+            // 「经典」开了左右滑也照旧放 ▾/▴，滑只是多一种展开办法（11-23）。别的宿主（没有「<」时）右边放「清空」，这时不再放收起。
             val rightClearShown = !candidatePageExpanded && displayAssociation.isNotEmpty() &&
                 callbacks.onClearAssociation != null && callbacks.onCancelInput == null
-            if (swipeExpand) {
+            if (rightCloses) {
                 if (closeAtRight) {
                     // 和下面收起键盘、空闲时的收起键同一格：同一个位置先关候选／联想，再点就收起键盘。
                     KeyboardToolbarButton({ callbacks.onCancelInput?.invoke() }, edgePressedFill,

@@ -103,8 +103,11 @@ private fun LayoutDisplayPage(
 ) {
     val context = LocalContext.current
     val pageTitle = LayoutDisplayPages.firstOrNull { it.first == page }?.second
-    // 「候选滑到头回弹展开」放在这一层：「候选栏按钮」里开关它，「候选样式」里的「每页候选词数」跟着改说法（11-22 他：两个要配套）。
+    // 「左右滑展开」放在这一层：「候选栏按钮」里开关它，「候选样式」里的「每页候选词数」跟着改说法（11-22 他：两个要配套）。
     var swipeExpand by remember { mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context)) }
+    // 「候选栏右边的键」：展开（默认，1.15.101）／关闭。存的还是两个旧开关，名字不改：关闭 = 左右滑展开 + 关闭键放右边。
+    var closeOnRight by remember { mutableStateOf(SettingsPreferences.isCandidateCloseOnRight(context)) }
+    val rightKeyCloses = swipeExpand && closeOnRight
 
     KeyboardSettingsScaffold(pageTitle ?: "键盘布局", { if (page != null) closePage() else onBack() },
         preview = true, example = if (page == "candidates") com.kingzcheung.xime.keyboard.KeyboardPanelLaunch.Example.Candidates
@@ -570,7 +573,7 @@ private fun LayoutDisplayPage(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
-                    // 开了「候选滑到头回弹展开」：候选栏只排一屏，露全最后半截那个再往左拉就展开全部，用不上这个数（11-22 他：
+                    // 开了「左右滑展开」：候选栏只排一屏，露全最后半截那个再往左拉就展开全部，用不上这个数（11-22 他：
                     // 「一个屏幕就是一页」）。存的数不动，关掉开关后照旧按它。
                     val pageSizePref = SettingsPreferences.getPageSize(context)
                     val effectiveValue = if (pageSizePref == 0) 20f else pageSizePref.toFloat()
@@ -611,7 +614,7 @@ private fun LayoutDisplayPage(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (swipeExpand) "已开「候选滑到头回弹展开」：候选栏显示多少就是一页，把最后露半截的那个露全，再往左拉就展开全部。关掉那个开关后按这里的数"
+                            text = if (swipeExpand) "已开「左右滑展开」：候选栏显示多少就是一页，滑到头再往左拉就展开全部。关掉后按这里的数"
                                 else "下次打字时生效",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -622,112 +625,119 @@ private fun LayoutDisplayPage(
             // 候选栏左右的按钮（11-02 整理：原来 11 行挤在一张「候选词」卡片里，按用途拆成四组，各行原样不变）。
             if (page == "candidates") item {
                 SettingsSection(title = "候选栏按钮", content = {
-                    // 回弹展开决定整条候选栏怎么用，放这一组最前（11-22 他：开关和图例放在候选词页靠前）。
-                    // 11-21 他：滑到头回弹展开只在打开这个开关后才有，默认关；关着时候选栏和 1.15.101 一样。
-                    SettingsToggleItem(Icons.TwoTone.SwipeLeft, "候选滑到头回弹展开",
-                        "候选栏只排一屏，露全最后一个再往左拉就展开，展开后往回划收起；右边那一格不再展开，用来关闭和收起键盘", swipeExpand, {
-                            swipeExpand = it
-                            SettingsPreferences.setCandidateSwipeExpand(context, it)
-                        })
-                    // 11-22 他：全面屏手势的人要「不管什么时候点右边同一个位置都能收起键盘」。开关打开后才有这两项：
-                    // 关闭键放左边（同 104）还是右边（「×」，和收起键盘同一格）。
-                    if (swipeExpand) {
-                        var closeRight by remember { mutableStateOf(SettingsPreferences.isCandidateCloseOnRight(context)) }
-                        Column(Modifier.settingsSearchAnchor("关闭键位置")) {
-                            Text("关闭键位置", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp))
-                            Text("放右边时用「×」，和收起键盘同一个位置：上屏后点一下关掉联想，同一处再点一下收起键盘",
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 16.dp))
-                            Row(Modifier.fillMaxWidth().choiceCardRowHeight(150.dp).padding(horizontal = 16.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                for (right in listOf(false, true)) {
-                                    IllustratedChoiceCard(if (right) "右边" else "左边", closeRight == right,
-                                        onClick = {
-                                            closeRight = right
-                                            SettingsPreferences.setCandidateCloseOnRight(context, right)
-                                        },
-                                        modifier = Modifier.weight(1f), tag = "candidate-close-side:${if (right) "right" else "left"}",
-                                        titleMaxLines = 1) {
-                                        CandidateCloseSideIllustration(right)
-                                    }
+                    // 11-23 他：两套候选栏不能藏在一个「回弹」开关后面，做成两张图卡，名字对称：右边那个键是「展开」还是「关闭」。
+                    // 展开 = 1.15.101（右 ▾ 展开、▴ 收回，左「‹」取消）；关闭 = 右边同一格先关候选／联想、再点收起键盘（全面屏手势）。
+                    Column(Modifier.settingsSearchAnchor("候选栏右边的键")) {
+                        Text("候选栏右边的键", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp))
+                        // 上下两张整宽卡片：小候选栏照真的一样横着画满，字和图标看得清。
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            for (closes in listOf(false, true)) {
+                                IllustratedChoiceCard(if (closes) "关闭" else "展开（默认）", rightKeyCloses == closes,
+                                    onClick = {
+                                        closeOnRight = closes
+                                        SettingsPreferences.setCandidateCloseOnRight(context, closes)
+                                        // 「关闭」右边不放 ▾/▴，展开只能靠滑，所以一并打开左右滑；选回「展开」时左右滑保持原样。
+                                        if (closes && !swipeExpand) {
+                                            swipeExpand = true
+                                            SettingsPreferences.setCandidateSwipeExpand(context, true)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(if (closes) 196.dp else 136.dp),
+                                    tag = "candidate-right-key:${if (closes) "close" else "expand"}",
+                                    titleMaxLines = 1) {
+                                    CandidateRightKeyIllustration(closes)
                                 }
                             }
-                            // 11-23 他：四格「操作图例」太丑、也没让人看懂，不如不加，整块拿掉。
-                            Spacer(Modifier.height(8.dp))
                         }
+                        Spacer(Modifier.height(8.dp))
                     }
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 16.dp),
                         thickness = 0.5.dp,
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                     )
-                    var showCandidateCancel by remember {
-                        mutableStateOf(SettingsPreferences.shouldShowCandidateCancelButton(context))
-                    }
-                    // 图例放在开关下面，随开关实时变化；整块都可点。
-                    Column(
-                        modifier = Modifier.settingsSearchAnchor("候选栏取消按钮")
-                            .fillMaxWidth()
-                            .testTag("candidate-cancel-setting")
-                            .toggleable(
-                                value = showCandidateCancel,
-                                role = Role.Switch,
-                                onValueChange = {
-                                    showCandidateCancel = it
-                                    SettingsPreferences.setShowCandidateCancelButton(context, it)
-                                },
-                            )
-                            .padding(16.dp),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("候选栏取消按钮", style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium)
-                                Text("候选栏左端显示取消按钮",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Switch(checked = showCandidateCancel, onCheckedChange = null)
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        CandidateCancelIllustration(showCandidateCancel)
-                    }
-                    // 联想关闭键用叉号（用户 11-03，默认关）：只在取消按钮开着时有用，关着就不显示。
-                    if (showCandidateCancel) {
+                    // 11-23 他选：左右滑单独一个开关，「展开」也能滑（▾/▴ 照旧在）；默认关。「关闭」靠它展开，锁成开着。
+                    SettingsToggleItem(Icons.TwoTone.SwipeLeft, "左右滑展开",
+                        "候选滑到头再往左拉展开，往右划收起", swipeExpand, {
+                            swipeExpand = it
+                            SettingsPreferences.setCandidateSwipeExpand(context, it)
+                        }, lockMessage = if (rightKeyCloses) "右边的键选了「关闭」，展开只能靠滑，一直开着" else null)
+                    // 取消按钮和联想叉号只管「展开」时左边的「‹」；「关闭」时取消在右边，不显示这两项。
+                    if (!rightKeyCloses) {
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 16.dp),
                             thickness = 0.5.dp,
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                         )
-                        var associationCancelCross by remember {
-                            mutableStateOf(SettingsPreferences.isAssociationCancelCross(context))
+                        var showCandidateCancel by remember {
+                            mutableStateOf(SettingsPreferences.shouldShowCandidateCancelButton(context))
                         }
-                        Row(
-                            modifier = Modifier.settingsSearchAnchor("联想关闭键用叉号")
+                        // 图例放在开关下面，随开关实时变化；整块都可点。
+                        Column(
+                            modifier = Modifier.settingsSearchAnchor("候选栏取消按钮")
                                 .fillMaxWidth()
-                                .testTag("association-cancel-cross-setting")
+                                .testTag("candidate-cancel-setting")
                                 .toggleable(
-                                    value = associationCancelCross,
+                                    value = showCandidateCancel,
                                     role = Role.Switch,
                                     onValueChange = {
-                                        associationCancelCross = it
-                                        SettingsPreferences.setAssociationCancelCross(context, it)
+                                        showCandidateCancel = it
+                                        SettingsPreferences.setShowCandidateCancelButton(context, it)
                                     },
                                 )
                                 .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Column(Modifier.weight(1f)) {
-                                Text("联想关闭键用叉号", style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium)
-                                Text("联想词的关闭按钮显示为 ⊗",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("候选栏取消按钮", style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium)
+                                    Text("候选栏左端显示取消按钮",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Switch(checked = showCandidateCancel, onCheckedChange = null)
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Switch(checked = associationCancelCross, onCheckedChange = null)
+                            Spacer(Modifier.height(10.dp))
+                            CandidateCancelIllustration(showCandidateCancel)
+                        }
+                        // 联想关闭键用叉号（用户 11-03，默认关）：只在取消按钮开着时有用，关着就不显示。
+                        if (showCandidateCancel) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 16.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            )
+                            var associationCancelCross by remember {
+                                mutableStateOf(SettingsPreferences.isAssociationCancelCross(context))
+                            }
+                            Row(
+                                modifier = Modifier.settingsSearchAnchor("联想关闭键用叉号")
+                                    .fillMaxWidth()
+                                    .testTag("association-cancel-cross-setting")
+                                    .toggleable(
+                                        value = associationCancelCross,
+                                        role = Role.Switch,
+                                        onValueChange = {
+                                            associationCancelCross = it
+                                            SettingsPreferences.setAssociationCancelCross(context, it)
+                                        },
+                                    )
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("联想关闭键用叉号", style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium)
+                                    Text("联想词的关闭按钮显示为 ⊗",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Switch(checked = associationCancelCross, onCheckedChange = null)
+                            }
                         }
                     }
                     val pressPrefs = remember(context) { SettingsPreferences.getPrefsPublic(context) }
