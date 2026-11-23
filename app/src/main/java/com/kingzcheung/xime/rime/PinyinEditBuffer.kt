@@ -21,7 +21,7 @@ data class PinyinEditSession(
 /** The host and engine can use different separators for the same syllable boundary. */
 internal fun PinyinEditSession.inlineOffset(code: String): Int? {
     if (!code.startsWith(protectedText)) return null
-    val suffix = code.drop(protectedText.length).replace(' ', '\'')
+    val suffix = hostCode(code.drop(protectedText.length).replace(' ', '\''))
     if (suffix == text) return protectedText.length + caret
     if (suffix.replace("'", "") != text.replace("'", ""))
         return doublePinyinCaretMap(suffix)?.let { protectedText.length + it.displayOffset(caret) }
@@ -30,12 +30,16 @@ internal fun PinyinEditSession.inlineOffset(code: String): Int? {
 
 internal fun PinyinEditSession.editOffset(code: String, offset: Int): Int? {
     if (!code.startsWith(protectedText)) return null
-    val suffix = code.drop(protectedText.length).replace(' ', '\'')
+    val suffix = hostCode(code.drop(protectedText.length).replace(' ', '\''))
     val local = (offset - protectedText.length).coerceIn(0, suffix.length)
     if (suffix == text) return local
     if (suffix.replace("'", "") == text.replace("'", "")) return mapCodeOffset(suffix, text, local)
     return doublePinyinCaretMap(suffix)?.rawOffset(local)
 }
+
+/** 笔画编码在输入框里可能显示成笔画（设置开着），一个笔画对一个字母，换回字母再对位置。 */
+private fun PinyinEditSession.hostCode(suffix: String): String =
+    if (!isT9 && PinyinEditBuffer.isStrokeCode(schemaId)) strokeLetters(suffix) else suffix
 
 /**
  * 26 键双拼的输入框显示全拼、编辑缓冲是双拼键：按方案键位对位置。不对的话，点了前面的拼音，
@@ -62,7 +66,7 @@ internal fun mapCodeOffset(from: String, to: String, offset: Int): Int {
 
 internal object PinyinEditBuffer {
     fun supports(schema: String): Boolean =
-        com.kingzcheung.xime.settings.InputProfiles.describe(schema).capabilities.editablePinyin
+        com.kingzcheung.xime.settings.InputProfiles.describe(schema).capabilities.editableCode
 
     fun normalizedT9(text: String): String = text.lowercase().replace('ü', 'v')
         .replace(' ', '\'').filter { it in 'a'..'z' || it in '2'..'9' || it == '\'' }
@@ -78,6 +82,18 @@ internal object PinyinEditBuffer {
     fun normalized(text: String, keepCase: Boolean, keepSemicolon: Boolean): String =
         if (!keepSemicolon) normalized(text, keepCase)
         else text.split(';').joinToString(";") { normalized(it, keepCase) }
+
+    /**
+     * 笔画编码：通配符 * 是编码（一笔），编辑时和字母一样留着；分词号连打、打在开头都算数
+     * （n 个分词号 = n+1 个字，空段代表任意一个字，11-18），不合并、不去掉。
+     */
+    fun isStrokeCode(schema: String): Boolean =
+        com.kingzcheung.xime.settings.InputProfiles.describe(schema).capabilities.editableStrokeCode
+
+    /** [normalized]，笔画编码另外留着通配符 *。 */
+    fun normalized(text: String, keepCase: Boolean, keepSemicolon: Boolean, keepWildcard: Boolean): String =
+        if (!keepWildcard) normalized(text, keepCase, keepSemicolon)
+        else text.split('*').joinToString("*") { normalized(it, keepCase, keepSemicolon) }
 
     fun keepsSemicolon(schema: String): Boolean =
         com.kingzcheung.xime.settings.InputProfiles.describe(schema).scheme ==
@@ -184,7 +200,7 @@ internal fun pinyinPreviewText(preedit: String): String = preedit.trim()
     .replace(Regex("(?<=[a-zA-ZüÜ'])\\s+(?=[a-zA-ZüÜ'])"), "'")
 
 internal fun editablePreeditText(text: String, schema: String, isAscii: Boolean): String =
-    if (!isAscii && PinyinEditBuffer.supports(schema)) pinyinPreviewText(text) else text
+    if (!isAscii && com.kingzcheung.xime.settings.InputProfiles.describe(schema).capabilities.editablePinyin) pinyinPreviewText(text) else text
 
 internal val merged14Groups = listOf("qw", "er", "ty", "ui", "op", "as", "df", "gh", "jk", "l", "zx", "cv", "bn", "m")
 internal fun merged14Representative(c: Char): Char = merged14Groups.firstOrNull { c in it }?.first() ?: c

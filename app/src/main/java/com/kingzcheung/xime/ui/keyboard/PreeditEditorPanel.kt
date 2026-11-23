@@ -73,7 +73,10 @@ internal fun PreeditEditorBar(
     val scroll = rememberScrollState()
     val currentCaret by rememberUpdatedState(onCaret)
     val display = remember(session.text, session.isT9, session.protectedText, preedit) { PinyinEditDisplay(session.text, preedit.removePrefix(session.protectedText).trim(), session.isT9, includeAutomaticBoundaries = false) }
-    val code = display.text.ifEmpty { " " }
+    val stroke = remember(session.schemaId) { com.kingzcheung.xime.rime.PinyinEditBuffer.isStrokeCode(session.schemaId) }
+    // 笔画编码：组字区显示成笔画时编辑条也显示笔画（一个字母换一个笔画，光标、点按位置不变）。
+    val code = (if (stroke) com.kingzcheung.xime.rime.strokeEditorText(display.text,
+        preedit.removePrefix(session.protectedText)) else display.text).ifEmpty { " " }
     val displayCaret = display.displayOffset(session.caret)
     LaunchedEffect(session.caret, code, layout) {
         layout?.takeIf { it.layoutInput.text.text == code }?.getCursorRect(displayCaret.coerceIn(0, code.length))?.let {

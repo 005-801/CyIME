@@ -4304,7 +4304,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         if (restored != null || oldSelStart != newSelStart || oldSelEnd != newSelEnd) {
             inlineComposition.hostCaret(restored?.start ?: candidatesStart, restored?.end ?: candidatesEnd, newSelStart, newSelEnd)?.let { offset ->
                 val state = uiState.value
-                if (!state.inputTarget.isInternal && !state.isAsciiMode && state.inputProfile.capabilities.editablePinyin &&
+                if (!state.inputTarget.isInternal && !state.isAsciiMode && state.inputProfile.capabilities.editableCode &&
                     candidateState.value.isComposing && TerminalEditor.inputTextLocation(this) == SettingsPreferences.INPUT_TEXT_INPUT_BOX &&
                     currentInputConnection?.let { connection ->
                         // Android can deliver an earlier write-to-end after a newer caret move.

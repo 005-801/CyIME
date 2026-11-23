@@ -8,6 +8,32 @@ class PinyinEditBufferTest {
         listOf("rime_ice", "t9_pinyin", "pinyin_14jian", "double_pinyin_flypy").forEach { assertTrue(PinyinEditBuffer.supports(it)) }
         listOf("japanese", "japanese_kana", "wubi86", "english").forEach { assertFalse(PinyinEditBuffer.supports(it)) }
     }
+    /** 11-22：笔画编码也能打开编辑条改；左栏选音节、逗号键分词这些拼音专用的不跟着开。 */
+    @Test fun strokeCodeIsEditableButNotPinyin() {
+        assertTrue(PinyinEditBuffer.supports("stroke"))
+        assertTrue(PinyinEditBuffer.isStrokeCode("stroke"))
+        assertFalse(PinyinEditBuffer.isStrokeCode("rime_ice"))
+        assertFalse(com.kingzcheung.xime.settings.InputProfiles.describe("stroke").capabilities.editablePinyin)
+    }
+    @Test fun strokeCodeKeepsWildcardsAndEverySeparator() {
+        assertEquals("hs*''h", PinyinEditBuffer.normalized("hs*''h", false, false, true))
+        assertEquals("*h*", PinyinEditBuffer.normalized("*h*", false, false, true))
+        assertEquals("hs''h", PinyinEditBuffer.normalized("hs*''h", false, false, false))
+    }
+    /** 编辑条跟组字区一样：组字区显示笔画时编辑条也是笔画（折是乛），关着时是字母；一个换一个，长度不变。 */
+    @Test fun strokeEditorFollowsTheShownPreedit() {
+        assertEquals("⼀⼁*'乛", strokeEditorText("hs*'z", "⼀⼁*'乛"))
+        assertEquals("hs*'z", strokeEditorText("hs*'z", "hs*'z"))
+        assertEquals("hspnz*'", strokeLetters(strokeGlyphs("hspnz*'")))
+        assertEquals("hspnz".length, strokeGlyphs("hspnz").length)
+    }
+    /** 输入框里显示的是笔画时，点在第几个笔画上，编辑光标就在第几个字母上。 */
+    @Test fun strokeHostCaretMapsGlyphsToLetters() {
+        val session = PinyinEditSession(1, "stroke", "hs*h", "", "", "hs*h", 2, false)
+        assertEquals(2, session.inlineOffset("⼀⼁*⼀"))
+        assertEquals(3, session.editOffset("⼀⼁*⼀", 3))
+        assertEquals(2, session.inlineOffset("hs*h"))
+    }
     @Test fun keepsRealBoundariesAndUmlautAsV() {
         assertEquals("nv'er", PinyinEditBuffer.normalized("Nü er"))
         assertEquals("ni'hao", PinyinEditBuffer.normalized("ni hao"))

@@ -898,7 +898,7 @@ fun KeyboardView(
                     state.quickSendFormFocused || state.toolPanelInputFocused -> false
                     sentenceEdit != null -> false
                     preeditEditSession != null -> { editPreedit(key = key); true }
-                    !state.isAsciiMode && state.inputProfile.capabilities.editablePinyin &&
+                    !state.isAsciiMode && state.inputProfile.capabilities.editableCode &&
                         callbacks.onOpenPreeditEditor != null &&
                         (preeditOpening || candidateState.value.isComposing || candidateState.value.inputText.isNotEmpty()) -> {
                         // Opening is asynchronous. Retain every step, and never leak it to
@@ -971,8 +971,12 @@ fun KeyboardView(
                 }
             }) else if (preeditEditSession != null) ({ key ->
                 val t9 = preeditEditSession?.isT9 == true
+                // 笔画键盘：分词键插分词号，通配键插 *，和笔画一样插在光标处（11-22）。
+                val strokeCode = !t9 && state.inputProfile.capabilities.editableStrokeCode
                 if (key.startsWith("preedit_cursor:")) {
                     editPreedit(key = key); true
+                } else if (strokeCode && (key == "word_separator" || key == "*")) {
+                    editPreedit(key = if (key == "*") "*" else "'"); true
                 } else if (key == "delete" || key == "'" || key.length == 1 &&
                     (key[0].lowercaseChar() in 'a'..'z' || t9 && key[0] in '1'..'9') ||
                     // 14 键的合并键（qw）：挪过光标后接着点，插在光标处（11-13：原来关掉编辑，插到哪、显示什么都乱）。
