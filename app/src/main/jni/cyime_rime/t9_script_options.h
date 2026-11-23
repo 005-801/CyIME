@@ -76,6 +76,10 @@ struct T9ScriptOptions {
   // first, a character it starts as an initial (的 for 3) comes first instead if its corpus frequency is at
   // least that much higher; the vowel stays second. 0 keeps the decoder order.
   double t9_single_key_initial_margin_ = 0;
+  // t9/whole_word_margin (ln units): a first sentence spelled character by character (爱+滋+病) gives the first place
+  // to a whole-input dictionary word of as many characters, spelled in full (艾滋病), that the decoder scores within
+  // this much of it; the sentence is then not shown below 9 keys. 0 keeps the decoder order.
+  double t9_whole_word_margin_ = 0;
   // t9/ngram_typo_bigrams ("觉 的"): word pairs whose corpus count is mostly a misspelling (觉的 for 觉得).
   // The pair is scored as if never seen, from the second word's lower-order probability.
   std::shared_ptr<const std::vector<std::pair<int32_t, int32_t>>> t9_ngram_typo_bigrams_;  // T9NgramModel::Pairs

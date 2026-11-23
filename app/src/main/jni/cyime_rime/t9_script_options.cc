@@ -156,6 +156,7 @@ void T9ScriptOptions::LoadT9Options(Config* config, Context* context) {
     }
     config->GetBool("t9/ngram_merge_segmentations", &t9_ngram_merge_segmentations_);
     config->GetDouble("t9/single_key_initial_margin", &t9_single_key_initial_margin_);
+    config->GetDouble("t9/whole_word_margin", &t9_whole_word_margin_);
     if (auto list = config->GetList("t9/ngram_typo_bigrams"); list && t9_ngram_) {
       auto pairs = std::make_shared<T9NgramModel::Pairs>();
       for (size_t i = 0; i < list->size(); ++i) {
