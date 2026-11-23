@@ -1543,6 +1543,9 @@ fun KeyboardView(
                 LocalCorrectedCandidates provides correctionMarks,
                 LocalPreeditLineCorrections provides allCorrectionMarks,
                 LocalPreeditToneData provides preeditToneData,
+                // 笔画方案的编码在组字区里自己画（11-23）。
+                LocalStrokeGlyphDrawing provides (!state.isAsciiMode &&
+                    state.inputProfile.scheme == com.kingzcheung.xime.settings.InputScheme.STROKE),
                 LocalSentenceSelection provides sentenceDragOwnerState,
                 LocalPreeditOrigin provides preeditOrigin,
                 LocalSentenceCandidateHighlight provides sentenceEdit?.let { owner ->

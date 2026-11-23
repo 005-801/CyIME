@@ -23,3 +23,29 @@ internal fun strokeLetters(text: String): String =
  */
 internal fun strokeEditorText(code: String, shownPreedit: String): String =
     if (shownPreedit.any { it in STROKE_LETTERS }) strokeGlyphs(code) else code
+
+/**
+ * 笔画分词打出的词（一个分词段一个字，11-18）拆成一个个字：长按首选时一个字一个按钮，点哪个字就重选哪个字，
+ * 和拼音九键等方案长按首选拆词是同一个操作（11-23 群友：笔画也要能拆开改）。[code] 是这个候选盖住的那段编码。
+ * 段数和字数对不上、有空段（还没打笔画的字）、带通配符或别的字符时为 null（不拆）。
+ */
+internal fun strokeSegmentChars(shown: String, code: String): List<String>? {
+    if (code.isEmpty() || code.any { it !in "hspnz'" }) return null
+    val parts = code.split('\'')
+    if (parts.size < 2 || parts.any { it.isEmpty() }) return null
+    val chars = ArrayList<String>(parts.size)
+    var i = 0
+    while (i < shown.length) {
+        val next = i + Character.charCount(shown.codePointAt(i))
+        chars += shown.substring(i, next)
+        i = next
+    }
+    return chars.takeIf { it.size == parts.size }
+}
+
+/** 第 [index] 段（从 0 数）笔画在 [code] 里的结束位置：这段最后一笔后面、分词号前面。 */
+internal fun strokeSegmentEnd(code: String, index: Int): Int {
+    var end = -1
+    repeat(index + 1) { end = code.indexOf('\'', end + 1).let { if (it < 0) code.length else it } }
+    return end
+}

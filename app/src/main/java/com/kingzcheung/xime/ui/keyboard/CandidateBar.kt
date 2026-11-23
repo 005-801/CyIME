@@ -1856,9 +1856,10 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
                 right -> Alignment.CenterEnd
                 else -> Alignment.Center
             }) {
-            Text(text, color = textColor, fontSize = size, maxLines = 1, softWrap = false,
+            // 笔画编码自己画，粗细、大小统一（11-23，见 StrokeGlyphInline.kt）。
+            Text(text.withDrawnStrokes(LocalStrokeGlyphDrawing.current), color = textColor, fontSize = size, maxLines = 1, softWrap = false,
                 // 长句只露出正在打的结尾。
-                overflow = TextOverflow.StartEllipsis,
+                overflow = TextOverflow.StartEllipsis, inlineContent = strokeInlineContent(textColor),
                 modifier = Modifier.testTag(if (corrected) "preedit-tab-correction" else "preedit-tab-text"))
         }
         if (notchDp > 0.dp) {
@@ -2115,11 +2116,13 @@ internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals, onEdit: ((
         val displayText = if (maxLines > 1) shownText.replace("'", "'\u200B") else shownText
         val plainAnnotated = sentenceSelectionText(displayText, LocalSentenceSelection.current.value, visuals.accentColor,
             preeditWithCaret(displayText, visuals.accentColor, textColor, visuals.selectedTextColor, caretAlpha))
-        val annotated = LocalPreeditToneText.current?.let { plainAnnotated.withSameLengthText(it) } ?: plainAnnotated
+        val annotated = (LocalPreeditToneText.current?.let { plainAnnotated.withSameLengthText(it) } ?: plainAnnotated)
+            .withDrawnStrokes(LocalStrokeGlyphDrawing.current)
+        val strokeContent = strokeInlineContent(textColor)
         val textStyle = LocalTextStyle.current.copy(shadow = visuals.textShadow)
         if (maxLines <= 1) {
             Text(annotated, color = textColor, fontSize = PreeditStyle.FontSize, maxLines = 1,
-                softWrap = false, style = textStyle, modifier = Modifier.horizontalScroll(scrollState).testTag("candidate-preedit-text"))
+                softWrap = false, style = textStyle, inlineContent = strokeContent, modifier = Modifier.horizontalScroll(scrollState).testTag("candidate-preedit-text"))
         } else {
             // 长拼音折成几行，不再一行横穿整个应用、后半截被切掉（用户 10-31 截图）。
             val density = LocalDensity.current
@@ -2144,7 +2147,7 @@ internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals, onEdit: ((
                 lines.scrollTo(target.coerceIn(0, lines.maxValue))
             }
             Text(annotated, color = textColor, fontSize = PreeditStyle.FontSize, lineHeight = lineHeight,
-                softWrap = true, style = textStyle, onTextLayout = { layout = it },
+                softWrap = true, style = textStyle, inlineContent = strokeContent, onTextLayout = { layout = it },
                 modifier = Modifier.padding(vertical = 4.dp)
                     .heightIn(max = with(density) { viewportPx.toDp() })
                     .verticalScroll(lines).testTag("candidate-preedit-text"))

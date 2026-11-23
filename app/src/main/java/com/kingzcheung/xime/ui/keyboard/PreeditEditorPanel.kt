@@ -138,7 +138,8 @@ internal fun PreeditEditorBar(
                         else Modifier.heightIn(min = PreeditStyle.SurfaceHeight).padding(horizontal = 8.dp))
                     .testTag("preedit-editor-surface"),
                     contentAlignment = Alignment.CenterStart) {
-                    Text(code, color = codeColor, fontSize = origin?.let { (it.fontSp + (PreeditStyle.FontSize.value - it.fontSp) * t).sp } ?: PreeditStyle.FontSize, maxLines = 1, softWrap = false,
+                    // 笔画编码自己画，粗细、大小统一（11-23）；显示的字符不变，光标、点按位置照旧。
+                    Text(code.withDrawnStrokes(stroke), color = codeColor, inlineContent = strokeInlineContent(codeColor), fontSize = origin?.let { (it.fontSp + (PreeditStyle.FontSize.value - it.fontSp) * t).sp } ?: PreeditStyle.FontSize, maxLines = 1, softWrap = false,
                         onTextLayout = { layout = it }, modifier = Modifier.fillMaxWidth().horizontalScroll(scroll)
                             .testTag("preedit-editor-code")
                             .semantics {
