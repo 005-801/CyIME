@@ -41,6 +41,7 @@ class CandidateRightKeySettingTest {
         SettingsPreferences.getPrefsPublic(context).edit()
             .remove(SettingsPreferences.KEY_CANDIDATE_SWIPE_EXPAND)
             .remove(SettingsPreferences.KEY_CANDIDATE_CLOSE_ON_RIGHT)
+            .remove(SettingsPreferences.KEY_CANDIDATE_SWIPE_BEFORE_CLOSE)
             .remove(SettingsPreferences.KEY_SHOW_CANDIDATE_CANCEL_BUTTON).commit()
     }
 
@@ -61,11 +62,27 @@ class CandidateRightKeySettingTest {
         rule.onNodeWithText("候选栏取消按钮").assertDoesNotExist()
         rule.onNodeWithText("右边的键选了「关闭」，展开只能靠滑，一直开着", substring = true).assertExists()
 
-        // 选回「展开」：关闭键回左边，左右滑保持开着（经典也能滑），▾/▴ 照旧。
+        // 选回「展开」：关闭键回左边，左右滑恢复成选「关闭」前的关着（11-23 平板实测）。
         rule.onNodeWithTag("candidate-right-key:expand").performClick()
         rule.onNodeWithTag("candidate-right-key:expand").assertIsSelected()
         assertEquals(false, SettingsPreferences.isCandidateCloseOnRight(context))
-        assertEquals(true, SettingsPreferences.isCandidateSwipeExpand(context))
+        assertEquals(false, SettingsPreferences.isCandidateSwipeExpand(context))
         rule.onNodeWithText("候选栏取消按钮").assertExists()
+    }
+
+    /** 选「关闭」前自己开着左右滑：选回「展开」后照旧开着；在「关闭」上再点一次也不会把记下的值盖掉。 */
+    @Test fun swipeComesBackToWhatItWas() {
+        SettingsPreferences.setCandidateSwipeExpand(context, true)
+        SettingsPreferences.setCandidateRightKeyCloses(context, true)
+        SettingsPreferences.setCandidateRightKeyCloses(context, false)
+        assertEquals(true, SettingsPreferences.isCandidateSwipeExpand(context))
+
+        SettingsPreferences.setCandidateSwipeExpand(context, false)
+        SettingsPreferences.setCandidateRightKeyCloses(context, true)
+        SettingsPreferences.setCandidateRightKeyCloses(context, true)
+        assertEquals(true, SettingsPreferences.isCandidateSwipeExpand(context))
+        SettingsPreferences.setCandidateRightKeyCloses(context, false)
+        assertEquals(false, SettingsPreferences.isCandidateSwipeExpand(context))
+        assertEquals(false, SettingsPreferences.isCandidateCloseOnRight(context))
     }
 }

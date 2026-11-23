@@ -491,6 +491,8 @@ object SettingsPreferences {
     const val KEY_CANDIDATE_SWIPE_EXPAND = "candidate_swipe_expand"
     /** 开了「候选滑到头回弹展开」时，取消／关联想键放右边画成「×」（11-22 他：和收起键盘同一个位置）；默认左边。 */
     const val KEY_CANDIDATE_CLOSE_ON_RIGHT = "candidate_close_on_right"
+    /** 「候选栏右边的键」选「关闭」前「左右滑展开」开没开；选回「展开」时恢复成它（11-23 平板实测：切回后不该还开着）。 */
+    const val KEY_CANDIDATE_SWIPE_BEFORE_CLOSE = "candidate_swipe_expand_before_close"
     const val KEY_INPUT_TEXT_LOCATION = "input_text_location"
     const val KEY_SHOW_PREEDIT_PREVIEW = "show_preedit_preview"
     const val KEY_INLINE_PREEDIT_PREVIEW = "inline_preedit_preview"
@@ -646,6 +648,25 @@ object SettingsPreferences {
 
     fun setCandidateCloseOnRight(context: Context, right: Boolean) {
         getPrefs(context).edit().putBoolean(KEY_CANDIDATE_CLOSE_ON_RIGHT, right).apply()
+    }
+
+    /**
+     * 设置「候选栏右边的键」：[closes] 为真是「关闭」（右边 × 先关候选、同一处再点收键盘），存成关闭键放右边 + 左右滑展开开着；
+     * 「关闭」只能靠滑展开，所以选它时把「左右滑展开」打开，并记下原来开没开，选回「展开」时恢复。
+     */
+    fun setCandidateRightKeyCloses(context: Context, closes: Boolean) {
+        val prefs = getPrefs(context)
+        val swipe = prefs.getBoolean(KEY_CANDIDATE_SWIPE_EXPAND, false)
+        val closing = swipe && prefs.getBoolean(KEY_CANDIDATE_CLOSE_ON_RIGHT, false)
+        val edit = prefs.edit().putBoolean(KEY_CANDIDATE_CLOSE_ON_RIGHT, closes)
+        if (closes) {
+            if (!closing) edit.putBoolean(KEY_CANDIDATE_SWIPE_BEFORE_CLOSE, swipe)
+            edit.putBoolean(KEY_CANDIDATE_SWIPE_EXPAND, true)
+        } else if (prefs.contains(KEY_CANDIDATE_SWIPE_BEFORE_CLOSE)) {
+            edit.putBoolean(KEY_CANDIDATE_SWIPE_EXPAND, prefs.getBoolean(KEY_CANDIDATE_SWIPE_BEFORE_CLOSE, swipe))
+                .remove(KEY_CANDIDATE_SWIPE_BEFORE_CLOSE)
+        }
+        edit.apply()
     }
 
     /**

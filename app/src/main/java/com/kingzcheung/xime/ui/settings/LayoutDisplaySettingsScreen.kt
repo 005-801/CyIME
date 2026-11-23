@@ -639,15 +639,13 @@ private fun LayoutDisplayPage(
                             for (closes in listOf(false, true)) {
                                 IllustratedChoiceCard(if (closes) "关闭" else "展开（默认）", rightKeyCloses == closes,
                                     onClick = {
-                                        closeOnRight = closes
-                                        SettingsPreferences.setCandidateCloseOnRight(context, closes)
-                                        // 「关闭」右边不放 ▾/▴，展开只能靠滑，所以一并打开左右滑；选回「展开」时左右滑保持原样。
-                                        if (closes && !swipeExpand) {
-                                            swipeExpand = true
-                                            SettingsPreferences.setCandidateSwipeExpand(context, true)
-                                        }
+                                        // 「关闭」右边不放 ▾/▴，展开只能靠滑，所以一并打开左右滑；选回「展开」时恢复成选「关闭」前的样子。
+                                        SettingsPreferences.setCandidateRightKeyCloses(context, closes)
+                                        closeOnRight = SettingsPreferences.isCandidateCloseOnRight(context)
+                                        swipeExpand = SettingsPreferences.isCandidateSwipeExpand(context)
                                     },
-                                    modifier = Modifier.fillMaxWidth().height(if (closes) 196.dp else 136.dp),
+                                    // 高度按内容量：平板、大字号下最后一行说明不再被裁（11-23 平板截图）。
+                                    modifier = Modifier.fillMaxWidth().choiceCardRowHeight(if (closes) 150.dp else 110.dp),
                                     tag = "candidate-right-key:${if (closes) "close" else "expand"}",
                                     titleMaxLines = 1) {
                                     CandidateRightKeyIllustration(closes)
