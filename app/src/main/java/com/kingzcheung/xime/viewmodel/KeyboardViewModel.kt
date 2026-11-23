@@ -124,6 +124,8 @@ data class KeyboardUiState(
     val clipboardSearchInline: Boolean = false,
     /** AI 工具面板放不下两行（手机横屏）：一行的面板，见 toolPanelCompact。 */
     val toolPanelCompact: Boolean = false,
+    /** 拼音位置选「整行」时键盘在候选栏上面多出来的那一行（dp），见 preeditStripRowDp；没有时 0。 */
+    val preeditStripDp: Int = 0,
     val toolPanelPluginId: String = "",
     val toolPanelTitle: String = "",
     val toolPanelPrefillText: String = "",

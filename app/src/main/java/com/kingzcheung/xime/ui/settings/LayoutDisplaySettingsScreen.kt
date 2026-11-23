@@ -364,7 +364,7 @@ private fun LayoutDisplayPage(
                                 Triple(SettingsPreferences.PREEDIT_STYLE_BUBBLE, "气泡", "拼音浮在键盘上面，会挡住一点输入框。透明度可调。"),
                                 Triple(SettingsPreferences.PREEDIT_STYLE_LINE, "小标签", "拼音贴在键盘上边，只有拼音那么宽。输入框往上让开，不会被挡住。"),
                                 Triple(SettingsPreferences.PREEDIT_STYLE_BLOCK, "方块", "和小标签一样贴着键盘，但更高、字更大，四角是直角。输入框往上让开，不会被挡住。"),
-                                Triple(SettingsPreferences.PREEDIT_STYLE_STRIP, "整行", "拼音占满键盘上面一整行。输入框往上让开，不会被挡住。"),
+                                Triple(SettingsPreferences.PREEDIT_STYLE_STRIP, "整行", "键盘加高一行放拼音，和键盘连成一块。"),
                             )
                             val aligns = listOf(
                                 SettingsPreferences.PREEDIT_ALIGN_LEFT to "靠左",

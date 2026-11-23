@@ -604,7 +604,7 @@ fun KeyboardView(
         // the results squeezed the keys.
         contentHeightDp = state.keyboardHeightDp + clipboardSearchExtraHeight(
             state.isFloatingMode && state.clipboardSearchVisible, state.clipboardSearchResultsHeight,
-            state.clipboardSearchInline),
+            state.clipboardSearchInline) + state.preeditStripDp,
         bottomContentPaddingDp = renderedBottomPaddingDp,
         bottomKeyClearance = floatingBottomClearance,
         fixedWidthDp = state.fixedWidthDp,
@@ -650,8 +650,10 @@ fun KeyboardView(
         }
         // 「候选字大小」超过 22sp 时候选栏整条放大的倍数（11-22）；面板让开候选栏时要按放大后的高度算。
         val candidateZoom = candidateTextZoom(rememberCandidateTextSize())
-        // 拼音贴在键盘上沿（小标签、方块、整行）时让应用的输入框往上让开那一截，见 PreeditTabInsets；悬浮键盘不占应用的地方，不用让。
-        val tabReservePx = if (inputPreferences.preeditOnTopLine && !state.isFloatingMode) {
+        // 拼音贴在键盘上沿（小标签、方块）时让应用的输入框往上让开那一截，见 PreeditTabInsets；悬浮键盘不占应用的地方，不用让。
+        // 整行排在键盘里、键盘本身加高了（state.preeditStripDp），不用再另让。
+        val tabReservePx = if (inputPreferences.preeditOnTopLine && !state.isFloatingMode &&
+            inputPreferences.preeditStyle != com.kingzcheung.xime.settings.SettingsPreferences.PREEDIT_STYLE_STRIP) {
             val tabHeight = if (inputPreferences.preeditStyle == com.kingzcheung.xime.settings.SettingsPreferences.PREEDIT_STYLE_BLOCK)
                 PREEDIT_BLOCK_HEIGHT else PREEDIT_TAB_HEIGHT
             // 拼音是单独的弹窗，弹窗里的 dp 按屏幕本来的 density 算，不跟候选栏放大（见 PreeditTab）。
@@ -1787,7 +1789,10 @@ fun KeyboardView(
             // 量候选栏的顶边：不占地方的标记，位置就是上面各栏加起来的高度。
             Spacer(Modifier.onPlaced { aboveCandidateBarPx.intValue = it.positionInParent().y.roundToInt() })
             // Opening a tool must not insert a row and shrink the underlying handwriting canvas.
-            if (!state.handwritingExpanded || candidatePageExpanded) renderCandidateBar(page)
+            // 「整行」拼音是候选栏上面多出来的一行，只给这条主候选栏（键盘已按 preeditStripDp 加高）。
+            if (!state.handwritingExpanded || candidatePageExpanded) {
+                CompositionLocalProvider(LocalPreeditStripRow provides state.preeditStripDp.dp) { renderCandidateBar(page) }
+            }
 
             val renderExpandedCandidates: @Composable () -> Unit = {
                 val cs = candidateState.value
@@ -2528,7 +2533,7 @@ fun KeyboardView(
                     Modifier.align(Alignment.BottomCenter).absoluteOffset(x = slot.offsetXDp.dp).width(slot.widthDp.dp)
                         .height((slot.heightDp - candidateBarHeightDp(candidateBarScaleState.floatValue * candidateZoom)).coerceAtLeast(0f).dp)
                 } ?: Modifier.fillMaxSize().belowCandidateBar(aboveCandidateBarPx,
-                    candidateBarHeightDp(candidateBarScaleState.floatValue * candidateZoom).dp))
+                    (candidateBarHeightDp(candidateBarScaleState.floatValue * candidateZoom) + state.preeditStripDp).dp))
                     .testTag("keyboard-overlay"),
                 visibility = overlayVisibility,
                 revealState = overlayReveal,

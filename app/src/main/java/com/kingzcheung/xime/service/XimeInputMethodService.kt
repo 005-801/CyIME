@@ -2360,9 +2360,16 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                     keyboardHeight, effectiveScreenH - clipboardBottomSpace)
                 val toolPanelAboveBar = com.kingzcheung.xime.ui.keyboard.toolPanelExtraHeight(
                     state.toolPanelVisible, state.toolPanelDisplay, toolPanelCompact)
+                // 拼音位置选「整行」（11-23 他）：拼音是键盘在候选栏上面多出来的一行，键盘整体加高这一行；
+                // 选了就一直留着，不是打字时才加，免得每打一个词应用就跳一次。悬浮键盘转了角度（改用气泡）、手写全屏、
+                // 实体键盘小条、语音收起、调节尺寸时不加。
+                val preeditStripExtra = com.kingzcheung.xime.ui.keyboard.preeditStripRowDp(keyboardPrefs,
+                    available = !handwritingExpanded && !state.isCompact && !state.voiceCollapsed && !state.showKeyboardResize &&
+                        !(state.isFloatingMode && com.kingzcheung.xime.ui.keyboard.isFloatingRotated(state.floatingRotation)))
+                SideEffect { currentPreeditStripDp = preeditStripExtra }
                 val clipboardExpansion = rememberClipboardPanelExpansion(
                     clipboardPanelOpen, state.inputSessionId,
-                    clipboardPanelBounds(keyboardHeight, effectiveScreenH, clipboardBottomSpace + toolPanelAboveBar),
+                    clipboardPanelBounds(keyboardHeight, effectiveScreenH, clipboardBottomSpace + toolPanelAboveBar + preeditStripExtra),
                     state.clipboardImagesExpanded,
                 ) { expanded ->
                     uiState.value = uiState.value.copy(clipboardImagesExpanded = expanded)
@@ -2401,7 +2408,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                 // Clipboard editing uses a separate popup and does not resize the keyboard.
                 // 与面板实际高度同一来源（toolPanelExtraHeight），否则容器比面板多/少一截，键盘被拉高。
                 // PASSIVE 纯展示面板走 Overlay 全屏覆盖（键盘窗口内容区），不撑高。
-                val toolPanelExtra = toolPanelAboveBar
+                val toolPanelExtra = toolPanelAboveBar + preeditStripExtra
                 // Clipboard search adds its results and search panel above the keyboard like the tool panel.
                 val overlayPanelExtra = toolPanelExtra + com.kingzcheung.xime.ui.keyboard.clipboardSearchExtraHeight(
                     state.clipboardSearchVisible, clipboardSearchResultsHeight, clipboardSearchInline)
@@ -2815,7 +2822,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                 effectiveKeyboardHeight,
                                 // Without this key the keyboard view kept a stale results height (0) and the keys
                                 // stretched into the results.
-                                clipboardSearchResultsHeight, clipboardSearchInline, toolPanelCompact,
+                                clipboardSearchResultsHeight, clipboardSearchInline, toolPanelCompact, preeditStripExtra,
                                 handwritingExpanded, handwritingWidth, handwritingOffsetX,
                                 protectedSize,
                                 floatingMinY,
@@ -2895,6 +2902,7 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
                                     clipboardSearchResultsHeight = clipboardSearchResultsHeight,
                                     clipboardSearchInline = clipboardSearchInline,
                                     toolPanelCompact = toolPanelCompact,
+                                    preeditStripDp = preeditStripExtra,
                                     toolPanelPluginId = state.toolPanelPluginId,
                                     toolPanelTitle = state.toolPanelTitle,
                                     toolPanelPrefillText = state.toolPanelPrefillText,
@@ -3301,9 +3309,12 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
         val contentHeight = if (clipboardPanelCanExpand(page, false, fixed.isCompact) && fixed.clipboardImagesExpanded)
             clipboardPanelBounds(normal.height, resources.configuration.screenHeightDp, clipboardBottom + toolExtra).expanded
             else normal.height
-        return KeyboardDockTarget(normal.width, contentHeight + toolExtra, normal.offsetX,
+        return KeyboardDockTarget(normal.width, contentHeight + toolExtra + currentPreeditStripDp, normal.offsetX,
             fixed.keyboardBottomPaddingDp, bottom)
     }
+
+    /** 键盘这时给「整行」拼音多留的那一行（dp），停靠目标要算进去；由键盘界面每次排版时写。 */
+    private var currentPreeditStripDp = 0
 
     private var rotatedTouchKey: Pair<android.graphics.Rect, Float>? = null
     private val rotatedTouchCache = android.graphics.Region()
