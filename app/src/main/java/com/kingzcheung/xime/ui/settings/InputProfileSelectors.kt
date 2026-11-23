@@ -141,8 +141,7 @@ private fun SchemeTextCard(label: String, preview: String, chosen: Boolean, tag:
             // 「方案管理」卡片窄（88dp 起），两层左右留白占掉 32dp，四个字放不下被截成「方案管」（#491）：动作卡片少留白。
             .padding(horizontal = if (isAction) 4.dp else 10.dp, vertical = 3.dp), contentAlignment = Alignment.Center) {
             Column(Modifier.padding(horizontal = if (isAction) 0.dp else 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                // 「方案管理」的齿轮原来 16dp、半透明，看不清（用户 11-23）：放大到 22dp、不透明。
-                if (isAction) Icon(Icons.Outlined.Settings, null, Modifier.size(22.dp), tint = contentColor)
+                if (isAction) Icon(Icons.Outlined.Settings, null, Modifier.size(16.dp), tint = contentColor.copy(alpha = .75f))
                 else Text(preview, style = MaterialTheme.typography.labelSmall, color = contentColor.copy(alpha = .75f),
                     textAlign = TextAlign.Center, maxLines = 1)
                 Text(label, style = MaterialTheme.typography.bodyMedium, color = contentColor, textAlign = TextAlign.Center, maxLines = 1)
