@@ -26,8 +26,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * 设置「候选栏右边的键」（11-23 他：两套不能藏在「回弹」开关后面；名字对称「展开」「关闭」）。
- * 默认「展开」= 1.15.101；选「关闭」存成左右滑 + 关闭键放右边，「左右滑展开」锁成开着、取消按钮那两项不显示。
+ * 候选栏两种用法（11-23 他：两套不能藏在「回弹」开关后面；11-24 定名「默认」「经典」）。
+ * 「默认」= 1.15.101；选「经典」存成左右滑 + 关闭键放右边，「左右滑展开候选」锁成开着、取消按钮那两项不显示。
  * 存的键名不变（candidate_swipe_expand、candidate_close_on_right）。
  */
 @RunWith(AndroidJUnit4::class)
@@ -60,7 +60,7 @@ class CandidateRightKeySettingTest {
         assertEquals(true, SettingsPreferences.isCandidateSwipeExpand(context))
         assertEquals(true, SettingsPreferences.isCandidateCloseOnRight(context))
         rule.onNodeWithText("候选栏取消按钮").assertDoesNotExist()
-        rule.onNodeWithText("选了「候选栏右边的键：关闭」时只能靠滑展开", substring = true).assertExists()
+        rule.onNodeWithText("选了「经典」时只能靠滑展开候选", substring = true).assertExists()
 
         // 选回「展开」：关闭键回左边，左右滑恢复成选「关闭」前的关着（11-23 平板实测）。
         rule.onNodeWithTag("candidate-right-key:expand").performClick()

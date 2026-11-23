@@ -103,9 +103,9 @@ private fun LayoutDisplayPage(
 ) {
     val context = LocalContext.current
     val pageTitle = LayoutDisplayPages.firstOrNull { it.first == page }?.second
-    // 「左右滑展开」放在这一层：「候选栏按钮」里开关它，「候选样式」里的「每页候选词数」跟着改说法（11-22 他：两个要配套）。
+    // 「左右滑展开候选」放在这一层：「候选栏按钮」里开关它，「候选样式」里的「每页候选词数」跟着改说法（11-22 他：两个要配套）。
     var swipeExpand by remember { mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context)) }
-    // 「候选栏右边的键」：展开（默认，1.15.101）／关闭。存的还是两个旧开关，名字不改：关闭 = 左右滑展开 + 关闭键放右边。
+    // 候选栏两种用法：默认（1.15.101）／经典（右边一格关）。存的还是两个旧开关，名字不改：经典 = 左右滑展开 + 关闭键放右边。
     var closeOnRight by remember { mutableStateOf(SettingsPreferences.isCandidateCloseOnRight(context)) }
     val rightKeyCloses = swipeExpand && closeOnRight
 
@@ -583,7 +583,7 @@ private fun LayoutDisplayPage(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
-                    // 开了「左右滑展开」：候选栏只排一屏，露全最后半截那个再往左拉就展开全部，用不上这个数（11-22 他：
+                    // 开了「左右滑展开候选」：候选栏只排一屏，露全最后半截那个再往左拉就展开全部，用不上这个数（11-22 他：
                     // 「一个屏幕就是一页」）。存的数不动，关掉开关后照旧按它。
                     val pageSizePref = SettingsPreferences.getPageSize(context)
                     val effectiveValue = if (pageSizePref == 0) 20f else pageSizePref.toFloat()
@@ -624,7 +624,7 @@ private fun LayoutDisplayPage(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (swipeExpand) "已开「左右滑展开」：候选栏显示多少就是一页，滑到头再往左拉就展开全部。关掉后按这里的数"
+                            text = if (swipeExpand) "已开「左右滑展开候选」：候选栏显示多少就是一页，滑到头再往左拉就展开全部。关掉后按这里的数"
                                 else "下次打字时生效",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -637,16 +637,16 @@ private fun LayoutDisplayPage(
                 SettingsSection(title = "候选栏按钮", content = {
                     // 11-23 他：两套候选栏不能藏在一个「回弹」开关后面，做成两张图卡，名字对称：右边那个键是「展开」还是「关闭」。
                     // 展开 = 1.15.101（右 ▾ 展开、▴ 收回，左「‹」取消）；关闭 = 右边同一格先关候选／联想、再点收起键盘（全面屏手势）。
-                    Column(Modifier.settingsSearchAnchor("候选栏右边的键")) {
-                        Text("候选栏右边的键", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp))
+                    // 11-24 他在截图上改名：去掉小标题「候选栏右边的键」（上面已有组名），两张卡叫「默认」「经典」。
+                    // 锚点名留着不显示，给搜索和「左右滑展开候选」锁定说明里的跳转用。
+                    Column(Modifier.settingsSearchAnchor("候选栏右边的键").padding(top = 8.dp)) {
                         // 上下两张整宽卡片：小候选栏照真的一样横着画满，字和图标看得清。
                         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             for (closes in listOf(false, true)) {
-                                IllustratedChoiceCard(if (closes) "关闭" else "展开（默认）", rightKeyCloses == closes,
+                                IllustratedChoiceCard(if (closes) "经典" else "默认", rightKeyCloses == closes,
                                     onClick = {
-                                        // 「关闭」右边不放 ▾/▴，展开只能靠滑，所以一并打开左右滑；选回「展开」时恢复成选「关闭」前的样子。
+                                        // 「经典」右边不放 ▾/▴，展开只能靠滑，所以一并打开左右滑；选回「默认」时恢复成选「经典」前的样子。
                                         SettingsPreferences.setCandidateRightKeyCloses(context, closes)
                                         closeOnRight = SettingsPreferences.isCandidateCloseOnRight(context)
                                         swipeExpand = SettingsPreferences.isCandidateSwipeExpand(context)
@@ -666,14 +666,14 @@ private fun LayoutDisplayPage(
                         thickness = 0.5.dp,
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                     )
-                    // 11-23 他选：左右滑单独一个开关，「展开」也能滑（▾/▴ 照旧在）；默认关。「关闭」靠它展开，锁成开着。
-                    SettingsToggleItem(Icons.TwoTone.SwipeLeft, "左右滑展开",
+                    // 11-23 他选：左右滑单独一个开关，「默认」也能滑（▾/▴ 照旧在）；默认关。「经典」靠它展开，锁成开着。
+                    SettingsToggleItem(Icons.TwoTone.SwipeLeft, "左右滑展开候选",
                         "候选滑到头再往左拉展开，往右划收起", swipeExpand, {
                             swipeExpand = it
                             SettingsPreferences.setCandidateSwipeExpand(context, it)
                         // 锁住时说清是谁锁的，「」里点一下跳到上面那两张卡并高亮（11-24 他：找不着在哪改、也跳不过去）。
-                        }, lockMessage = if (rightKeyCloses) "选了「候选栏右边的键：关闭」时只能靠滑展开，所以一直开着；点它改回「展开」就能关" else null)
-                    // 取消按钮和联想叉号只管「展开」时左边的「‹」；「关闭」时取消在右边，不显示这两项。
+                        }, lockMessage = if (rightKeyCloses) "选了「经典」时只能靠滑展开候选，所以一直开着；点「经典」去改回「默认」就能关" else null)
+                    // 取消按钮和联想叉号只管「默认」时左边的「‹」；「经典」时取消在右边，不显示这两项。
                     if (!rightKeyCloses) {
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 16.dp),
