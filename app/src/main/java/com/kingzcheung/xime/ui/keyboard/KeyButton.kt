@@ -337,6 +337,8 @@ fun SwipeableKeyButton(
     onRelease: (() -> Unit)? = null,
     onLongPressSelect: ((String) -> Unit)? = null,
     longPressItems: List<String>? = null,
+    /** 长按到点时排在手指下、默认选中的项（见 [KeyGestureActions.longPressCenterItems]）。 */
+    longPressCenterItems: List<String> = emptyList(),
     longPressDrawableIds: List<Int>? = null,
     /** 拂动选字母：依次为左、上、右、下（缺的方向保留原手势），长按执行 [onFlickLongPress]。 */
     flickLetters: List<String>? = null,
@@ -510,6 +512,7 @@ fun SwipeableKeyButton(
         onUp = keyOnSwipe,
         onDown = keyOnSwipeDown,
         longPressItems = longPressItems.orEmpty(),
+        longPressCenterItems = longPressCenterItems,
         onLeft = letters?.let { { onLetterSelection?.invoke(it.first); Unit } } ?: onSwipeLeft,
         // 「字母键显示大写」只改显示：方向提示跟键帽一样大写，送出的仍是 letters 原样。
         leftText = letters?.first?.let { if (inputPreferences.uppercaseKeyLabels) it.uppercase() else it } ?: swipeLeftText,
