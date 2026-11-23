@@ -122,10 +122,12 @@ fun JapaneseKanaKeyboardLayout(
                 }
             }
             Column(Modifier.weight(3f).fillMaxHeight()) {
+                // 数字页同数字键盘，跟「数字位置」走（见 [numberPadRows]）；假名页不受影响。
+                val digitRows = numberPadRows(LocalKeyboardInputPreferences.current.numberPadTop789)
                 for (row in 0..2) Row(Modifier.weight(1f).fillMaxWidth()) {
                     for (column in 0..2) {
                         if (numberMode) {
-                            val digit = (row * 3 + column + 1).toString()
+                            val digit = digitRows[row][column]
                             KeyButton(digit, { onKeyPress(digit) }, keyBackgroundColor, keyTextColor,
                                 Modifier.weight(1f).testTag("kana-digit:$digit"), onPress = { onKeyPressDown?.invoke(digit) },
                                 shadowEnabled = shadowEnabled, shadowElevation = shadowElevation, shadowShapeRadius = shadowShapeRadius)

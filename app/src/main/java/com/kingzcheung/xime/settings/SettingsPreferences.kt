@@ -243,6 +243,18 @@ object SettingsPreferences {
         getPrefs(context).edit().putBoolean(KEY_NUMBER_ROW, enabled).apply()
     }
 
+    const val KEY_NUMBER_PAD_TOP_789 = "number_pad_top_789"
+
+    /**
+     * 「数字位置」：数字键盘最上面一排是 1 2 3（默认，和以前一样）还是 7 8 9（同电脑键盘右边的小键盘）。
+     * 新键（11-22，群里有人要），读不到就是 1 2 3 在上。管 123 页数字键盘和假名九键的数字页，见 numberPadRows。
+     */
+    fun isNumberPadTop789(context: Context): Boolean = getPrefs(context).getBoolean(KEY_NUMBER_PAD_TOP_789, false)
+
+    fun setNumberPadTop789(context: Context, top789: Boolean) {
+        getPrefs(context).edit().putBoolean(KEY_NUMBER_PAD_TOP_789, top789).apply()
+    }
+
     const val KEY_SPLIT_GAP_PORTRAIT = "split_gap_fraction_portrait"
     const val KEY_SPLIT_GAP_LANDSCAPE = "split_gap_fraction_landscape"
 

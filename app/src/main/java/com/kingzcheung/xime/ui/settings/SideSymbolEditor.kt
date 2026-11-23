@@ -61,6 +61,7 @@ import com.kingzcheung.xime.ui.keyboard.NineGridFrame
 import com.kingzcheung.xime.ui.keyboard.QwertyBottomRowWeights
 import com.kingzcheung.xime.ui.keyboard.SideSymbolTarget
 import com.kingzcheung.xime.ui.keyboard.handwritingKeyLabel
+import com.kingzcheung.xime.ui.keyboard.numberPadRows
 import com.kingzcheung.xime.ui.keyboard.rememberKeyboardInputPreferences
 import com.kingzcheung.xime.ui.keyboard.strokeMainLabels
 import com.kingzcheung.xime.ui.keyboard.symbolGridGeometry
@@ -311,12 +312,13 @@ private fun NineGridSketch(target: SideSymbolTarget, count: Int, canGrow: Boolea
 @Composable
 private fun NumberSketch(count: Int, cell: @Composable (Int, Modifier) -> Unit) {
     val text = LocalTextModeLabel.current
+    val digitRows = numberPadRows(rememberKeyboardInputPreferences().numberPadTop789)
     Column(Modifier.fillMaxWidth().height(SketchRow * 4).testTag("side-symbol-sketch:number")) {
         Row(Modifier.fillMaxWidth().weight(3f)) {
             SlotRail(count, canGrow = true, fillWhenFew = false,
                 modifier = Modifier.weight(NineGridFrame.SIDE).fillMaxHeight(), cell = cell)
             Column(Modifier.weight(NineGridFrame.MAIN).fillMaxHeight()) {
-                listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9")).forEach { row ->
+                digitRows.forEach { row ->
                     Row(Modifier.fillMaxWidth().weight(1f)) { row.forEach { FixedKey(it, Modifier.weight(1f).fillMaxHeight()) } }
                 }
             }

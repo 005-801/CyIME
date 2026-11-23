@@ -256,6 +256,9 @@ private fun LayoutDisplayPage(
                         )
                     }
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                    // 数字位置（11-22 群里有人要，默认 1 2 3 在上不变）：两张小键盘图点选，见 NumberPadOrderChoice.kt。
+                    NumberPadOrderChoice()
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                     // 数字键盘左栏（用户 11-09）：进「按键符号 → 数字侧栏」改字、加减格子、调顺序。
                     SettingsItem(Icons.TwoTone.EmojiSymbols, "左栏符号",
                         "数字键盘左侧一列的符号",

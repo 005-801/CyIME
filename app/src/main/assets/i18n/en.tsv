@@ -2228,6 +2228,10 @@ settings-fold:语言键切换方式	=
 尺寸与位置	Size & position
 底部留白校准	Bottom margin calibration
 数字框自动数字键盘	Number pad for number fields
+数字位置	Number positions
+数字键盘最上面一排是 1 2 3 还是 7 8 9	Whether the top row of the number pad is 1 2 3 or 7 8 9
+1 2 3 在上	1 2 3 on top
+7 8 9 在上	7 8 9 on top
 左栏符号	Left column symbols
 数字行	Number row
 英文出短语	Phrases in English
