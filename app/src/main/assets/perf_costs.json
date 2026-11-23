@@ -10,6 +10,7 @@
       "layout": "",
       "baseline": {"keyMs": 34.0},
       "noiseMs": 0.5,
+      "screenPixels": 4905600,
       "voiceResident": {"memoryMb": 605, "estimated": true},
       "t9Model": {"keyMs": 0.54, "keyP95Ms": 4.30, "basis": "engine"},
       "items": {
@@ -67,7 +68,7 @@
         "handwriting_recognize_while_writing": {"keyMs": 0.0, "memoryMb": 2, "estimated": true},
         "typing_stats": {"keyMs": 0.1, "memoryMb": 0, "estimated": true},
         "digit_phrase_candidates": {"keyMs": 0.0, "memoryMb": 0, "estimated": true},
-        "background_motion": {"keyMs": 0.5, "memoryMb": 1, "estimated": true, "idleCpuSecPerMin": 23.9},
+        "background_motion": {"keyMs": 0.5, "memoryMb": 1, "estimated": true, "idleCpuSecPerMin": 23.9, "idleRenderShare": 0.4},
         "t9_fuzzy_z_zh": {"keyMs": 0.05, "keyP95Ms": 0.50, "baselineKeyMs": 39.0, "basis": "engine"},
         "t9_fuzzy_c_ch": {"keyMs": 0.05, "keyP95Ms": 0.50, "baselineKeyMs": 39.0, "basis": "engine"},
         "t9_fuzzy_s_sh": {"keyMs": 0.05, "keyP95Ms": 0.50, "baselineKeyMs": 39.0, "basis": "engine"},

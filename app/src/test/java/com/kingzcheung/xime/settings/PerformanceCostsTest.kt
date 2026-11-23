@@ -195,6 +195,29 @@ class PerformanceCostsTest {
         assertTrue(filled.idleCpuEstimated)
     }
 
+    @Test fun drainIsConvertedToBatteryPercentOnThisDevice() {
+        val tab = device.copy(screenPixels = 4_905_600,
+            items = mapOf("background_motion" to PerformanceCosts.Cost(idleCpuSecPerMin = 23.9, idleRenderShare = 0.4)))
+        // 同样的屏幕、5000 mAh：23.9 秒/分钟 × 60 × 0.09 mAh/秒 ÷ 5000 mAh ≈ 2.6%/小时。
+        val same = PerformanceCosts.Here(5000.0, 4_905_600)
+        val pct = PerformanceCosts.drainPercentPerHour(23.9, 0.4, tab, same)!!
+        assertEquals(2.58, pct, 0.01)
+        assertEquals("性能开销：耗电：键盘停着时 CPU 每分钟 +24 秒(本机约每小时 2.6% 电)",
+            PerformanceCosts.note(PerformanceCosts.Source(tab, local = false, sameModel = true, here = same), "background_motion"))
+        // 屏幕小一半：只有渲染那 4 成跟着少。
+        val small = PerformanceCosts.drainPercentPerHour(23.9, 0.4, tab, PerformanceCosts.Here(5000.0, 4_905_600 / 2))!!
+        assertEquals(pct * 0.8, small, 1e-9)
+        // 电池大一倍，百分比少一半；读不到电池按 5000 mAh。
+        assertEquals(pct / 2, PerformanceCosts.drainPercentPerHour(23.9, 0.4, tab, PerformanceCosts.Here(10_000.0, 4_905_600))!!, 1e-9)
+        assertEquals(pct, PerformanceCosts.drainPercentPerHour(23.9, 0.4, tab, PerformanceCosts.Here(null, null))!!, 1e-9)
+        // 没有本机参数（测试、读不到）不写百分比。
+        assertNull(PerformanceCosts.drainPercentPerHour(23.9, 0.4, tab, null))
+        // 按档折算时停着的 CPU 秒数一起折，并标估算。
+        val mid = PerformanceCosts.scale(tab, 1.7).items.getValue("background_motion")
+        assertEquals(23.9 * 1.7, mid.idleCpuSecPerMin!!, 1e-9)
+        assertTrue(mid.idleCpuEstimated)
+    }
+
     @Test fun totalUsesMeasuredComboWhenExact() {
         val total = PerformanceCosts.total(device, setOf("neighbor_correction", "fuzzy_z_zh"))
         assertTrue(total.measured)

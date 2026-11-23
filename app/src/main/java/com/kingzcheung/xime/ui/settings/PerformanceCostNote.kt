@@ -82,7 +82,7 @@ internal fun PerformanceCostTotalSection(
             Row(Modifier.fillMaxWidth()) {
                 Text("当前总开销", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.width(8.dp))
-                Text(PerformanceCosts.describeLoad(load, source.device) ?: "没有额外开销",
+                Text(PerformanceCosts.describeLoad(load, source.device, source.here) ?: "没有额外开销",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.testTag("perf-cost-total-value"))
             }
@@ -107,7 +107,7 @@ internal fun PerformanceCostTotalSection(
         listed.forEach { (item, cost) ->
             val enabled = item.id in on
             CostDivider()
-            SettingsListRow(item.title, if (enabled) PerformanceCosts.describe(cost, device).orEmpty() else "已关",
+            SettingsListRow(item.title, if (enabled) PerformanceCosts.describe(cost, device, source.here).orEmpty() else "已关",
                 modifier = Modifier.testTag("perf-cost-row:${item.id}")) {
                 Switch(checked = enabled, onCheckedChange = { onToggle(item, it) }, modifier = Modifier.padding(end = 12.dp))
             }
