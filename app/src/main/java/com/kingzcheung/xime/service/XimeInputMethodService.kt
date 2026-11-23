@@ -257,20 +257,21 @@ class XimeInputMethodService : InputMethodService(), LifecycleOwner, SavedStateR
      * 耗电 54.7 mAh，比打字的 49 分钟（33 mAh）还多；熄屏没有帧，几乎不耗。
      *
      * 这里在收起 [HIDDEN_QUIET_DELAY_MS] 后：生命周期退到 CREATED（Compose 帧钟暂停，重组和按帧的动画都停，
-     * 按生命周期收的数据流也停）。弹出（onStartInputView / onWindowShown）时先恢复，再画第一帧。
-     * 不把根视图设成 INVISIBLE：平板实测那样弹出第一帧的 measure/layout 从 1.6 ms 涨到 14 ms（中位弹出 +15 ms），
-     * 而真收起时本来就不出帧，INVISIBLE 省不下什么。
+     * 按生命周期收的数据流也停），键盘根视图设为 INVISIBLE（再有失效也不画）。弹出（onStartInputView /
+     * onWindowShown）时先恢复，再画第一帧。
      */
     private val quietHiddenKeyboard = Runnable {
         if (imeWindowShown || hiddenQuiet) return@Runnable
         hiddenQuiet = true
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        if (::keyboardContainer.isInitialized) keyboardContainer.visibility = View.INVISIBLE
     }
 
     private fun wakeHiddenKeyboard() {
         mainHandler.removeCallbacks(quietHiddenKeyboard)
         if (!hiddenQuiet) return
         hiddenQuiet = false
+        if (::keyboardContainer.isInitialized) keyboardContainer.visibility = View.VISIBLE
         lifecycleRegistry.currentState = if (inputLifecycleResumed) Lifecycle.State.RESUMED else Lifecycle.State.STARTED
     }
 
