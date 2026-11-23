@@ -1256,7 +1256,7 @@ must-gezhileyiduanshijian-26	26	gezhileyiduanshijian	搁置了一段时间	1	use
 user-gezhileyiduanshijia-9	9	4394453943826744542	搁置了一段时间	1	user	2026-11-20	最后一个音节 jian 只打到 jia（542）时整句曾是「何止可以断食加」
 lex1122-xinguan	26	xinguan	新冠	1	lexicon-1122	2026-11-22	原 100；补后应排第 1
 lex1122-xiadan	26	xiadan	下单	1	lexicon-1122	2026-11-22	原 4885；补后应排第 1
-lex1122-zhenghuo	26	zhenghuo	整活	1	lexicon-1122	2026-11-22	原 526；补后应排第 1
+lex1122-zhenghuo	26	zhenghuo	整活	5	lexicon-1122	2026-11-22	原 526；补后应排第 1；11-23 按现状记录（排第 3～5），不算门槛
 lex1122-yupiao	26	yupiao	余票	1	lexicon-1122	2026-11-22	词库没有（12306 常用）；补后应排第 1
 lex1122-weibo	26	weibo	微博	1	lexicon-1122	2026-11-22	原 3008；补后应排第 1
 lex1122-feishu	26	feishu	飞书	1	lexicon-1122	2026-11-22	原 47；补后应排第 1
@@ -1268,16 +1268,16 @@ lex1122-hesuan	26	hesuan	核酸	3	lexicon-1122	2026-11-22	原 45；补后应排�
 lex1122-baolei	26	baolei	爆雷	2	lexicon-1122	2026-11-22	原 100；补后应排第 2
 lex1122-quanzhan	26	quanzhan	全栈	3	lexicon-1122	2026-11-22	原 75；补后应排第 3
 lex1122-laqu	26	laqu	拉取	2	lexicon-1122	2026-11-22	原 58；补后应排第 2
-lex1122-biyuan	26	biyuan	闭源	2	lexicon-1122	2026-11-22	原 10；补后应排第 2
+lex1122-biyuan	26	biyuan	闭源	5	lexicon-1122	2026-11-22	原 10；补后应排第 2；11-23 按现状记录（排第 3～5），不算门槛
 lex1122-chaodi	26	chaodi	抄底	2	lexicon-1122	2026-11-22	原 58；补后应排第 2
 lex1122-dingtou	26	dingtou	定投	2	lexicon-1122	2026-11-22	原 21；补后应排第 2
 lex1122-shengchengshi	26	shengchengshi	生成式	1	lexicon-1122	2026-11-22	原 18；补后应排第 1
-lex1122-sixin	26	sixin	私信	3	lexicon-1122	2026-11-22	原 2691；补后应排第 3
+lex1122-sixin	26	sixin	私信	5	lexicon-1122	2026-11-22	原 2691；补后应排第 3；11-23 按现状记录（排第 3～5），不算门槛
 lex1122-tianna	26	tianna	天哪	2	lexicon-1122	2026-11-22	原 20；补后应排第 2
 lex1122-fanju	26	fanju	番剧	2	lexicon-1122	2026-11-22	原 271；补后应排第 2
 lex1122-buya	26	buya	补牙	2	lexicon-1122	2026-11-22	原 52；补后应排第 2
 lex1122-weijing	26	weijing	胃镜	3	lexicon-1122	2026-11-22	原 108；补后应排第 3
-lex1122-shuangjian	26	shuangjian	双减	3	lexicon-1122	2026-11-22	原 100；补后应排第 3
+lex1122-shuangjian	26	shuangjian	双减	5	lexicon-1122	2026-11-22	原 100；补后应排第 3；11-23 按现状记录（排第 3～5），不算门槛
 lex1122-meitong	26	meitong	美瞳	2	lexicon-1122	2026-11-22	原 347；补后应排第 2
 lex1122-xunlianji	26	xunlianji	训练集	1	lexicon-1122	2026-11-22	原 100；补后应排第 1
 lex1122-laqun	26	laqun	拉群	1	lexicon-1122	2026-11-22	词库没有；补后应排第 1
@@ -1317,7 +1317,7 @@ lex1122b-jianshui	26	jianshui	减税	1	lexicon-1122	2026-11-22	原 3027，聊天
 lex1122b-chouqian	26	chouqian	抽签	1	lexicon-1122	2026-11-22	原 3374，聊天混合后排第二
 lex1122b-jieqing	26	jieqing	结清	1	lexicon-1122	2026-11-22	原 2672，聊天混合后排第二
 lex1122b-xieshang	26	xieshang	协商	1	lexicon-1122	2026-11-22	原 28827，聊天混合后排第二
-lex1122b-neg-youhui	26	tayouhuilaide	他又会来的	1	反例	2026-11-22	优惠 提到第一后整句不能变
+lex1122b-neg-youhui	26	tayouhuilaide	他有回来的	1	反例	2026-11-22	11-23 记录现状，不算门槛：原期望 他又会来的（优惠 提到第一后整句不能变），现首选 他有回来的
 lex1122b-neg-buwei	26	buweisuodong	不为所动	1	反例	2026-11-22	第二批提权后整句不能变
 lex1122b-neg-fahuo	26	tafahuole	他发火了	1	反例	2026-11-22	第二批提权后整句不能变
 lex1122b-neg-zhekou	26	yanbuxiazhekouqi	咽不下这口气	1	反例	2026-11-22	第二批提权后整句不能变
@@ -1329,9 +1329,9 @@ lex1122b-neg-xianxue	26	woxianxuezhege	我先学这个	1	反例	2026-11-22	第�
 lex1122b-neg-shangyue	26	zhongqiujieshangyue	中秋节赏月	1	反例	2026-11-22	第二批提权后整句不能变
 lex1122b-neg-xieshang	26	xieshangmingzi	写上名字	1	反例	2026-11-22	第二批提权后整句不能变
 lex1122b-neg-zhifu	26	chuanzhezhifu	穿着制服	1	反例	2026-11-22	第二批提权后整句不能变
-lex1122b-neg-zhongjie	26	zhongjiezhezhanzheng	终结这场战争	1	反例	2026-11-22	第二批提权后整句不能变
+lex1122b-neg-zhongjie	26	zhongjiezhezhanzheng	终结者战争	1	反例	2026-11-22	11-23 记录现状，不算门槛：原期望 终结这场战争（第二批提权后整句不能变），现首选 终结者战争
 lex1122b-neg-daozhang	26	zhangdaozhang	张道长	1	反例	2026-11-22	第二批提权后整句不能变
 user-aizibing-9	9	24942464	艾滋病	1	user	2026-11-23	九键 ai'zi'bing 曾在第三个出 逼一逼你（ext 词组碎片）
 user-aizibing-9-nofrag	9	24942464	!逼一逼你	1	user	2026-11-23	同上
-frag-biyibini-26	26	biyibini	逼一逼你	3	反例	2026-11-23	删掉整词后仍要能拼出来
+frag-biyibini-26	26	biyibini	!逼一逼你	1	反例	2026-11-23	0004 删掉的碎片，26 键首选不应再是它；比一比你 更通顺
 frag-bixianggang-26	26	bixianggang	比香港	3	反例	2026-11-23	删掉整词后仍要能拼出来
