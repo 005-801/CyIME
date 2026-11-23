@@ -194,29 +194,6 @@ bool T9DecodeJoint(const T9ScriptQuery& q, const T9ScriptOptions& o, bool (*is_n
         }
       }
     }
-    // A whole-input dictionary word against a first sentence spelled character by character (t9/whole_word_margin).
-    // 2026-11-23 ai'zi'bing (24942464): the word model rated 爱+滋+病 a little over the word 艾滋病, so a spelling
-    // the dictionary does not have led. Such a sentence gives the first place to a word of as many characters,
-    // spelled in full (not an abbreviation), that is within the margin; a clearly likelier character sequence
-    // (了吗 over 勒马) keeps it.
-    if (!single_t9_key && o.t9_whole_word_margin_ > 0 && demoted == order.size() && order.size() > 1) {
-      const auto& first = paths[order.front().first].sentence.components();
-      const bool chars_only = first.size() >= 2 && std::all_of(first.begin(), first.end(), [](const DictEntry& part) {
-        return utf8::distance(part.text.begin(), part.text.end()) == 1;
-      });
-      for (size_t i = 1; chars_only && i < order.size(); ++i) {
-        if (order.front().second - order[i].second > o.t9_whole_word_margin_) break;
-        const auto& parts = paths[order[i].first].sentence.components();
-        if (parts.size() != 1 || parts.front().quality_len + 1e-9 < static_cast<double>(total) ||
-            utf8::distance(parts.front().text.begin(), parts.front().text.end()) != static_cast<ptrdiff_t>(first.size()))
-          continue;
-        auto item = order[i];
-        item.second = std::max(item.second, order.front().second);
-        order.erase(order.begin() + i);
-        order.insert(order.begin(), item);
-        break;
-      }
-    }
     set<string> displayed;
 #ifndef T9_ALGO_ONLY_BUILD
     // Sentences the user deleted (long press) are skipped here, so the next best one takes the slot.
