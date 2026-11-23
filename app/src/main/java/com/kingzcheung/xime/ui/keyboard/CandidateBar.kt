@@ -309,16 +309,15 @@ fun CandidateBar(
     var associationCancelCross by remember(preferences) {
         mutableStateOf(SettingsPreferences.isAssociationCancelCross(context))
     }
-    var pressHighlight by remember(preferences) {
-        mutableStateOf(preferences.getBoolean(SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT, false))
-    }
     var swipeExpand by remember(preferences) {
         mutableStateOf(SettingsPreferences.isCandidateSwipeExpand(context))
     }
     var closeOnRight by remember(preferences) {
         mutableStateOf(SettingsPreferences.isCandidateCloseOnRight(context))
     }
-    val edgePressedFill = if (pressHighlight) protectedVisuals.textColor.copy(alpha = 0.34f) else iconButtonContainer
+    // 两端按钮按下时的底色。原来「候选栏按钮按压高亮」开着时更深一档；那个开关 11-24 去掉了（关着也亮，他说有没有都一样），
+    // 存着的旧值不再读，大家都是原来的默认样子。
+    val edgePressedFill = iconButtonContainer
     DisposableEffect(preferences) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == SettingsPreferences.KEY_SHOW_CANDIDATE_CANCEL_BUTTON || key == null) {
@@ -326,9 +325,6 @@ fun CandidateBar(
             }
             if (key == SettingsPreferences.KEY_ASSOCIATION_CANCEL_CROSS || key == null) {
                 associationCancelCross = SettingsPreferences.isAssociationCancelCross(context)
-            }
-            if (key == SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT || key == null) {
-                pressHighlight = preferences.getBoolean(SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT, false)
             }
             if (key == SettingsPreferences.KEY_CANDIDATE_SWIPE_EXPAND || key == null) {
                 swipeExpand = SettingsPreferences.isCandidateSwipeExpand(context)

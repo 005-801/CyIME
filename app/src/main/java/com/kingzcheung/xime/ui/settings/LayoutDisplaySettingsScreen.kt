@@ -671,7 +671,8 @@ private fun LayoutDisplayPage(
                         "候选滑到头再往左拉展开，往右划收起", swipeExpand, {
                             swipeExpand = it
                             SettingsPreferences.setCandidateSwipeExpand(context, it)
-                        }, lockMessage = if (rightKeyCloses) "右边的键选了「关闭」，展开只能靠滑，一直开着" else null)
+                        // 锁住时说清是谁锁的，「」里点一下跳到上面那两张卡并高亮（11-24 他：找不着在哪改、也跳不过去）。
+                        }, lockMessage = if (rightKeyCloses) "选了「候选栏右边的键：关闭」时只能靠滑展开，所以一直开着；点它改回「展开」就能关" else null)
                     // 取消按钮和联想叉号只管「展开」时左边的「‹」；「关闭」时取消在右边，不显示这两项。
                     if (!rightKeyCloses) {
                         HorizontalDivider(
@@ -748,14 +749,7 @@ private fun LayoutDisplayPage(
                             }
                         }
                     }
-                    val pressPrefs = remember(context) { SettingsPreferences.getPrefsPublic(context) }
-                    var pressHighlight by remember { mutableStateOf(
-                        pressPrefs.getBoolean(SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT, false)) }
-                    SettingsToggleItem(Icons.TwoTone.FormatColorFill, "候选栏按钮按压高亮",
-                        "按下候选栏按钮时显示高亮", pressHighlight, {
-                            pressHighlight = it
-                            pressPrefs.edit().putBoolean(SettingsPreferences.KEY_CANDIDATE_PRESS_HIGHLIGHT, it).apply()
-                        })
+                    // 「候选栏按钮按压高亮」去掉（11-24 他：关着按下去也亮，有没有都一样）。按下时照旧有默认的高亮。
                 })
             }
             if (page == "candidates") item {

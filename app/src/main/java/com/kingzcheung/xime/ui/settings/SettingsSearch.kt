@@ -312,7 +312,6 @@ internal val SettingsSearchIndex: List<SettingsSearchEntry> = run {
         // 11-09 反馈：有人按「取消候选按钮」「关闭候选按钮」找，记不住「候选栏」在前。
         SettingsSearchEntry("候选栏取消按钮", candidates, candidatePage, "取消 左箭头 取消输入 取消候选 关闭候选 取消候选按钮 关闭候选按钮 候选时取消按钮 关闭按钮 返回按钮 返回键 退出输入 取消联想 关闭联想"),
         SettingsSearchEntry("联想关闭键用叉号", candidates, candidatePage, "联想 关闭联想 取消联想 关闭键 关闭按钮 叉 叉号 圆叉 左箭头"),
-        SettingsSearchEntry("候选栏按钮按压高亮", candidates, candidatePage, "按住 反馈 取消键 关闭 展开箭头"),
         // 11-23 设置改版：「候选滑到头回弹展开」「关闭键位置」改成「候选栏右边的键」（展开／关闭）和「左右滑展开」，旧名留作关键词。
         SettingsSearchEntry("候选栏右边的键", candidates, candidatePage, "右边 展开 关闭 关闭键 关闭键位置 叉 叉号 箭头 展开箭头 收起键盘 全面屏手势 关闭联想 经典"),
         SettingsSearchEntry("左右滑展开", candidates, candidatePage, "候选 滑动展开 左滑 右滑 拉 回弹 弹回 滑到头 候选滑到头回弹展开 展开候选 收起候选 收回候选 手势展开"),

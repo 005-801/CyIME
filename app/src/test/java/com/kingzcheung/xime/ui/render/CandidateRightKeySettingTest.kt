@@ -60,7 +60,7 @@ class CandidateRightKeySettingTest {
         assertEquals(true, SettingsPreferences.isCandidateSwipeExpand(context))
         assertEquals(true, SettingsPreferences.isCandidateCloseOnRight(context))
         rule.onNodeWithText("候选栏取消按钮").assertDoesNotExist()
-        rule.onNodeWithText("右边的键选了「关闭」，展开只能靠滑，一直开着", substring = true).assertExists()
+        rule.onNodeWithText("选了「候选栏右边的键：关闭」时只能靠滑展开", substring = true).assertExists()
 
         // 选回「展开」：关闭键回左边，左右滑恢复成选「关闭」前的关着（11-23 平板实测）。
         rule.onNodeWithTag("candidate-right-key:expand").performClick()
