@@ -95,7 +95,9 @@ internal fun PerformanceCostTotalSection(
         // 模糊音按组登记，一组的开销小到不值一提，合成一行：26 键一行（去模糊音页改），九键「按数字也模糊」一行（这里能关）。
         val fuzzy26 = PerformanceCosts.Item.entries.filter { !it.nineKey && it.id.startsWith("fuzzy_") }
         val fuzzy9 = PerformanceCosts.Item.entries.filter { it.nineKey && it.id.startsWith(PerformanceCosts.T9_PREFIX + "fuzzy_") }
-        fun weight(cost: PerformanceCosts.Cost?) = (cost?.keyMs ?: 0.0) + (cost?.keyP95Ms ?: 0.0) + (cost?.memoryMb ?: 0.0) / 10
+        // 键盘停着时一直耗电的（动态背景）排最前：每分钟多 1 秒 CPU 按每键多 1 ms 算。
+        fun weight(cost: PerformanceCosts.Cost?) = (cost?.keyMs ?: 0.0) + (cost?.keyP95Ms ?: 0.0) + (cost?.memoryMb ?: 0.0) / 10 +
+            (cost?.idleCpuSecPerMin ?: 0.0)
         val listed = PerformanceCosts.Item.entries
             .filter { it !in fuzzy26 && it !in fuzzy9 && (it.id in on || it.id in shownOff) }
             .map { it to device.items[it.id] }

@@ -121,7 +121,8 @@ object PerformanceCosts {
         TYPING_STATS("typing_stats", "记录打字统计"),
         // 只在数字上屏后读一次光标前的字、查一遍编码是数字的短语；打拼音不经过它。
         DIGIT_PHRASES("digit_phrase_candidates", "数字出短语"),
-        // 打字不经过它，代价在键盘显示时每秒 20 帧的合成；测它要用图片背景（我的图片或内置图片主题），纯色、渐变不动。
+        // 打字不经过它，代价在键盘显示时一直出帧（最多每秒 20 帧，动得慢时更少）；耗电看 [Cost.idleCpuSecPerMin]。
+        // 测它要用图片背景（我的图片或内置图片主题），纯色、渐变不动；宿主不能是主题页（预览也在动，会算进来）。
         BACKGROUND_MOTION("background_motion", "动态背景");
 
         val nineKey: Boolean get() = id.startsWith(T9_PREFIX)
@@ -324,6 +325,13 @@ object PerformanceCosts {
          * 逐键实测（`/mnt/project-files/perf-matrix-1103`，只含引擎查词排序，不含画面），不是这台设备测的。
          */
         val basis: String? = null,
+        /**
+         * 耗电：键盘开着、不打字时，输入法每分钟多用几秒 CPU（energy_bench 的 idle_shown，开和关相减）。
+         * 一直在动的东西（动态背景）的代价主要在这里，每键耗时看不出来（用户 11-23：耗电、内存、速度都要写明白）。
+         */
+        val idleCpuSecPerMin: Double? = null,
+        /** true = [idleCpuSecPerMin] 还没实测，是估算；和 [estimated] 分开记，同一项可能只测了一样。 */
+        val idleCpuEstimated: Boolean = false,
     )
 
     /** [Cost.basis]：电脑同源引擎实测。 */
@@ -430,7 +438,14 @@ object PerformanceCosts {
         reference ?: return device
         val missing = reference.items.filterKeys { it !in device.items }
             .mapValues { (_, c) -> if (c.basis == BASIS_ENGINE) c else c.copy(estimated = true) }
-        val noted = device.items.mapValues { (id, c) -> if (c.note == null) c.copy(note = reference.items[id]?.note) else c }
+        val noted = device.items.mapValues { (id, c) ->
+            val ref = reference.items[id]
+            var out = if (c.note == null) c.copy(note = ref?.note) else c
+            // 本机只测了每键耗时、没测耗电时，耗电用参考表的，标估算。
+            if (out.idleCpuSecPerMin == null && ref?.idleCpuSecPerMin != null)
+                out = out.copy(idleCpuSecPerMin = ref.idleCpuSecPerMin, idleCpuEstimated = true)
+            out
+        }
         val voice = device.voiceResident ?: reference.voiceResident?.copy(estimated = true)
         // 引擎实测不是哪台设备的数，补过来照原样标来源，不改成估算。
         val t9 = device.t9Model ?: reference.t9Model?.let { if (it.basis == BASIS_ENGINE) it else it.copy(estimated = true) }
@@ -477,17 +492,23 @@ object PerformanceCosts {
     // ---- 文字 ----
 
     /**
-     * “每键 +1.2 ms（慢 4%）· 内存 +30 MB”。每键低于测量误差、内存不到 1 MB 的部分不写；两样都没有返回 null，
-     * 开关下面就不出这一行（用户 11-03「这种东西还有必要写性能开销吗」「也不用大约了」）。表里没有这项也返回 null。
+     * “耗电：键盘停着时 CPU 每分钟 +24 秒 · 每键 +1.2 ms(慢 4%) · 内存 +30 MB”。耗电不到 1 秒/分钟、每键低于测量误差、
+     * 内存不到 1 MB 的部分不写；都没有返回 null，开关下面就不出这一行（用户 11-03「这种东西还有必要写性能开销吗」）。
+     * 还没实测的数前面写「约」（用户 11-23：不准的写个大约是多少，并且标出来；11-03 说过不用写大约，以 11-23 为准）。
+     * 表里没有这项也返回 null。
      */
     fun describe(cost: Cost?, device: Device): String? {
         cost ?: return null
         val parts = mutableListOf<String>()
-        cost.keyMs?.let { ms ->
-            if (ms >= device.noiseMs) parts += "每键 +${oneDecimal(ms)} ms(慢 ${percent(ms, cost.baselineKeyMs ?: device.baseline.keyMs)}%)"
+        val about = if (cost.estimated) "约 " else ""
+        cost.idleCpuSecPerMin?.let { sec ->
+            if (sec >= 1) parts += "耗电：键盘停着时 CPU 每分钟${if (cost.idleCpuEstimated) "约" else ""} +${sec.roundToInt()} 秒"
         }
-        cost.keyP95Ms?.let { ms -> if (ms >= device.noiseMs) parts += "慢键 +${oneDecimal(ms)} ms" }
-        cost.memoryMb?.let { mb -> if (mb >= 1) parts += "内存 +${mb.roundToInt()} MB" }
+        cost.keyMs?.let { ms ->
+            if (ms >= device.noiseMs) parts += "每键${about.trimEnd()} +${oneDecimal(ms)} ms(慢 ${percent(ms, cost.baselineKeyMs ?: device.baseline.keyMs)}%)"
+        }
+        cost.keyP95Ms?.let { ms -> if (ms >= device.noiseMs) parts += "慢键${about.trimEnd()} +${oneDecimal(ms)} ms" }
+        cost.memoryMb?.let { mb -> if (mb >= 1) parts += "内存${about.trimEnd()} +${mb.roundToInt()} MB" }
         cost.note?.takeIf { it.isNotBlank() }?.let { parts += it }
         return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
     }
@@ -529,7 +550,7 @@ object PerformanceCosts {
     fun voiceResidentWarning(source: Source?): String {
         val mb = source?.device?.voiceResident?.memoryMb?.takeIf { it >= 1 }
         val amount = if (source == null || mb == null) "语音模型会一直占着内存"
-            else "语音模型会一直占着 ${mb.roundToInt()} MB 内存" + if (source.sameModel) "" else "(${deviceName(source.device)} 实测)"
+            else "语音模型会一直占着${if (source.device.voiceResident?.estimated == true) "约" else ""} ${mb.roundToInt()} MB 内存" + if (source.sameModel) "" else "(${deviceName(source.device)} 实测)"
         return "$amount。内存紧张时系统会自动卸掉，下次按麦克风要先重新加载，打字不受影响。"
     }
 
@@ -626,8 +647,12 @@ object PerformanceCosts {
         return if (Item.KEY_GAP_LIGHT.id in next) next else next - KeyGapLightPreferences.eventKeys
     }
 
-    /** 一组开关加上常驻语音、九键模型、导入词库之后的总开销。 */
-    data class Load(val keyMs: Double, val keyP95Ms: Double, val memoryMb: Double)
+    /**
+     * 一组开关加上常驻语音、九键模型、导入词库之后的总开销。[estimated]：里面有还没实测的数，写的时候带「约」；
+     * [idleCpuSecPerMin]：键盘停着时多用的 CPU（耗电），按项相加。
+     */
+    data class Load(val keyMs: Double, val keyP95Ms: Double, val memoryMb: Double,
+        val idleCpuSecPerMin: Double = 0.0, val estimated: Boolean = false, val idleCpuEstimated: Boolean = false)
 
     fun load(device: Device, on: Set<String>, voiceResident: Boolean, t9Model: Boolean, dictionaryWords: Int): Load {
         val switches = total(device, on)
@@ -635,14 +660,19 @@ object PerformanceCosts {
         val voice = device.voiceResident?.takeIf { voiceResident }
         val t9 = device.t9Model?.takeIf { t9Model }
         val extras = listOfNotNull(dictionaries, voice, t9)
+        val idle = on.mapNotNull { device.items[it] }.filter { (it.idleCpuSecPerMin ?: 0.0) > 0.0 }
         return Load(switches.keyMs + extras.sumOf { it.keyMs ?: 0.0 },
             switches.keyP95Ms + extras.sumOf { it.keyP95Ms ?: 0.0 },
-            switches.memoryMb + extras.sumOf { it.memoryMb ?: 0.0 })
+            switches.memoryMb + extras.sumOf { it.memoryMb ?: 0.0 },
+            idleCpuSecPerMin = idle.sumOf { it.idleCpuSecPerMin ?: 0.0 },
+            estimated = switches.estimated.isNotEmpty() || extras.any { it.estimated },
+            idleCpuEstimated = idle.any { it.idleCpuEstimated })
     }
 
     /** 总开销一行（同 [describe] 的写法）；小到测不出返回 null。 */
     fun describeLoad(load: Load, device: Device): String? =
-        describe(Cost(load.keyMs, load.memoryMb, keyP95Ms = load.keyP95Ms.takeIf { it > 0 }), device)
+        describe(Cost(load.keyMs, load.memoryMb, keyP95Ms = load.keyP95Ms.takeIf { it > 0 }, estimated = load.estimated,
+            idleCpuSecPerMin = load.idleCpuSecPerMin.takeIf { it > 0 }, idleCpuEstimated = load.idleCpuEstimated), device)
 
     /**
      * 总开销下面那行“数从哪来”：开着的几项里多少是电脑引擎实测、多少是设备实测、多少还是按同类推算的，
