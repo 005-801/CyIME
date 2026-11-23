@@ -9,17 +9,16 @@ import kotlinx.coroutines.withContext
 
 /**
  * 「语言与方案」和键盘里的方案面板列同一份方案（用户 11-22：设置里有仓颉、注音，键盘面板里没有）。
- * 两边都从这里取，不各算各的：启用的方案，加上关着也列出的随包方案（[CyimeInputDefaults.listedWhenOff]，
- * 如五笔、仓颉、速成、笔画、注音、双拼），点了关着的才启用并部署。
+ * 两边都从这里取，不各算各的：只列启用的方案（用户 11-23：关了小鹤双拼键盘里还显示；多出一堆用不到的方案，
+ * 自己在用的五笔被挤到后面）。关着的方案在「方案管理」（已安装的方案）里打开。
  */
 object SchemaPicking {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /** [installed] 是装着的方案（含关着的），[enabled] 是启用的方案 ID。 */
+    /** [installed] 是装着的方案（含关着的），[enabled] 是启用的方案 ID；只返回启用的（连同它们的组合）。 */
     fun offered(installed: List<SchemaInfo>, enabled: Collection<String>): List<SchemaInfo> {
         val installedIds = installed.map { it.schemaId }.toSet()
-        val ids = CyimeInputDefaults.withCompanions(
-            (enabled + CyimeInputDefaults.listedWhenOff).filter { it in installedIds }.distinct(), installedIds).toSet() + enabled
+        val ids = CyimeInputDefaults.withCompanions(enabled.filter { it in installedIds }.distinct(), installedIds).toSet() + enabled
         return installed.filter { it.schemaId in ids }.distinctBy { it.schemaId }
     }
 

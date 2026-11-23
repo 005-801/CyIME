@@ -54,7 +54,7 @@ fun SchemaListView(
         SchemaPicking.offered((all + found).distinctBy { it.schemaId }, enabled + switchable)
     } ?: all)
     val schemes = current?.let { SchemaPicking.schemeRow(pool, it) }.orEmpty()
-    // 布局一行也按同一份方案列：关着的注音、笔画也有它们的布局卡片，和设置页一样。
+    // 布局一行也按同一份方案列（只有启用的方案），和设置页一样。
     val poolEntries = pool.filter { current != null && it.profile.mode == InputMode.KEYBOARD && it.profile.language == current.profile.language }
     // 关着的方案：和设置页一样启用并部署，好了键盘自动换上；面板先收起，不用等。
     val enableOff: (SchemaInfo) -> Unit = { entry ->
