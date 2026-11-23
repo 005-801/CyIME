@@ -998,6 +998,10 @@ private fun T9DigitKey(
     val currentOnClick by rememberUpdatedState(onClick)
     val shownItems = remember(longPressItems, uppercaseLetters) { t9LetterLabels(longPressItems, uppercaseLetters) }
     val itemValue = remember(longPressItems, shownItems) { { shown: String -> longPressItems.getOrNull(shownItems.indexOf(shown)) ?: shown } }
+    // 长按气泡里的字母一律小写：选了是进拼音（编码条里是小写 k、出 k 开头的词），不跟键帽大写。
+    // 26 键的长按气泡里大写是直接上屏大写字母，九键这里写大写 K 却出「看/快/开」，对不上（用户 11-23）。
+    val menuItems = remember(longPressItems) { t9LongPressMenuLetters(longPressItems) }
+    val menuValue = remember(longPressItems, menuItems) { { shown: String -> longPressItems.getOrNull(menuItems.indexOf(shown)) ?: shown } }
     val currentOnLongPressSelect by rememberUpdatedState(onLongPressSelect)
     val currentOnPress by rememberUpdatedState(onPress)
     val currentSwipes by rememberUpdatedState(swipes)
@@ -1018,8 +1022,9 @@ private fun T9DigitKey(
         },
         onPress = { currentOnPress?.invoke() },
         // 长按弹字母气泡和 26/14 键共用“长按弹出字母气泡”开关，默认关（用户 10-21）；拂动模式长按出数字，不受影响。
-        longPressItems = if (flick || inputPreferences.letterLongPressMenu) shownItems else emptyList(),
-        onLongPressSelect = { letter -> currentOnLongPressSelect?.invoke(itemValue(letter)) },
+        // 拂动模式下长按出的是数字，这里的列表用不上；只有「长按弹出字母气泡」走这份小写列表。
+        longPressItems = if (flick) shownItems else if (inputPreferences.letterLongPressMenu) menuItems else emptyList(),
+        onLongPressSelect = { letter -> currentOnLongPressSelect?.invoke(if (flick) itemValue(letter) else menuValue(letter)) },
         // Four-letter keys: P/S on the left/right, Q/R up/down (user layout, 2026-10-18); three letters go left/up/right.
         flickLetters = if (!flick) null else if (shownItems.size == 4)
             listOf(shownItems[0], shownItems[1], shownItems[3], shownItems[2]) else shownItems,
@@ -1050,6 +1055,9 @@ internal fun t9LetterLabel(letters: String, uppercase: Boolean): String =
     else if (uppercase) letters.uppercase() else letters.lowercase()
 
 internal fun t9LetterLabels(items: List<String>, uppercase: Boolean): List<String> = items.map { t9LetterLabel(it, uppercase) }
+
+/** 九键长按气泡里的字母：一律小写，写的就是进拼音的那个字母；送出的仍是原值。 */
+internal fun t9LongPressMenuLetters(items: List<String>): List<String> = t9LetterLabels(items, uppercase = false)
 
 // ─── 子组件 ───────────────────────────────────────────────────────────
 

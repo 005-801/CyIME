@@ -107,6 +107,27 @@ class T9KeyLabelCaseTest {
         }
     }
 
+    /**
+     * 用户 11-23：键帽大写 JKL 时长按弹出 J K L，选 K 进的却是拼音 k（出「看/快/开」）。
+     * 长按气泡一律写小写 j k l；送出的仍是原值，进拼音的结果不变。
+     */
+    @Test fun longPressMenuShowsLowercaseEvenWithUppercaseFaces() {
+        show(KeyLabelCaseChoice.UPPER.applyTo(KeyboardInputPreferences(letterLongPressMenu = true)))
+        val jkl = rule.onNodeWithText("JKL", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.center
+        rule.onRoot().performTouchInput { down(jkl); advanceEventTime(900L); moveTo(jkl) }
+        rule.waitForIdle()
+        for (letter in listOf("j", "k", "l")) assertTrue("气泡里有小写 $letter", shown(letter))
+        for (letter in listOf("J", "K", "L")) assertTrue("气泡里没有大写 $letter", !shown(letter))
+        rule.onRoot().performTouchInput { up() }
+        rule.waitForIdle()
+        rule.runOnIdle { assertTrue("长按选中后送出原值：$keys", keys.single() in setOf("J", "K", "L")) }
+    }
+
+    @Test fun longPressMenuHelperIsAlwaysLowercase() {
+        assertEquals(listOf("p", "q", "r", "s"), t9LongPressMenuLetters(listOf("P", "Q", "R", "S")))
+        assertEquals(listOf("a", "b", "c"), t9LongPressMenuLetters(listOf("a", "b", "c")))
+    }
+
     @Test fun labelHelperOnlyTouchesLetters() {
         assertEquals("abc", t9LetterLabel("ABC", false))
         assertEquals("PQRS", t9LetterLabel("pqrs", true))
