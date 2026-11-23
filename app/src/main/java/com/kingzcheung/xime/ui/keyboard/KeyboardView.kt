@@ -111,6 +111,7 @@ import com.kingzcheung.xime.service.highlightedCandidateIndex
 import com.kingzcheung.xime.service.shownPreedit
 import com.kingzcheung.xime.service.focusedT9AssociationIndex
 import com.kingzcheung.xime.service.usesT9CandidateNavigation
+import com.kingzcheung.xime.service.showsTypedEnglishWord
 import com.kingzcheung.xime.service.ExpandedCandidatePager
 import com.kingzcheung.xime.settings.KeysConfigHelper
 import com.kingzcheung.xime.settings.SettingsPreferences
@@ -1487,7 +1488,7 @@ fun KeyboardView(
                         inputText = cs.inputText,
                         preeditText = cs.shownPreedit(state.inputProfile),
                         isComposing = cs.isComposing,
-                        associationCandidates = if (cs.pendingEnglishText.isNotEmpty() && cs.englishReplaceSupported) {
+                        associationCandidates = if (cs.showsTypedEnglishWord) {
                             listOf(cs.pendingEnglishText) + cs.associationCandidates
                         } else {
                             cs.associationCandidates
@@ -1888,7 +1889,7 @@ fun KeyboardView(
                 }
                 val barAssociationCount = visibleBarAssociations.size
                 // 栏里的联想序号：英文打字时第一个是已打的原词（[associationWordAt] 同一规矩），展开页接着往下排。
-                val barAssociationWords = if (cs.pendingEnglishText.isNotEmpty() && cs.englishReplaceSupported)
+                val barAssociationWords = if (cs.showsTypedEnglishWord)
                     listOf(cs.pendingEnglishText) + cs.associationCandidates else cs.associationCandidates
                 CandidatePage(
                     state = CandidatePageState(
