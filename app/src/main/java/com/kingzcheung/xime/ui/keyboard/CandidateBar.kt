@@ -1840,14 +1840,17 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
         val startCorner = if (strip || !left) corner else 0.dp
         val endCorner = if (strip || !right) corner else 0.dp
         val shape = RoundedCornerShape(topStart = startCorner, topEnd = endCorner)
-        Column(horizontalAlignment = if (right && !strip) Alignment.End else Alignment.Start) {
+        // 清空后透明的那几帧要整块透明：透明层放在最外面。以前放在底色、描边之后，只把字藏了，底色和描边照画，
+        // 拼音一空小签缩成最小宽度的空壳；窗口拆掉时系统又拿这一帧放约半秒的退出动画（11-23 他：上屏、清空后
+        // 「先清空内容、标签还在、最小宽度，等一会才消失」）。
+        Column(Modifier.then(if (hidden) HiddenPreeditBubble else Modifier),
+            horizontalAlignment = if (right && !strip) Alignment.End else Alignment.Start) {
         Box(Modifier.then(if (strip) Modifier.width(stripWidth) else Modifier.widthIn(max = popupScreenWidth))
             .heightIn(min = height).clip(shape).background(color)
             .preeditTabOutline(outline, startCorner, endCorner)
             .then(if (edit != null && !hidden) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = edit) else Modifier)
             .padding(horizontal = if (strip) 12.dp else 8.dp).testTag("preedit-tab")
-            .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier)
-            .then(if (hidden) HiddenPreeditBubble else Modifier),
+            .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier),
             contentAlignment = when {
                 !strip || left -> Alignment.CenterStart
                 right -> Alignment.CenterEnd
@@ -1859,12 +1862,11 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
                 modifier = Modifier.testTag(if (corrected) "preedit-tab-correction" else "preedit-tab-text"))
         }
         if (notchDp > 0.dp) {
-            val fillModifier = if (hidden) HiddenPreeditBubble else Modifier
             if (strip) Row(Modifier.width(stripWidth)) {
-                PreeditTabCornerFill(notchDp, color, mirrored = false, modifier = fillModifier)
+                PreeditTabCornerFill(notchDp, color, mirrored = false)
                 Spacer(Modifier.weight(1f))
-                PreeditTabCornerFill(notchDp, color, mirrored = true, modifier = fillModifier)
-            } else PreeditTabCornerFill(notchDp, color, mirrored = right, modifier = fillModifier)
+                PreeditTabCornerFill(notchDp, color, mirrored = true)
+            } else PreeditTabCornerFill(notchDp, color, mirrored = right)
         }
         }
     }
