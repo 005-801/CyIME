@@ -37,7 +37,9 @@ object SchemaPicking {
     /** 启用关着的方案：组合（如小鹤 14 键）连同它需要的双拼和 14 键一起启用，并打开方案的语言。读写文件，在 IO 线程调用。 */
     fun enable(context: Context, schemaId: String) {
         val needs = CyimeInputDefaults.companionNeeds(schemaId) ?: listOf(schemaId)
-        SchemaManager.setEnabledSchemas(context, (SchemaManager.getEnabledSchemas(context) + needs).distinct())
+        val before = SchemaManager.getEnabledSchemas(context)
+        InputModes.placeNewlyEnabledLast(context, SchemaManager.discoverSchemas(context).map { it.toSchemaInfo() }, before, needs)
+        SchemaManager.setEnabledSchemas(context, (before + needs).distinct())
         LanguagePreferences.enableForSchema(context, schemaId)
     }
 

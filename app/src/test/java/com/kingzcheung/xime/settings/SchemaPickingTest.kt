@@ -55,4 +55,14 @@ class SchemaPickingTest {
                     entry.schemaId == current.schemaId || InputProfileSelection.offers(entry, layoutId, offered))
         }
     }
+
+    /** 平板 11-23：新打开的五笔86、仓颉速成插到导入的小鹤音形前面。新打开的排在已打开的最后，别的先后不动。 */
+    @Test fun newlyEnabledSchemesGoAfterTheOnesAlreadyOn() {
+        val full = listOf("rime_ice", "wubi86", "t9_pinyin", "cyime_quick", "flypy", "stroke")
+        val before = listOf("rime_ice", "t9_pinyin", "flypy")
+        assertEquals(listOf("rime_ice", "t9_pinyin", "flypy", "wubi86", "cyime_quick", "stroke"),
+            InputModes.orderWithNewLast(InputModes.orderWithNewLast(full, before, listOf("wubi86")),
+                before + "wubi86", listOf("cyime_quick")))
+        assertEquals("已经打开的不动", full, InputModes.orderWithNewLast(full, before, listOf("flypy")))
+    }
 }
