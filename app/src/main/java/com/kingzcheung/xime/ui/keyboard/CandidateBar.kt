@@ -252,7 +252,8 @@ fun CandidateBar(
     voiceSpectrum: FloatArray = FloatArray(16),
     voiceRecognitionState: RecognitionState = RecognitionState.IDLE,
     voicePluginName: String = "",
-    onEditPreedit: (() -> Unit)? = null,
+    /** 点拼音打开编辑；参数是点在第几个字母后面（算不出来是 null，光标照旧）。 */
+    onEditPreedit: ((Int?) -> Unit)? = null,
     showPreeditPreview: Boolean = true,
     showNumberLabels: Boolean = false,
     inlinePreeditEditor: (@Composable () -> Unit)? = null,
@@ -1330,15 +1331,18 @@ private fun preeditLineLabel(state: CandidateBarState, preeditText: String, text
  */
 @Composable
 private fun PreeditStripRow(text: androidx.compose.ui.text.AnnotatedString, textColor: Color, align: String,
-    horizontalInset: androidx.compose.ui.unit.Dp, onEdit: (() -> Unit)?, corrected: Boolean) {
+    horizontalInset: androidx.compose.ui.unit.Dp, onEdit: ((Int?) -> Unit)?, corrected: Boolean) {
     val bounds = remember { mutableStateOf<IntRect?>(null) }
+    val tap = remember { PreeditTapPoint() }
+    val slop = with(LocalDensity.current) { PreeditTapSlop.toPx() }
     val sizeSp = PREEDIT_TAB_TEXT_SP * LocalCandidateSizeFactor.current
     val barScale = LocalCandidateBarScale.current
     val origin = LocalPreeditOrigin.current
     val edit: (() -> Unit)? = onEdit?.let { open -> {
         // 编辑条在候选栏外面、不跟候选栏放大，字号按放大后的实际大小记。
         origin?.value = bounds.value?.let { PreeditOrigin(it, Color.Transparent, sizeSp * barScale) }
-        open()
+        // 纠错读音和打的字母不是一回事，对不上位置，光标照旧。
+        open(if (corrected) null else tap.lettersBefore(slop))
     } }
     val placed = bounds.value
     Box(Modifier.fillMaxSize()
@@ -1347,7 +1351,7 @@ private fun PreeditStripRow(text: androidx.compose.ui.text.AnnotatedString, text
             val next = IntRect(r.left.roundToInt(), r.top.roundToInt(), r.right.roundToInt(), r.bottom.roundToInt())
             if (bounds.value != next) bounds.value = next
         }
-        .then(if (edit != null) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = edit) else Modifier)
+        .then(if (edit != null) tap.record().clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = edit) else Modifier)
         .padding(horizontal = horizontalInset).testTag("preedit-strip")
         .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier),
         contentAlignment = when (align) {
@@ -1356,8 +1360,8 @@ private fun PreeditStripRow(text: androidx.compose.ui.text.AnnotatedString, text
             else -> Alignment.CenterStart
         }) {
         Text(text, color = textColor, fontSize = sizeSp.sp, maxLines = 1, softWrap = false,
-            overflow = TextOverflow.StartEllipsis,
-            modifier = Modifier.testTag(if (corrected) "preedit-tab-correction" else "preedit-tab-text"))
+            overflow = TextOverflow.StartEllipsis, onTextLayout = tap::layout,
+            modifier = tap.textModifier().testTag(if (corrected) "preedit-tab-correction" else "preedit-tab-text"))
     }
 }
 
@@ -1705,7 +1709,7 @@ private fun Modifier.glassStripBoost(alpha: Float): Modifier {
 
 /** 非聚焦窗口提供真实触控区域，点击编码不会抢走宿主编辑框焦点。 */
 @Composable
-private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (() -> Unit)?, bubbleColor: Color,
+private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: ((Int?) -> Unit)?, bubbleColor: Color,
     /** 编码刚清空、窗口还没拆：气泡画成全透明，不能点，模糊也同时调成全透明（见 [PreeditBubbleHost]）。 */
     hidden: Boolean = false,
     /** 靠左（默认，和原来一样）、居中、靠右（用户 11-21：四种样式都能选左中右）。 */
@@ -1756,12 +1760,12 @@ private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (
     val origin = LocalPreeditOrigin.current
     val fontSp = PreeditStyle.FontSize.value
     val vertical = with(density) { 6.dp.roundToPx() }
-    val edit: (() -> Unit)? = onEdit?.let { open -> {
+    val edit: ((Int?) -> Unit)? = onEdit?.let { open -> { letters: Int? ->
         // 编辑条从气泡的底色块处渐渐变长（用户 11-21：原来的样式只要逐渐变长）。
         origin?.value = bubbleBounds.value?.let {
             PreeditOrigin(IntRect(it.left, it.top + vertical, it.right, it.bottom - vertical), bubbleColor, fontSp)
         }
-        open()
+        open(letters)
     } }
     Popup(popupPositionProvider = positionProvider,
         properties = PopupProperties(focusable = false, dismissOnBackPress = false,
@@ -1784,7 +1788,7 @@ private fun PreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (
 @Composable
 private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor: Color, color: Color,
     style: String, align: String, barPadding: androidx.compose.ui.unit.Dp, cardCorner: androidx.compose.ui.unit.Dp,
-    cardWidth: androidx.compose.ui.unit.Dp, onEdit: (() -> Unit)?, hidden: Boolean, corrected: Boolean) {
+    cardWidth: androidx.compose.ui.unit.Dp, onEdit: ((Int?) -> Unit)?, hidden: Boolean, corrected: Boolean) {
     val density = LocalDensity.current
     val screenWidth = (LocalConfiguration.current.screenWidthDp / LocalCandidateBarScale.current).dp
     val tabBounds = remember { mutableStateOf<IntRect?>(null) }
@@ -1833,10 +1837,13 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
     val size = sizeSp.sp
     val height = if (block) PREEDIT_BLOCK_HEIGHT else PREEDIT_TAB_HEIGHT
     val origin = LocalPreeditOrigin.current
+    val tap = remember { PreeditTapPoint() }
+    val slop = with(density) { PreeditTapSlop.toPx() }
     val edit: (() -> Unit)? = onEdit?.let { open -> {
         // 记下拼音在哪、什么底色字号，编辑条从这里渐渐长成原来的样子。
         origin?.value = tabBounds.value?.let { PreeditOrigin(it, color, sizeSp) }
-        open()
+        // 点在哪个字母后面，打开后光标就在哪（纠错读音对不上打的字母，光标照旧）。
+        open(if (corrected) null else tap.lettersBefore(slop))
     } }
     Popup(popupPositionProvider = positionProvider,
         properties = PopupProperties(focusable = false, dismissOnBackPress = false,
@@ -1862,7 +1869,7 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
         Box(Modifier.then(if (strip) Modifier.width(stripWidth) else Modifier.widthIn(max = popupScreenWidth))
             .heightIn(min = height).clip(shape).background(color)
             .preeditTabOutline(outline, startCorner, endCorner)
-            .then(if (edit != null && !hidden) Modifier.clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = edit) else Modifier)
+            .then(if (edit != null && !hidden) tap.record().clickable(role = Role.Button, onClickLabel = "编辑拼音", onClick = edit) else Modifier)
             .padding(horizontal = if (strip) 12.dp else 8.dp).testTag("preedit-tab")
             .then(if (placed != null) Modifier.semantics { this[PreeditPopupBoundsKey] = placed } else Modifier),
             contentAlignment = when {
@@ -1873,8 +1880,8 @@ private fun PreeditTab(text: androidx.compose.ui.text.AnnotatedString, textColor
             // 笔画编码自己画，粗细、大小统一（11-23，见 StrokeGlyphInline.kt）。
             Text(text.withDrawnStrokes(LocalStrokeGlyphDrawing.current), color = textColor, fontSize = size, maxLines = 1, softWrap = false,
                 // 长句只露出正在打的结尾。
-                overflow = TextOverflow.StartEllipsis, inlineContent = strokeInlineContent(textColor),
-                modifier = Modifier.testTag(if (corrected) "preedit-tab-correction" else "preedit-tab-text"))
+                overflow = TextOverflow.StartEllipsis, inlineContent = strokeInlineContent(textColor), onTextLayout = tap::layout,
+                modifier = tap.textModifier().testTag(if (corrected) "preedit-tab-correction" else "preedit-tab-text"))
         }
         if (notchDp > 0.dp) {
             if (strip) Row(Modifier.width(stripWidth)) {
@@ -2050,7 +2057,7 @@ internal fun PreeditBubbleBlur(region: IntRect?, blurRadiusDp: Float, cornerRadi
  * Popup 的锚点是转过后的候选栏原点，气泡中心按同一角度转到窗口坐标；窗口取转后的外接框，里面再把气泡转过去。
  */
 @Composable
-private fun RotatedPreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: (() -> Unit)?,
+private fun RotatedPreeditPreview(text: String, visuals: CandidateBarVisuals, onEdit: ((Int?) -> Unit)?,
     rotation: Float, gap: Int, screenWidth: androidx.compose.ui.unit.Dp, bubbleColor: Color,
     labelModifier: Modifier = Modifier) {
     val labelSize = remember { IntArray(2) }
@@ -2090,7 +2097,9 @@ private fun RotatedPreeditPreview(text: String, visuals: CandidateBarVisuals, on
 
 /** Shared by the screen keyboard preview and the hardware caret surface. */
 @Composable
-internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals, onEdit: (() -> Unit)? = null,
+internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals,
+    /** 点拼音打开编辑；参数是点在第几个字母后面（算不出来是 null）。 */
+    onEdit: ((Int?) -> Unit)? = null,
     modifier: Modifier = Modifier, followTextTail: Boolean = false,
     /** 键盘上方的拼音气泡：给了就用这个实底（不再打折），字色按它调到看得清。 */
     solidBackground: Color? = null,
@@ -2114,10 +2123,12 @@ internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals, onEdit: ((
         ?: visuals.textColor.copy(alpha = if (visuals.opaqueComments) 1f else 0.9f)
     // 半透明的气泡：后面是白是黑都按最坏情况算，拼音不够 4.5:1 时垫和候选栏玻璃同一种柔光托底。
     val halo = remember(textColor, solidBackground) { floatingPreeditHalo(textColor, solidBackground) }
+    val tap = remember { PreeditTapPoint() }
+    val slop = with(LocalDensity.current) { PreeditTapSlop.toPx() }
     Box(modifier.then(surface).glassTextHalo(halo)
         .testTag("candidate-preedit")
-        .then(if (onEdit != null) Modifier.clickable(role = Role.Button,
-            onClickLabel = "编辑拼音", onClick = onEdit) else Modifier),
+        .then(if (onEdit != null) tap.record().clickable(role = Role.Button,
+            onClickLabel = "编辑拼音", onClick = { onEdit(tap.lettersBefore(slop)) }) else Modifier),
         contentAlignment = Alignment.CenterStart) {
         val shownText = if (onEdit != null) com.kingzcheung.xime.rime.pinyinPreviewText(text) else text
         // 光标像系统文字光标一样闪（530ms 一亮一灭，用户 10-21 同意）。节拍挂在拼音条上而不是光标位置上：
@@ -2136,7 +2147,8 @@ internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals, onEdit: ((
         val textStyle = LocalTextStyle.current.copy(shadow = visuals.textShadow)
         if (maxLines <= 1) {
             Text(annotated, color = textColor, fontSize = PreeditStyle.FontSize, maxLines = 1,
-                softWrap = false, style = textStyle, inlineContent = strokeContent, modifier = Modifier.horizontalScroll(scrollState).testTag("candidate-preedit-text"))
+                softWrap = false, style = textStyle, inlineContent = strokeContent, onTextLayout = tap::layout,
+                modifier = Modifier.horizontalScroll(scrollState).then(tap.textModifier()).testTag("candidate-preedit-text"))
         } else {
             // 长拼音折成几行，不再一行横穿整个应用、后半截被切掉（用户 10-31 截图）。
             val density = LocalDensity.current
@@ -2161,10 +2173,10 @@ internal fun PreeditLabel(text: String, visuals: CandidateBarVisuals, onEdit: ((
                 lines.scrollTo(target.coerceIn(0, lines.maxValue))
             }
             Text(annotated, color = textColor, fontSize = PreeditStyle.FontSize, lineHeight = lineHeight,
-                softWrap = true, style = textStyle, inlineContent = strokeContent, onTextLayout = { layout = it },
+                softWrap = true, style = textStyle, inlineContent = strokeContent, onTextLayout = { layout = it; tap.layout(it) },
                 modifier = Modifier.padding(vertical = 4.dp)
                     .heightIn(max = with(density) { viewportPx.toDp() })
-                    .verticalScroll(lines).testTag("candidate-preedit-text"))
+                    .verticalScroll(lines).then(tap.textModifier()).testTag("candidate-preedit-text"))
         }
     }
 }

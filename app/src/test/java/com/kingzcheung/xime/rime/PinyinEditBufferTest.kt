@@ -144,4 +144,17 @@ class PinyinEditBufferTest {
         assertEquals(2, session.editOffset("ping'zheng", 4))
         assertEquals(0, session.editOffset("ping'zheng", 0))
     }
+
+    /** 点屏上拼音打开编辑：按「点在第几个字母后面」对位置，带声调、空格、隔音符、汉字前缀都不影响（11-23）。 */
+    @Test fun shownPreeditLettersMapBackToTheCode() {
+        assertEquals(5, preeditLettersBefore("wǒ'men shi", 7))
+        assertEquals(0, preeditLettersBefore("我们 shi", 3))
+        assertEquals("跳过前面选好的汉字", 3, offsetAfterPreeditLetters("我们 shi hao", 0))
+        assertEquals(6, offsetAfterPreeditLetters("我们 shi hao", 3))
+        assertEquals(10, offsetAfterPreeditLetters("wo men shi", 99))
+        assertFalse(isPreeditLetter('|'))
+        assertFalse(isPreeditLetter('\u200B'))
+        assertTrue(isPreeditLetter(';'))
+        assertTrue(isPreeditLetter('7'))
+    }
 }
