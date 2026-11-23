@@ -1876,6 +1876,8 @@ internal fun ShiftCapsKeyButton(
     val currentKey by rememberUpdatedState(onKeyPress)
     val currentTapKey by rememberUpdatedState(tapKey)
     val currentGapLight by rememberUpdatedState(LocalKeyGapLight.current)
+    // 「点一下 Shift 锁定大写」（默认关）：开着时点按直接锁定/解锁，见 [shiftTapAction]。
+    val currentTapLocks by rememberUpdatedState(LocalKeyboardInputPreferences.current.shiftTapLocks)
     var bounds by remember { mutableStateOf(Rect.Zero) }
 
     val frostedGlass = LocalKeyboardInputPreferences.current.frostedGlass
@@ -1999,12 +2001,11 @@ internal fun ShiftCapsKeyButton(
                             if (currentSplit?.invoke() == true) {
                                 currentKey(SYLLABLE_SEPARATOR)
                                 lastTap = Long.MIN_VALUE
-                            } else if (lastTap != Long.MIN_VALUE && down.uptimeMillis - lastTap in 0..viewConfiguration.doubleTapTimeoutMillis) {
-                                currentKey("shift_caps")
-                                lastTap = Long.MIN_VALUE
                             } else {
-                                currentKey("shift_single")
-                                lastTap = upTime
+                                val doubleTap = lastTap != Long.MIN_VALUE && down.uptimeMillis - lastTap in 0..viewConfiguration.doubleTapTimeoutMillis
+                                val action = shiftTapAction(currentTapLocks, doubleTap)
+                                currentKey(action)
+                                lastTap = if (action == "shift_single") upTime else Long.MIN_VALUE
                             }
                         } else lastTap = Long.MIN_VALUE
                     }
