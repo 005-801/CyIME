@@ -21,7 +21,7 @@ object LatexToUnicode {
     private val RE_CMD = Regex("""\\([A-Za-z]+)""")
     private val RE_PURE_CMD = Regex("""\\[A-Za-z]+""")
     private val RE_WS_CMD = Regex("""\\[,;:!>]""")
-    private val RE_EMPTY_BRACES = Regex("""\{\s*}""")
+    private val RE_EMPTY_BRACES = Regex("""\{\s*\}""")
     private val RE_DOUBLE_SLASH = Regex("""\\\\""")
     private val RE_CMD_AT = Regex("""^\\[A-Za-z]+|^\\[^A-Za-z]""")
 
