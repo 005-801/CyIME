@@ -1,15 +1,18 @@
 package com.kingzcheung.xime.handwriting
 
+
 /**
- * 手写公式 LaTeX 转 Unicode 上下标纯文本。
+ * 手写公式 LaTeX 转 Unicode 纯文本。
  *
- * 全文不使用泛型尖括号：映射表用「键串 + 值串」下标对齐，
+ * 全文不使用泛型尖括号：映射表用「键串 + 值串」或两个等长 list 下标对齐，
  * 避免从聊天/网页复制时尖括号被当成 HTML 标签吃掉，导致编译失败。
+ *
+ * Android 的 ICU 正则比 JVM 严格：正则里 { } 单独出现必须转义成 \{ \}。
  */
 object LatexToUnicode {
 
-    private const val ALLOW_SUP_LETTERS = false
-    private const val ALLOW_SUB_LETTERS = false
+    private const val ALLOW_SUP_LETTERS = true
+    private const val ALLOW_SUB_LETTERS = true
     private const val ENABLE_SYMBOL_MAP = true
     private const val GREEDY_DIGITS = true
 
@@ -19,11 +22,16 @@ object LatexToUnicode {
     )
     private val RE_ESCAPED = Regex("\\\\([{}^_%\$&#])")
     private val RE_CMD = Regex("""\\([A-Za-z]+)""")
-    private val RE_PURE_CMD = Regex("""\\[A-Za-z]+""")
+    private val RE_PURE_CMD = Regex("""\$$A-Za-z]+""")
     private val RE_WS_CMD = Regex("""\\[,;:!>]""")
     private val RE_EMPTY_BRACES = Regex("""\{\s*\}""")
     private val RE_DOUBLE_SLASH = Regex("""\\\\""")
     private val RE_CMD_AT = Regex("""^\\[A-Za-z]+|^\\[^A-Za-z]""")
+
+    private val RE_NROOT = Regex("""\\sqrt\s*\[([^$$]*)\]\s*\{([^{}]*)\}""")
+    private val RE_SQRT = Regex("""\\sqrt\s*\{([^{}]*)\}""")
+    private val RE_ACCENT = Regex("""\\(vec|hat|bar|tilde|dot|ddot)\s*\{([^{}]*)\}""")
+    private val RE_TEXTCMD = Regex("""\\(?:text|mathrm|mathbf|mathit|operatorname)\s*\{([^{}]*)\}""")
 
     private const val SUP_KEYS = "0123456789+-=()"
     private const val SUP_VALS = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾"
@@ -55,19 +63,41 @@ object LatexToUnicode {
     private val GREEK_SUP_NAMES = listOf("beta", "gamma", "delta", "phi", "chi")
     private val GREEK_SUP_CHARS = listOf("ᵝ", "ᵞ", "ᵟ", "ᵠ", "ᵡ")
 
+    /** 函数名：去掉反斜杠当正体文本，\sin x -> sin x */
+    private val FUNC_NAMES = listOf(
+        "sin", "cos", "tan", "cot", "sec", "csc",
+        "arcsin", "arccos", "arctan", "sinh", "cosh", "tanh",
+        "log", "ln", "lg", "exp", "lim", "max", "min",
+        "sup", "inf", "det", "dim", "ker", "gcd", "mod", "bmod",
+    )
+
     private val SYMBOL_NAMES = listOf(
-        "times", "cdot", "div", "pm", "mp", "leq", "le", "geq", "ge", "neq", "ne",
-        "approx", "equiv", "propto", "infty", "partial", "nabla", "to", "rightarrow",
-        "leftarrow", "Rightarrow", "Leftarrow", "in", "notin", "subset", "subseteq",
-        "cup", "cap", "forall", "exists", "sum", "prod", "int", "oint", "angle",
-        "circ", "ldots", "cdots",
+        "times", "cdot", "div", "pm", "mp",
+        "leq", "le", "geq", "ge", "neq", "ne",
+        "approx", "equiv", "sim", "cong", "propto",
+        "infty", "partial", "nabla", "degree", "prime",
+        "to", "rightarrow", "leftarrow", "Rightarrow", "Leftarrow",
+        "in", "notin", "subset", "subseteq", "supset", "cup", "cap",
+        "forall", "exists", "emptyset", "because", "therefore",
+        "sum", "prod", "int", "oint", "iint",
+        "angle", "circ", "perp", "parallel",
+        "mid", "vert", "Vert",
+        "ldots", "cdots", "dots",
+        "triangle", "square", "oplus", "otimes", "odot", "bigcup", "bigcap",
     )
     private val SYMBOL_CHARS = listOf(
-        "×", "·", "÷", "±", "∓", "≤", "≤", "≥", "≥", "≠", "≠",
-        "≈", "≡", "∝", "∞", "∂", "∇", "→", "→",
-        "←", "⇒", "⇐", "∈", "∉", "⊂", "⊆",
-        "∪", "∩", "∀", "∃", "∑", "∏", "∫", "∮", "∠",
-        "∘", "…", "⋯",
+        "×", "·", "÷", "±", "∓",
+        "≤", "≤", "≥", "≥", "≠", "≠",
+        "≈", "≡", "∼", "≅", "∝",
+        "∞", "∂", "∇", "°", "′",
+        "→", "→", "←", "⇒", "⇐",
+        "∈", "∉", "⊂", "⊆", "⊃", "∪", "∩",
+        "∀", "∃", "∅", "∵", "∴",
+        "∑", "∏", "∫", "∮", "∬",
+        "∠", "∘", "⊥", "∥",
+        "|", "|", "‖",
+        "…", "⋯", "…",
+        "△", "□", "⊕", "⊗", "⊙", "⋃", "⋂",
     )
 
     private fun at(keys: String, vals: String, ch: Char): String? {
@@ -92,6 +122,7 @@ object LatexToUnicode {
     }
 
     private fun cmdRepl(name: String): String? {
+        if (FUNC_NAMES.indexOf(name) >= 0) return name
         val g = GREEK_NAMES.indexOf(name)
         if (g >= 0) return GREEK_CHARS[g]
         if (!ENABLE_SYMBOL_MAP) return null
@@ -107,7 +138,35 @@ object LatexToUnicode {
         s = s.replace("\\qquad", " ").replace("\\quad", " ")
         s = RE_WS_CMD.replace(s, "")
         s = s.replace("\\ ", " ")
+        // 角度：90^\circ -> 90°
+        s = s.replace("^{\\circ}", "°").replace("^\\circ", "°")
+        // \text{...} \mathrm{...} 只留内容
+        s = RE_TEXTCMD.replace(s) { it.groupValues[1] }
         s = convertScripts(s, 0)
+        // 重音：\vec{v} -> v⃗，\hat{x} -> x̂
+        s = RE_ACCENT.replace(s) { m ->
+            val mark = when (m.groupValues[1]) {
+                "vec" -> "\u20D7"
+                "hat" -> "\u0302"
+                "bar" -> "\u0304"
+                "tilde" -> "\u0303"
+                "dot" -> "\u0307"
+                else -> "\u0308"
+            }
+            m.groupValues[2] + mark
+        }
+        // n 次根：\sqrt[3]{x} -> ³√(x)
+        s = RE_NROOT.replace(s) { m ->
+            val n = m.groupValues[1]
+            val inner = m.groupValues[2]
+            val head = if (n.length == 1) (supMap(n[0]) ?: n) else n
+            head + "√(" + inner + ")"
+        }
+        // 平方根：\sqrt{x} -> √x，多字符加括号
+        s = RE_SQRT.replace(s) { m ->
+            val inner = m.groupValues[1]
+            if (inner.length <= 1) "√" + inner else "√(" + inner + ")"
+        }
         s = RE_CMD.replace(s) { m -> cmdRepl(m.groupValues[1]) ?: m.value }
         s = RE_EMPTY_BRACES.replace(s, "")
         return s.replace("\u0000", "\\\\")
