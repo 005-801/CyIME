@@ -3,10 +3,9 @@ package com.kingzcheung.xime.handwriting
 /**
  * 手写公式 LaTeX 转 Unicode 纯文本。
  *
- * 全文不使用泛型尖括号：映射表用「键串 + 值串」或两个等长 list 下标对齐，
- * 避免从聊天/网页复制时尖括号被当成 HTML 标签吃掉，导致编译失败。
- *
- * Android 的 ICU 正则比 JVM 严格：正则里 { } 单独出现必须转义成 \{ \}。
+ * 全文不使用泛型尖括号，也不使用 \[ $$ 这类正则字面量：
+ * 前者会被当成 HTML 标签吃掉，后者会被 Markdown 当成公式定界符替换，
+ * 两者都会让复制后的代码编译不过。这里一律用下标表、手写循环、字符串替换绕开。
  */
 object LatexToUnicode {
 
@@ -25,13 +24,8 @@ object LatexToUnicode {
     )
     private val RE_ESCAPED = Regex("\\\\([{}^_%\$&#])")
     private val RE_CMD = Regex("""\\([A-Za-z]+)""")
-    private val RE_PURE_CMD = Regex("""\$$A-Za-z]+""")
-    private val RE_WS_CMD = Regex("""\\[,;:!>]""")
     private val RE_EMPTY_BRACES = Regex("""\{\s*\}""")
     private val RE_DOUBLE_SLASH = Regex("""\\\\""")
-    private val RE_CMD_AT = Regex("""^\\[A-Za-z]+|^\\[^A-Za-z]""")
-
-    private val RE_NROOT = Regex("""\\sqrt\s*\[([^$$]*)\]\s*\{([^{}]*)\}""")
     private val RE_SQRT = Regex("""\\sqrt\s*\{([^{}]*)\}""")
     private val RE_ACCENT = Regex("""\\(vec|hat|bar|tilde|dot|ddot)\s*\{([^{}]*)\}""")
     private val RE_TEXTCMD = Regex("""\\(?:text|mathrm|mathbf|mathit|operatorname)\s*\{([^{}]*)\}""")
@@ -74,6 +68,9 @@ object LatexToUnicode {
         "log", "ln", "lg", "exp", "lim", "max", "min",
         "sup", "inf", "det", "dim", "ker", "gcd", "mod", "bmod",
     )
+
+    /** 空白命令，直接删掉 */
+    private val SPACE_CMDS = listOf("\\,", "\\;", "\\:", "\\!", "\\>")
 
     private val SYMBOL_NAMES = listOf(
         "times", "cdot", "div", "pm", "mp",
@@ -135,12 +132,21 @@ object LatexToUnicode {
         return null
     }
 
+    /** 整串就是一个命令名：反斜杠开头，后面全是字母 */
+    private fun isPureCmd(s: String): Boolean {
+        if (s.length < 2 || s[0] != '\\') return false
+        for (k in 1 until s.length) {
+            if (!s[k].isLetter()) return false
+        }
+        return true
+    }
+
     fun convert(text: String): String {
         var s = RE_DOUBLE_SLASH.replace(text, "\u0000")
         s = RE_LAYOUT.replace(s, "")
         s = RE_ESCAPED.replace(s) { it.groupValues[1] }
         s = s.replace("\\qquad", " ").replace("\\quad", " ")
-        s = RE_WS_CMD.replace(s, "")
+        for (cmd in SPACE_CMDS) s = s.replace(cmd, "")
         s = s.replace("\\ ", " ")
         // 角度：90^\circ -> 90°
         s = s.replace("^{\\circ}", "°").replace("^\\circ", "°")
@@ -158,13 +164,6 @@ object LatexToUnicode {
                 else -> "\u0308"
             }
             m.groupValues[2] + mark
-        }
-        // n 次根：\sqrt[3]{x} -> ³√(x)
-        s = RE_NROOT.replace(s) { m ->
-            val n = m.groupValues[1]
-            val inner = m.groupValues[2]
-            val head = if (n.length == 1) (supMap(n[0]) ?: n) else n
-            head + "√(" + inner + ")"
         }
         // 平方根：\sqrt{x} -> √x，多字符加括号
         s = RE_SQRT.replace(s) { m ->
@@ -219,8 +218,10 @@ object LatexToUnicode {
             return Group(s.substring(i + 1, end), end + 1, true)
         }
         if (s[i] == '\\') {
-            val m = RE_CMD_AT.find(s.substring(i))
-            if (m != null) return Group(m.value, i + m.value.length, true)
+            var j = i + 1
+            while (j < s.length && s[j].isLetter()) j++
+            if (j == i + 1 && j < s.length) j++
+            return Group(s.substring(i, j), j, true)
         }
         if (GREEDY_DIGITS && s[i].isDigit()) {
             var j = i
@@ -232,7 +233,7 @@ object LatexToUnicode {
 
     private fun toUnicode(content: String, kind: Char): String? {
         if (content.isEmpty()) return null
-        if (RE_PURE_CMD.matches(content)) {
+        if (isPureCmd(content)) {
             if (kind != '^') return null
             val i = GREEK_SUP_NAMES.indexOf(content.substring(1))
             return if (i < 0) null else GREEK_SUP_CHARS[i]
