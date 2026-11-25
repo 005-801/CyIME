@@ -1,6 +1,5 @@
 package com.kingzcheung.xime.handwriting
 
-
 /**
  * 手写公式 LaTeX 转 Unicode 纯文本。
  *
@@ -11,10 +10,14 @@ package com.kingzcheung.xime.handwriting
  */
 object LatexToUnicode {
 
+    /** 字母也转上下标：x^{n} -> xⁿ、x_{i} -> xᵢ */
     private const val ALLOW_SUP_LETTERS = true
     private const val ALLOW_SUB_LETTERS = true
     private const val ENABLE_SYMBOL_MAP = true
     private const val GREEDY_DIGITS = true
+
+    /** 分式线性化：\frac{y}{x} -> y/x。关掉则原样保留 LaTeX。 */
+    private const val LINEARIZE_FRAC = true
 
     private val RE_LAYOUT = Regex(
         """\\(?:left|right|big|Big|bigg|Bigg|bigl|bigr|Bigl|Bigr""" +
@@ -32,6 +35,7 @@ object LatexToUnicode {
     private val RE_SQRT = Regex("""\\sqrt\s*\{([^{}]*)\}""")
     private val RE_ACCENT = Regex("""\\(vec|hat|bar|tilde|dot|ddot)\s*\{([^{}]*)\}""")
     private val RE_TEXTCMD = Regex("""\\(?:text|mathrm|mathbf|mathit|operatorname)\s*\{([^{}]*)\}""")
+    private val RE_FRAC = Regex("""\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}""")
 
     private const val SUP_KEYS = "0123456789+-=()"
     private const val SUP_VALS = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾"
@@ -168,6 +172,16 @@ object LatexToUnicode {
             if (inner.length <= 1) "√" + inner else "√(" + inner + ")"
         }
         s = RE_CMD.replace(s) { m -> cmdRepl(m.groupValues[1]) ?: m.value }
+        // 分式线性化：\frac{y}{x} -> y/x，多字符自动加括号
+        if (LINEARIZE_FRAC) {
+            s = RE_FRAC.replace(s) { m ->
+                val a = m.groupValues[1]
+                val b = m.groupValues[2]
+                val na = if (a.length <= 1) a else "(" + a + ")"
+                val nb = if (b.length <= 1) b else "(" + b + ")"
+                na + "/" + nb
+            }
+        }
         s = RE_EMPTY_BRACES.replace(s, "")
         return s.replace("\u0000", "\\\\")
     }
