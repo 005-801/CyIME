@@ -10,6 +10,7 @@ import com.kingzcheung.xime.settings.FrostedGlassConfig
 import com.kingzcheung.xime.settings.FrostedGlassPreferences
 import com.kingzcheung.xime.settings.SchemaInfo
 import com.kingzcheung.xime.settings.SettingsPreferences
+import com.kingzcheung.xime.handwriting.LatexToUnicode
 import com.kingzcheung.xime.settings.KeyEffectPreferences
 
 private const val DEFAULT_KEY_TEXT_SCALE = 1.2f
@@ -56,8 +57,13 @@ internal fun normalizeCandidateDragPercent(value: Float): Float =
 
 /** 手写公式上屏时两边加的 LaTeX 标记。 */
 enum class FormulaDelimiter(val label: String, val open: String, val close: String) {
-    NONE("不加", "", ""), DOLLAR("\$…\$", "\$", "\$"), DISPLAY("\\[ … \\]", "\\[", "\\]");
-    fun wrap(latex: String): String = open + latex + close
+    NONE("不加", "", ""), DOLLAR("\$…\$", "\$", "\$"),  DISPLAY("\$$ … \$$", "\$$", "\$$"),
+
+    /** 直接转成 Unicode 上下标（x^{13} → x¹³），不加任何 LaTeX 标记。 */
+    UNICODE("Unicode 上下标（x¹³）", "", "");
+
+    fun wrap(latex: String): String =
+        if (this == UNICODE) LatexToUnicode.convert(latex) else open + latex + close
 }
 
 enum class SpaceHoldAction(val label: String) {
