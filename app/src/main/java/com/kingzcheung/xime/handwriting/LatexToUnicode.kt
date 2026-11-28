@@ -3,7 +3,7 @@ package com.kingzcheung.xime.handwriting
 /**
  * 手写公式 LaTeX 转 Unicode 纯文本。
  *
- * 全文不使用泛型尖括号，也不使用 \[ $$ 这类正则字面量：
+ * 全文不使用泛型尖括号，也不使用方括号转义这类正则字面量：
  * 前者会被当成 HTML 标签吃掉，后者会被 Markdown 当成公式定界符替换，
  * 两者都会让复制后的代码编译不过。这里一律用下标表、手写循环、字符串替换绕开。
  */
@@ -18,6 +18,9 @@ object LatexToUnicode {
     /** 分式线性化：\frac{y}{x} -> y/x。关掉则原样保留 LaTeX。 */
     private const val LINEARIZE_FRAC = true
 
+    /** 下标没有对应 Unicode 字符时，去掉 _{} 直接连写：R_{f} -> Rf */
+    private const val BARE_SUB_FALLBACK = true
+
     private val RE_LAYOUT = Regex(
         """\\(?:left|right|big|Big|bigg|Bigg|bigl|bigr|Bigl|Bigr""" +
             """|displaystyle|textstyle|limits|nolimits)(?![A-Za-z])"""
@@ -29,7 +32,6 @@ object LatexToUnicode {
     private val RE_SQRT = Regex("""\\sqrt\s*\{([^{}]*)\}""")
     private val RE_ACCENT = Regex("""\\(vec|hat|bar|tilde|dot|ddot)\s*\{([^{}]*)\}""")
     private val RE_TEXTCMD = Regex("""\\(?:text|mathrm|mathbf|mathit|operatorname)\s*\{([^{}]*)\}""")
-    private val RE_FRAC = Regex("""\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}""")
 
     private const val SUP_KEYS = "0123456789+-=()"
     private const val SUP_VALS = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾"
@@ -171,18 +173,53 @@ object LatexToUnicode {
             if (inner.length <= 1) "√" + inner else "√(" + inner + ")"
         }
         s = RE_CMD.replace(s) { m -> cmdRepl(m.groupValues[1]) ?: m.value }
-        // 分式线性化：\frac{y}{x} -> y/x，多字符自动加括号
-        if (LINEARIZE_FRAC) {
-            s = RE_FRAC.replace(s) { m ->
-                val a = m.groupValues[1]
-                val b = m.groupValues[2]
-                val na = if (a.length <= 1) a else "(" + a + ")"
-                val nb = if (b.length <= 1) b else "(" + b + ")"
-                na + "/" + nb
-            }
-        }
+        if (LINEARIZE_FRAC) s = linearizeFrac(s)
         s = RE_EMPTY_BRACES.replace(s, "")
         return s.replace("\u0000", "\\\\")
+    }
+
+    /**
+     * 把 \frac{a}{b} 线性化成 a/b，多字符自动加括号。
+     * 用配对花括号解析而不是正则，所以 \frac{R_{f}}{R_{1}} 这种内层带花括号的也能处理。
+     */
+    private fun linearizeFrac(s: String): String {
+        var out = s
+        var guard = 0
+        var from = 0
+        while (guard < 8) {
+            val idx = out.indexOf("\\frac", from)
+            if (idx < 0) break
+            var p = idx + 5
+            while (p < out.length && out[p] == ' ') p++
+            if (p >= out.length || out[p] != '{') {
+                from = idx + 5
+                continue
+            }
+            val e1 = matching(out, p)
+            if (e1 < 0) {
+                from = idx + 5
+                continue
+            }
+            var q = e1 + 1
+            while (q < out.length && out[q] == ' ') q++
+            if (q >= out.length || out[q] != '{') {
+                from = idx + 5
+                continue
+            }
+            val e2 = matching(out, q)
+            if (e2 < 0) {
+                from = idx + 5
+                continue
+            }
+            val a = out.substring(p + 1, e1)
+            val b = out.substring(q + 1, e2)
+            val na = if (a.length <= 1) a else "(" + a + ")"
+            val nb = if (b.length <= 1) b else "(" + b + ")"
+            out = out.substring(0, idx) + na + "/" + nb + out.substring(e2 + 1)
+            from = idx + 1
+            guard++
+        }
+        return out
     }
 
     private class Group(val text: String, val next: Int, val closed: Boolean)
@@ -269,6 +306,8 @@ object LatexToUnicode {
             val mapped = direct ?: if (norm != content) toUnicode(norm, c) else null
             if (mapped != null) {
                 out.append(mapped)
+            } else if (c == '_' && BARE_SUB_FALLBACK) {
+                out.append(norm)
             } else {
                 out.append(c)
                 out.append('{')
