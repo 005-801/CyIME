@@ -27,6 +27,8 @@ object LatexToUnicode {
     )
     private val RE_ESCAPED = Regex("\\\\([{}^_%\$&#])")
     private val RE_CMD = Regex("""\\([A-Za-z]+)""")
+    /** 命令 + 可选的尾随空格：符号要吞掉空格（A\cup B -> A∪B），函数名保留（\sin x -> sin x） */
+    private val RE_CMD_SP = Regex("""\\([A-Za-z]+) ?""")
     private val RE_EMPTY_BRACES = Regex("""\{\s*\}""")
     private val RE_DOUBLE_SLASH = Regex("""\\\\""")
     private val RE_SQRT = Regex("""\\sqrt\s*\{([^{}]*)\}""")
@@ -167,13 +169,23 @@ object LatexToUnicode {
             }
             m.groupValues[2] + mark
         }
-        // 平方根：\sqrt{x} -> √x，多字符加括号
+        // 平方根放到分式之后，才能处理 \sqrt{\frac{a}{b}}
+        s = RE_CMD_SP.replace(s) { m ->
+            val name = m.groupValues[1]
+            val r = cmdRepl(name)
+            if (r == null) {
+                m.value
+            } else if (FUNC_NAMES.indexOf(name) >= 0) {
+                if (m.value.length > name.length + 1) r + " " else r
+            } else {
+                r
+            }
+        }
+        if (LINEARIZE_FRAC) s = linearizeFrac(s)
         s = RE_SQRT.replace(s) { m ->
             val inner = m.groupValues[1]
             if (inner.length <= 1) "√" + inner else "√(" + inner + ")"
         }
-        s = RE_CMD.replace(s) { m -> cmdRepl(m.groupValues[1]) ?: m.value }
-        if (LINEARIZE_FRAC) s = linearizeFrac(s)
         s = RE_EMPTY_BRACES.replace(s, "")
         return s.replace("\u0000", "\\\\")
     }
@@ -213,13 +225,23 @@ object LatexToUnicode {
             }
             val a = out.substring(p + 1, e1)
             val b = out.substring(q + 1, e2)
-            val na = if (a.length <= 1) a else "(" + a + ")"
-            val nb = if (b.length <= 1) b else "(" + b + ")"
+            val na = if (needsParen(a)) "(" + a + ")" else a
+            val nb = if (needsParen(b)) "(" + b + ")" else b
             out = out.substring(0, idx) + na + "/" + nb + out.substring(e2 + 1)
             from = idx + 1
             guard++
         }
         return out
+    }
+
+    /** 分子分母含运算符或空格时才加括号，否则连写更清爽 */
+    private fun needsParen(x: String): Boolean {
+        for (ch in x) {
+            if (ch == '+' || ch == '-' || ch == '=' || ch == ' ' || ch == ',') {
+                return true
+            }
+        }
+        return false
     }
 
     private class Group(val text: String, val next: Int, val closed: Boolean)
@@ -306,7 +328,11 @@ object LatexToUnicode {
             val mapped = direct ?: if (norm != content) toUnicode(norm, c) else null
             if (mapped != null) {
                 out.append(mapped)
-            } else if (c == '_' && BARE_SUB_FALLBACK) {
+            } else if (c == '_' && BARE_SUB_FALLBACK && norm.length == 1) {
+                out.append('_')
+                out.append(norm)
+            } else if (c == '^' && norm.length == 1) {
+                out.append('^')
                 out.append(norm)
             } else {
                 out.append(c)
